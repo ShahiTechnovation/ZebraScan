@@ -8,6 +8,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { CheckoutIntent } from "@/types/domain";
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -259,5 +260,127 @@ describe("Connect modal (real component)", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Connect & Sign In/ }));
     expect((await screen.findByRole("alert")).textContent).toMatch(/Zcash mainnet.*\[Testnet\] Noir Wallet/);
     expect(seen).toEqual([]);
+  });
+
+  it("connected build before the API config loads: no guessed network, the challenge's network decides", async () => {
+    const message = "Zeb Scan wants you to sign in";
+    const mainSig = { ...SIGNATURE, address: "t1DerivedIdentity11111111111111111" };
+    const calls = installNoir({ zcash_requestAccounts: () => MAINNET, zcash_signMessage: () => mainSig });
+    const seen = await mockApi({ walletChallenge: { ...challenge(message), network: "zcash-mainnet" }, walletVerify: { userId: "usr_3", emailVerified: false, csrfToken: "csrf_3" } });
+    const live = { config: null, error: null, merchant: null, refreshSession: vi.fn(async () => undefined) };
+    vi.doMock("@/providers/ZebProvider", () => ({ useZeb: () => ({ live }) }));
+    const { ConnectWalletModal } = await import("@/components/screens/ConnectWallet");
+    render(<ConnectWalletModal open onClose={vi.fn()} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Connect & Sign In/ }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/onboarding"));
+    expect(calls.map((c) => c.method)).toEqual(["zcash_requestAccounts", "zcash_signMessage"]);
+    expect(seen.map((s) => s.op)).toEqual(["walletChallenge", "walletVerify"]);
+  });
+
+  it("connected build with the API unreachable: connect only, and it says the API is unreachable", async () => {
+    installNoir({ zcash_requestAccounts: () => TESTNET });
+    const live = { config: null, error: "Backend unreachable", merchant: null, refreshSession: vi.fn(async () => undefined) };
+    vi.doMock("@/providers/ZebProvider", () => ({ useZeb: () => ({ live }) }));
+    const { ConnectWalletModal } = await import("@/components/screens/ConnectWallet");
+    render(<ConnectWalletModal open onClose={vi.fn()} />);
+    expect(await screen.findByRole("button", { name: /Connect Noir Wallet/ })).toBeTruthy();
+    expect(screen.getByText(/Zeb Scan API, which is not reachable right now\./)).toBeTruthy();
+  });
+});
+
+describe("errors carry a next step", () => {
+  it("a stale content script (extension switched off/on after the page loaded) says to reload the page", async () => {
+    installNoir({
+      zcash_requestAccounts: () => {
+        throw new Error("Extension context invalidated.");
+      },
+    });
+    const { connectNoir } = await import("@/services/live/noir");
+    await expect(connectNoir()).rejects.toThrow("Noir Wallet connection failed: Extension context invalidated. Noir Wallet was reloaded or switched after this page opened. Reload this page, then try again.");
+  });
+});
+
+describe("Pay with Noir in the checkout (real component)", () => {
+  const UTEST = "utest1invoiceaddress0000000000000000000000000000000";
+
+  function checkout(over: Partial<CheckoutIntent>): CheckoutIntent {
+    const now = Date.now();
+    return {
+      id: "chk_noir_0001",
+      mode: "scan_pay",
+      merchantId: null,
+      linkId: null,
+      createdAt: now,
+      quote: {
+        id: "q_noir_0001",
+        createdAt: now,
+        expiresAt: now + 600_000,
+        source: "live",
+        provider: "test",
+        privacy: "shielded",
+        inrMinor: 50_000,
+        protocolFeeBps: 0,
+        platformFeeBps: 0,
+        protocolFeeInrMinor: 0,
+        platformFeeInrMinor: 0,
+        totalInrMinor: 50_000,
+        inrPerUsdcMinor: 9_000,
+        usdMicroPerZec: 45_000_000,
+        usdcMicro: "5555556",
+        zecZat: "1234567",
+      },
+      privacy: "shielded",
+      receivingAddress: UTEST,
+      qrPayload: `zcash:${UTEST}?amount=0.01234567&memo=WkVCLTdRMks`,
+      depositStatus: "awaiting",
+      deposit: null,
+      recipient: null,
+      p2pOrderId: null,
+      customerNote: "",
+      exceptionReason: null,
+      events: [],
+      simulated: false,
+      ...over,
+    };
+  }
+
+  async function renderCheckout(c: CheckoutIntent) {
+    const { ZebProvider } = await import("@/providers/ZebProvider");
+    const { ToastProvider } = await import("@/providers/ToastProvider");
+    const { CheckoutPanel } = await import("@/components/payments/CheckoutPanel");
+    render(
+      <ZebProvider>
+        <ToastProvider>
+          <CheckoutPanel checkout={c} />
+        </ToastProvider>
+      </ZebProvider>,
+    );
+  }
+
+  it("testnet checkout: the click posts zcash_requestAccounts synchronously, then sends the exact amount and memo", async () => {
+    const calls = installNoir({ zcash_requestAccounts: () => TESTNET, zcash_sendTransaction: () => "b".repeat(64) });
+    await renderCheckout(checkout({ network: "testnet", envLabel: "TEST", memo: "ZEB-7Q2K" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Pay with Noir Wallet/ }));
+    expect(calls).toEqual([{ method: "zcash_requestAccounts" }]); // still inside the click
+    await waitFor(() => expect(calls).toHaveLength(2));
+    expect(calls[1]).toEqual({ method: "zcash_sendTransaction", params: [{ to: UTEST, amount: "0.01234567", memo: "ZEB-7Q2K", fundingSource: "shielded" }] });
+    expect(await screen.findByText(/Payment initiated in Noir Wallet/)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("never pays a mainnet address displayed on a demo/testnet checkout, even when a mainnet wallet answers", async () => {
+    const calls = installNoir({ zcash_requestAccounts: () => MAINNET, zcash_sendTransaction: () => "c".repeat(64) });
+    // Demo checkout: its non-payable placeholder address is displayed as a hard-coded mainnet u1 address.
+    await renderCheckout(checkout({ receivingAddress: "zebscan-demo-address-chk_noir_0001-not-payable", qrPayload: "zebscan-demo://checkout/chk_noir_0001" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Pay with Noir Wallet/ }));
+    expect((await screen.findByRole("alert")).textContent).toMatch(/not a Zcash testnet address/);
+    expect(calls).toEqual([]); // refused before any wallet request
+  });
+
+  it("keeps the wallet's error on screen instead of only in a ~3 s toast", async () => {
+    installNoir({ zcash_requestAccounts: () => MAINNET });
+    await renderCheckout(checkout({ network: "testnet", envLabel: "TEST", memo: "ZEB-7Q2K" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Pay with Noir Wallet/ }));
+    expect((await screen.findByRole("alert")).textContent).toMatch(/Zcash mainnet.*\[Testnet\] Noir Wallet/);
   });
 });

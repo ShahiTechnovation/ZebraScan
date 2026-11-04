@@ -48,7 +48,7 @@ export function ConnectWalletModal({ open, onClose, next = "/app" }: { open: boo
   const [connected, setConnected] = useState<NoirConnection | null>(null);
   const [originProblem, setOriginProblem] = useState<string | null>(null);
   const network = live?.config?.wallet.noirNetwork ?? "zcash-testnet";
-  const expected: NoirNetwork = network === "zcash-mainnet" ? "mainnet" : "testnet";
+  const expected: NoirNetwork | null = live && !live.config ? null : network === "zcash-mainnet" ? "mainnet" : "testnet"; // no guess before the API config loads; sign-in then checks the challenge's network
   // Sign-in needs the Zeb Scan API. Without it (public demo build) the wallet can still connect.
   const canSignIn = !!live && !live.error;
 
@@ -111,7 +111,7 @@ export function ConnectWalletModal({ open, onClose, next = "/app" }: { open: boo
                 : noir === "installed"
                   ? canSignIn
                     ? "Extension detected. Approve the connection, then sign a server challenge to authenticate. Hardware accounts may not support message signing."
-                    : "Extension detected. Approve the connection in Noir Wallet to see your account. Merchant sign-in needs the Zeb Scan API, which this build does not include."
+                    : `Extension detected. Approve the connection in Noir Wallet to see your account. Merchant sign-in needs the Zeb Scan API, which ${live ? "is not reachable right now" : "this build does not include"}.`
                   : originProblem ?? "Noir Wallet is the premier shielded Zcash browser extension. Install it to authenticate."}
             </p>
 

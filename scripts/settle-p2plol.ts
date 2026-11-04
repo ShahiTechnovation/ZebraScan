@@ -117,8 +117,8 @@ function settlementFile(id: string) {
 
 async function preview(id: string) {
   const t = await loadTerms(id);
-  log(`terms: checkout ${t.id} | txid ${t.txid.slice(0, 12)}… | sell ${t.usdc} USDC → UPI ${t.vpa}`);
-  const goal = buildP2PLolSellGoal({ offrampAmountUsdc: t.usdc, oneTimeUpiId: t.vpa, authorized: false, reference: `prev_${t.id.slice(3, 20)}` });
+  log(`terms: checkout ${t.id} | txid ${t.txid.slice(0, 12)}… | sell ${t.usdc} USDC → ₹${(Number(t.inrPaise) / 100).toFixed(2)} to UPI ${t.vpa}`);
+  const goal = buildP2PLolSellGoal({ offrampAmountUsdc: t.usdc, oneTimeUpiId: t.vpa, authorized: false, reference: `prev_${t.id.slice(3, 20)}`, targetInrPaise: BigInt(t.inrPaise) });
   const r = await runAgent(goal, 420);
   const c = checkP2PLolResult(r.raw, { offrampAmountUsdc: t.usdc, oneTimeUpiId: t.vpa, authorized: false, reference: "x0000" });
   const res = c.result;
@@ -147,10 +147,10 @@ async function execute(id: string, confirm: string | "auto") {
   closeSync(fd);
   await emitResource(ctx.db, ctx.env, `checkout:${t.id}`, "payout.live_demo.authorized", {
     label: "INR payout authorized",
-    detail: `TinyFish is selling ${t.usdc} USDC on P2P.lol to the UPI ID. INR is paid from Zeb Scan's own pre-funded P2P.lol USDC; the testnet payment only authorizes it.`,
+    detail: `TinyFish is sending ₹${(Number(t.inrPaise) / 100).toFixed(2)} via P2P.lol (selling ${t.usdc} USDC) to the UPI ID. INR is paid from Zeb Scan's own pre-funded P2P.lol USDC; the testnet payment only authorizes it.`,
   });
-  log(`EXECUTING: sell ${t.usdc} USDC → ${t.vpa} (one Place Order, no retries)`);
-  const goal = buildP2PLolSellGoal({ offrampAmountUsdc: t.usdc, oneTimeUpiId: t.vpa, authorized: true, reference: `pay_${t.id.slice(3, 20)}` });
+  log(`EXECUTING: TinyFish → P2P.lol: send ₹${(Number(t.inrPaise) / 100).toFixed(2)} (sell ${t.usdc} USDC) to UPI ${t.vpa} (one Place Order, no retries)`);
+  const goal = buildP2PLolSellGoal({ offrampAmountUsdc: t.usdc, oneTimeUpiId: t.vpa, authorized: true, reference: `pay_${t.id.slice(3, 20)}`, targetInrPaise: BigInt(t.inrPaise) });
   const r = await runAgent(goal, 1500);
   const c = checkP2PLolResult(r.raw, { offrampAmountUsdc: t.usdc, oneTimeUpiId: t.vpa, authorized: true, reference: "x0000" });
   const res = c.result as P2PLolResult | null;

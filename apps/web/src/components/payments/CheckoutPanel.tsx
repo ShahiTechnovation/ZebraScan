@@ -13,7 +13,7 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Blocks";
 import { CopyableValue, CopyButton } from "@/components/ui/CopyShare";
 import { DEPOSIT_META, MetaBadge } from "@/components/ui/StatusBadge";
-import { addressNetwork, payWithNoir } from "@/services/live/noir";
+import { payWithNoir } from "@/services/live/noir";
 import { QRRenderer } from "./QR";
 import { PrivacyBadge, RateExpiry } from "./Quote";
 import { DepositProgress } from "./Progress";
@@ -60,6 +60,7 @@ export function CheckoutPanel({
   const awaiting = c.depositStatus === "awaiting" && !expired;
   const exactZec = formatZec(c.quote.zecZat, { fixed: true });
   const [refundAddr, setRefundAddr] = useState("");
+  const [noirError, setNoirError] = useState<string | null>(null);
 
   const activeAddress = getEffectiveAddress(c.receivingAddress, activePool);
   const activeQrPayload = `zcash:${activeAddress}?amount=${exactZec}`;
@@ -83,12 +84,17 @@ export function CheckoutPanel({
   };
 
   // No dynamic import or await before the wallet: payWithNoir posts zcash_requestAccounts inside this click.
+  // The wallet network comes from the checkout, never from the displayed address, so payWithNoir refuses an
+  // address on another network (e.g. a mainnet address shown on a testnet or demo checkout) instead of paying it.
   const handlePayNoir = () => {
-    const net = addressNetwork(activeAddress) ?? (c.network === "mainnet" ? "mainnet" : "testnet");
+    const net = c.network === "mainnet" ? "mainnet" : "testnet";
+    setNoirError(null);
     void run(
       () => payWithNoir({ to: activeAddress, zat: c.quote.zecZat, memo: c.memo ?? null, network: net }),
       "Payment initiated in Noir Wallet — waiting for network confirmation"
-    );
+    ).then((r) => {
+      if (!r.ok) setNoirError(r.error); // toasts vanish after ~3 s; wallet errors carry multi-step fixes
+    });
   };
 
   return (
@@ -184,6 +190,11 @@ export function CheckoutPanel({
               >
                 <Wallet aria-hidden className="h-4 w-4" /> Pay with Noir Wallet
               </Button>
+            )}
+            {awaiting && noirError && (
+              <p role="alert" className="rounded-input border border-danger/40 bg-danger/[0.06] px-3 py-2 text-[13px] text-danger">
+                {noirError}
+              </p>
             )}
             <p className="text-micro text-foreground-muted">
               Network: {c.envLabel === "TEST" ? "Zcash testnet" : "Zcash"} · {activePool === "shielded" ? "Protected by Shielded Pool" : "Transparent Address"}

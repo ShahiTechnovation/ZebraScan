@@ -132,6 +132,8 @@ const HINTS: [RegExp, string][] = [
   [/timeout/i, "The Noir Wallet window was not answered in time. Try again."],
   [/not authorized|reconnect/i, "Connect Noir Wallet again, then retry."],
   [/no accounts? (selected|available)/i, "Select an account in the Noir Wallet window."],
+  // Chrome's text when the extension was reloaded, turned off/on or updated after this page loaded.
+  [/extension context invalidated/i, "Noir Wallet was reloaded or switched after this page opened. Reload this page, then try again."],
 ];
 
 function withHint(walletMessage: string): string {

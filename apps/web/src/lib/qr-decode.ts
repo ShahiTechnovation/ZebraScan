@@ -43,6 +43,8 @@ export interface Step {
   invert?: boolean;
   /** Turning the image changes zxing's row-scan order, which sidesteps most false corners. */
   rotate?: 0 | 90 | 180 | 270;
+  /** Quiet-zone pad (default on). Off once, because the pad also shifts the binarizer's 8 px blocks. */
+  pad?: boolean;
   attempts: Attempt[];
 }
 
@@ -179,10 +181,8 @@ function renderStep(source: CanvasImageSource, w: number, h: number, step: Pick<
   }
   const ctx = context2d(canvas);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  if (p) {
-    ctx.fillStyle = step.invert ? "#000000" : "#ffffff";
-    ctx.fillRect(0, 0, W, H);
-  }
+  ctx.fillStyle = step.invert ? "#000000" : "#ffffff"; // also the backdrop for transparent PNGs
+  ctx.fillRect(0, 0, W, H);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   if (rot) {
@@ -220,6 +220,7 @@ export function stillImagePlan(w: number, h: number): Step[] {
   const steps: Step[] = [
     { size: primary, attempts: [DIAG, STOCK, PURE, GLOBAL] },
     { size: primary, invert: true, attempts: [DIAG, STOCK, PURE] },
+    { size: primary, pad: false, attempts: [DIAG, STOCK, GLOBAL] },
     { size: turn, rotate: 90, attempts: [DIAG, STOCK, GLOBAL] },
   ];
   // Other scales shift module edges against zxing's sampling grid; tiny images get upscaled.
@@ -231,8 +232,7 @@ export function stillImagePlan(w: number, h: number): Step[] {
   if (L < 1000) add(Math.min(1200, L * (L < 300 ? 2 : 1.5)));
   if (L < 600) add(900);
   for (const s of [1100, 800, 560, 400]) if (s < primary) add(s);
-  for (const s of sizes) steps.push({ size: s, attempts: [DIAG, STOCK, GLOBAL] });
-  if (L < 600) steps.push({ size: 900, invert: true, attempts: [DIAG, STOCK] });
+  for (const s of sizes) steps.push({ size: s, attempts: [DIAG, STOCK, GLOBAL] }, { size: s, invert: true, attempts: [DIAG, STOCK] });
   steps.push({ size: turn, rotate: 180, attempts: [DIAG, GLOBAL] }, { size: turn, rotate: 270, invert: true, attempts: [DIAG] }, { size: turn, rotate: 90, invert: true, attempts: [DIAG] });
   if (L > 1600) steps.push({ size: Math.min(L, 2800), attempts: [DIAG] });
   return steps;
@@ -250,11 +250,11 @@ export async function decodeStillImage(source: CanvasImageSource | ImageBitmap, 
   const engine = await loadEngine();
   const canvas = document.createElement("canvas");
   for (const step of stillImagePlan(w, h)) {
-    const r = renderStep(source, w, h, step, canvas);
+    const r = renderStep(source, w, h, step, canvas, step.pad !== false);
     for (const a of step.attempts) {
       const text = tryDecode(engine, r.lum, r.w, r.h, a);
       if (text) {
-        trace?.(`${step.size}${step.invert ? "/inv" : ""}${step.rotate ? `/r${step.rotate}` : ""}:${a.diagonal ? "diag" : "stock"}${a.pure ? "+pure" : ""}${a.global ? "+global" : ""}`);
+        trace?.(`${step.size}${step.invert ? "/inv" : ""}${step.rotate ? `/r${step.rotate}` : ""}${step.pad === false ? "/nopad" : ""}:${a.diagonal ? "diag" : "stock"}${a.pure ? "+pure" : ""}${a.global ? "+global" : ""}`);
         canvas.width = canvas.height = 0;
         return text;
       }
