@@ -87,6 +87,23 @@ export function ScanStatus({ id }: { id: string }) {
                 {lastPayoutUpdate.detail ? ` — ${lastPayoutUpdate.detail}` : ""}
               </p>
             )}
+            {testnet &&
+              (() => {
+                const settlement = c.events.filter((e) => e.kind.startsWith("payout.live_demo."));
+                return settlement.length ? (
+                  <div className="mt-3 rounded-panel border border-border px-4 py-3" aria-live="polite">
+                    <p className="mb-1 text-[13px] font-semibold text-foreground">TinyFish → P2P.lol settlement</p>
+                    <ul className="space-y-1 text-[13px] text-foreground-secondary">
+                      {settlement.map((e, i) => (
+                        <li key={`${e.kind}-${i}`}>
+                          <strong>{e.label}</strong>
+                          {e.detail ? ` — ${e.detail}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null;
+              })()}
             {liveDemo && order?.status === "under_review" && (
               <Callout tone="warning" className="mt-4" title="Payout needs review">
                 The provider outcome could not be confirmed automatically. Nothing is retried automatically; an operator checks the provider order first.

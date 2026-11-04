@@ -169,7 +169,8 @@ export function mapCheckout(c: CheckoutPublic, cx: CheckoutContext): { intent: C
     p2pOrderId: orderId,
     customerNote: c.customerNote,
     exceptionReason: c.exceptionReason,
-    events: timeline(c.timeline.filter((e) => !e.type.startsWith("payout."))),
+    // payout.live_demo.* = TinyFish p2p.lol settlement progress (scripts/settle-p2plol.ts); shown on the status page.
+    events: timeline(c.timeline.filter((e) => !e.type.startsWith("payout.") || e.type.startsWith("payout.live_demo."))),
     simulated,
     envLabel: c.label,
     payable: c.zcash.payable,

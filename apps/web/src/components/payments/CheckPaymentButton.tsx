@@ -18,33 +18,42 @@ interface CheckResult {
 }
 
 /**
- * "Check payment now": asks the server to run one immediate watch-only scan of the receiving wallet
- * (mempool + latest blocks) instead of waiting for the next automatic poll, then shows the real
- * state. Live updates still arrive on their own; this never moves money.
+ * "I've paid — check now": asks the server to run one immediate watch-only scan of the receiving
+ * wallet (mempool + latest blocks) instead of waiting for the next automatic poll, then shows the
+ * real state. Always visible; in the public demo build it explains that it is not connected to the
+ * live watcher. It never moves money (the INR payout runs in the separate, gated settlement step).
  */
 export function CheckPaymentButton({ checkout: c }: { checkout: CheckoutIntent }) {
-  const { live } = useZeb();
+  const { live, isDemo } = useZeb();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  if (!live || !API_BASE) return null; // connected mode only; demo payments are simulated
-  if (!["awaiting", "detected", "confirming"].includes(c.depositStatus)) return null;
+  const connected = !!live && !!API_BASE;
+  const settled = ["accepted", "underpaid", "overpaid", "late", "refund_pending", "refunded", "under_review", "expired"].includes(c.depositStatus);
 
   const check = async () => {
     setBusy(true);
     setMsg(null);
     try {
+      if (!connected) {
+        setMsg(
+          isDemo
+            ? `Demo build: not connected to the live Zcash watcher, so it can't see real payments. Current demo status: ${c.depositStatus}. The real check runs in the connected testnet app.`
+            : "Not connected to the Zeb Scan service right now. Status still updates automatically once it reconnects.",
+        );
+        return;
+      }
       const token = checkoutTokens.get(c.id);
       const r = await fetch(`${API_BASE}/api/v1/checkout/${encodeURIComponent(c.id)}/check-payment`, {
         method: "POST",
         headers: token ? { authorization: `Bearer ${token}` } : {},
       });
       if (!r.ok) {
-        setMsg(r.status === 429 ? "Checking too often — wait a few seconds." : "Couldn't check right now. Status still updates automatically.");
+        setMsg(r.status === 429 ? "Checking too often — wait a few seconds." : r.status === 404 ? "This browser doesn't hold this checkout's access link." : "Couldn't check right now. Status still updates automatically.");
         return;
       }
       const j = (await r.json()) as CheckResult;
       if (j.scanError) setMsg(`Wallet watcher is catching up (${j.scanError}). Status still updates automatically.`);
-      else if (j.zecConfirmed) setMsg("ZEC received and confirmed. The INR payout step starts next.");
+      else if (j.zecConfirmed) setMsg(`ZEC received and confirmed (${j.confirmations} confirmation${j.confirmations === 1 ? "" : "s"}). The INR payout step starts next.`);
       else if (j.zecReceived) setMsg(`ZEC detected on the network — ${j.confirmations}/${j.confirmationsRequired} confirmation${j.confirmationsRequired === 1 ? "" : "s"}. Usually 1–3 minutes.`);
       else setMsg("No ZEC seen yet for this address. Shielded sends can take a minute to reach the network.");
     } catch {
@@ -56,12 +65,12 @@ export function CheckPaymentButton({ checkout: c }: { checkout: CheckoutIntent }
 
   return (
     <div className="space-y-2">
-      <Button variant="secondary" onClick={check} disabled={busy}>
+      <Button variant={settled ? "ghost" : "secondary"} onClick={check} disabled={busy}>
         {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <SearchCheck aria-hidden className="h-4 w-4" />}
-        {busy ? "Checking the network…" : "I've paid — check now"}
+        {busy ? "Checking the network…" : settled ? "Re-check payment status" : "I've paid — check if ZEC is received"}
       </Button>
       <p aria-live="polite" className="text-label text-foreground-secondary">
-        {msg ?? "The page also checks automatically every few seconds."}
+        {msg ?? (connected ? "The page also checks automatically every few seconds." : "Checks whether this checkout's ZEC has been received.")}
       </p>
     </div>
   );

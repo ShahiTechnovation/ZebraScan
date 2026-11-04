@@ -41,8 +41,18 @@ describe("demo quote", () => {
     expect(q.usdcMicro).toBe("5638889");
     // 5.638889 / 45 = 0.12530865 ZEC (ceil zat)
     expect(q.zecZat).toBe("12530865");
-    expect(q.expiresAt - q.createdAt).toBe(90_000);
+    expect(q.expiresAt - q.createdAt).toBe(900_000);
     expect(q.source).toBe("demo");
+  });
+  it("uses live market reference rates when available (no more hard-coded $45 ZEC)", () => {
+    const live = { usdMicroPerZec: 1_305_820_000, inrPerUsdcMinor: 9_456, provider: "Live: median(coingecko,kraken)", fetchedAt: 0 };
+    const q = buildDemoQuote({ id: "q", inrMinor: 1_000, privacy: "shielded", now: 0, rates: live });
+    expect(q.source).toBe("live");
+    expect(q.provider).toBe("Live: median(coingecko,kraken)");
+    // ₹10.15 / 94.56 = 0.107339 USDC → / 1305.82 = 0.00008220 ZEC (not 0.00247 at $45)
+    expect(q.usdcMicro).toBe("107340");
+    expect(Number(q.zecZat)).toBeGreaterThan(8_000);
+    expect(Number(q.zecZat)).toBeLessThan(8_400);
   });
   it("validates demo amount policy", () => {
     expect(validateInrAmount(null)).toMatch(/Enter/);
