@@ -17,3 +17,4 @@ export * from "./mail";
 export * from "./tfpayouts";
 export * from "./tfsim";
 export * from "./tfdeps";
+export * from "./tfoperator";

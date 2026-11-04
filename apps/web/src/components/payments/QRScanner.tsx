@@ -4,27 +4,31 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, CameraOff, ImageUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Blocks";
+import { classifyCameraError, startQrCamera, type CameraProblem, type QrCameraSession } from "@/lib/qr-decode";
 
-type CamState = "idle" | "starting" | "scanning" | "denied" | "unavailable" | "insecure" | "error";
+// Upload / paste decoding lives with the camera decoder in lib/qr-decode (same zxing set-up).
+export { decodeQrFromFile } from "@/lib/qr-decode";
 
-interface Controls {
-  stop: () => void;
-}
+type CamState = "idle" | "starting" | "scanning" | CameraProblem;
 
 /** Live camera QR scanning with explicit permission UX and clean stop on unmount. */
 export function CameraScanner({ onResult, onUseFallback }: { onResult: (text: string) => void; onUseFallback: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<Controls | null>(null);
+  const sessionRef = useRef<QrCameraSession | null>(null);
+  /** Bumped by every start/stop/unmount, so a camera that finishes opening late is closed, not leaked. */
+  const runRef = useRef(0);
+  const onResultRef = useRef(onResult);
   const [state, setState] = useState<CamState>("idle");
   const [message, setMessage] = useState<string>("");
 
+  useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
+
   const stop = useCallback(() => {
-    controlsRef.current?.stop();
-    controlsRef.current = null;
-    const v = videoRef.current;
-    const stream = v?.srcObject as MediaStream | null;
-    stream?.getTracks().forEach((t) => t.stop());
-    if (v) v.srcObject = null;
+    runRef.current++;
+    sessionRef.current?.stop();
+    sessionRef.current = null;
     setState((s) => (s === "scanning" || s === "starting" ? "idle" : s));
   }, []);
 
@@ -32,41 +36,47 @@ export function CameraScanner({ onResult, onUseFallback }: { onResult: (text: st
 
   const start = async () => {
     if (typeof window === "undefined") return;
+    const video = videoRef.current;
     if (!window.isSecureContext) {
+      setMessage(window.location.origin);
       setState("insecure");
       return;
     }
-    if (!navigator.mediaDevices?.getUserMedia) {
+    if (!navigator.mediaDevices?.getUserMedia || !video) {
       setState("unavailable");
       return;
     }
+    const run = ++runRef.current;
+    sessionRef.current?.stop();
+    sessionRef.current = null;
+    setMessage("");
     setState("starting");
     try {
-      const { BrowserQRCodeReader } = await import("@zxing/browser");
-      const reader = new BrowserQRCodeReader(undefined, { delayBetweenScanAttempts: 250 });
-      const controls = await reader.decodeFromConstraints(
-        { video: { facingMode: { ideal: "environment" } }, audio: false },
-        videoRef.current!,
-        (result) => {
-          if (result) {
-            const text = result.getText();
-            controlsRef.current?.stop();
-            controlsRef.current = null;
-            setState("idle");
-            onResult(text);
-          }
+      const session = await startQrCamera(video, {
+        onResult: (text) => {
+          if (runRef.current !== run) return;
+          sessionRef.current = null; // the session already stopped the camera
+          setState("idle");
+          onResultRef.current(text);
         },
-      );
-      controlsRef.current = controls;
+        onError: (e) => {
+          if (runRef.current !== run) return;
+          sessionRef.current = null;
+          setMessage((e as Error)?.message ?? "");
+          setState(classifyCameraError(e));
+        },
+      });
+      if (runRef.current !== run) {
+        session.stop(); // stopped or unmounted while the camera was opening
+        return;
+      }
+      sessionRef.current = session;
       setState("scanning");
     } catch (e) {
-      const name = (e as DOMException)?.name;
-      if (name === "NotAllowedError" || name === "SecurityError") setState("denied");
-      else if (name === "NotFoundError" || name === "OverconstrainedError") setState("unavailable");
-      else {
-        setState("error");
-        setMessage((e as Error)?.message ?? "Unknown camera error");
-      }
+      if (runRef.current !== run) return;
+      const problem = classifyCameraError(e, window.isSecureContext);
+      setMessage(problem === "insecure" ? window.location.origin : (e as Error)?.message || "Unknown camera error");
+      setState(problem);
     }
   };
 
@@ -102,7 +112,7 @@ export function CameraScanner({ onResult, onUseFallback }: { onResult: (text: st
         {!active ? (
           <Button onClick={start}>
             <Camera aria-hidden className="h-4 w-4" />
-            {state === "denied" ? "Try camera again" : "Open camera"}
+            {state === "denied" || state === "busy" || state === "error" ? "Try camera again" : "Open camera"}
           </Button>
         ) : (
           <Button variant="secondary" onClick={stop}>
@@ -117,10 +127,10 @@ export function CameraScanner({ onResult, onUseFallback }: { onResult: (text: st
       </div>
 
       <div aria-live="polite">
-        {state === "scanning" && <p className="text-label text-foreground-secondary">Scanning… hold the QR steady inside the frame.</p>}
+        {state === "scanning" && <p className="text-label text-foreground-secondary">Scanning… hold the QR steady inside the frame, about 15–30 cm from the camera.</p>}
         {state === "denied" && (
           <Callout tone="warning" title="Camera permission denied">
-            Allow camera access in your browser settings, or upload a QR image, paste QR data, or enter the UPI ID manually.
+            Allow camera access in your browser settings (the camera icon in the address bar), or upload a QR image, paste QR data, or enter the UPI ID manually.
           </Callout>
         )}
         {state === "unavailable" && (
@@ -128,9 +138,14 @@ export function CameraScanner({ onResult, onUseFallback }: { onResult: (text: st
             This device has no usable camera. Upload a screenshot of the QR, paste its data, or enter the UPI ID manually.
           </Callout>
         )}
+        {state === "busy" && (
+          <Callout tone="warning" title="Camera is busy">
+            Another app (Zoom, Teams, the Camera app…) may be using the camera, or it stopped unexpectedly. Close that app and try again, or upload a screenshot of the QR.
+          </Callout>
+        )}
         {state === "insecure" && (
           <Callout tone="warning" title="Camera needs a secure connection">
-            Browsers only allow camera access on HTTPS (or localhost). Use upload, paste or manual entry instead.
+            This page is open at {message || "an insecure address"}. Browsers only allow the camera on HTTPS or http://localhost, so it can&apos;t be used here. Upload a photo or screenshot of the QR, paste its text, or enter the UPI ID instead — those all work on this address.
           </Callout>
         )}
         {state === "error" && (
@@ -141,21 +156,4 @@ export function CameraScanner({ onResult, onUseFallback }: { onResult: (text: st
       </div>
     </div>
   );
-}
-
-/** Decode a QR from an uploaded image file. Returns the raw text or throws. */
-export async function decodeQrFromFile(file: File): Promise<string> {
-  if (!file.type.startsWith("image/")) throw new Error("Choose an image file (PNG, JPG or WebP).");
-  if (file.size > 8 * 1024 * 1024) throw new Error("Image is too large (max 8 MB).");
-  const { BrowserQRCodeReader } = await import("@zxing/browser");
-  const url = URL.createObjectURL(file);
-  try {
-    const reader = new BrowserQRCodeReader();
-    const result = await reader.decodeFromImageUrl(url);
-    return result.getText();
-  } catch {
-    throw new Error("No readable QR code was found in that image. Try a sharper, well-lit image.");
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }

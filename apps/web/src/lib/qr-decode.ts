@@ -216,8 +216,17 @@ export function stillImagePlan(w: number, h: number): Step[] {
     { size: primary, invert: true, attempts: [DIAG, STOCK, PURE] },
     { size: turn, rotate: 90, attempts: [DIAG, STOCK, GLOBAL] },
   ];
-  if (L < 600) steps.push({ size: 900, attempts: [DIAG, STOCK] }, { size: 900, invert: true, attempts: [DIAG, STOCK] });
-  for (const s of [1100, 800, 560]) if (s < primary * 0.85) steps.push({ size: s, attempts: [DIAG, STOCK] });
+  // Other scales shift module edges against zxing's sampling grid; tiny images get upscaled.
+  const sizes: number[] = [];
+  const add = (s: number) => {
+    const v = Math.round(s);
+    if (v >= 200 && [primary, ...sizes].every((x) => Math.abs(x - v) > x * 0.12)) sizes.push(v);
+  };
+  if (L < 1000) add(Math.min(1200, L * (L < 300 ? 2 : 1.5)));
+  if (L < 600) add(900);
+  for (const s of [1100, 800, 560, 400]) if (s < primary) add(s);
+  for (const s of sizes) steps.push({ size: s, attempts: [DIAG, STOCK, GLOBAL] });
+  if (L < 600) steps.push({ size: 900, invert: true, attempts: [DIAG, STOCK] });
   steps.push({ size: turn, rotate: 180, attempts: [DIAG, GLOBAL] }, { size: turn, rotate: 270, invert: true, attempts: [DIAG] }, { size: turn, rotate: 90, invert: true, attempts: [DIAG] });
   if (L > 1600) steps.push({ size: Math.min(L, 2800), attempts: [DIAG] });
   return steps;

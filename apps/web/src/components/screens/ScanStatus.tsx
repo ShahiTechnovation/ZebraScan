@@ -27,8 +27,12 @@ export function ScanStatus({ id }: { id: string }) {
   const order = c.p2pOrderId ? state.orders.find((o) => o.id === c.p2pOrderId) ?? null : null;
   const receipt = state.receipts.find((r) => r.checkoutId === c.id);
   const stepNo = c.depositStatus === "accepted" ? 4 : 3;
-  // HACKATHON_TESTNET: TAZ is worthless; no P2P order is ever created, so never draw an order tracker.
+  // HACKATHON_TESTNET: TAZ is worthless; no P2P order is ever created, so never draw an order tracker —
+  // unless the server reports the strict TESTNET_LIVE_PAYOUT_DEMO opt-in (liveDemoPayouts): then the REAL
+  // payout progress is shown, with the funding stated plainly (Zeb Scan's own P2P.lol USDC pays the INR).
   const testnet = !isDemo && live?.config?.label === "TEST";
+  const liveDemo = testnet && live?.config?.liveDemoPayouts === true;
+  const lastPayoutUpdate = liveDemo && order?.events.length ? order.events[order.events.length - 1] : null;
 
   return (
     <Container className="py-8 sm:py-12">
@@ -62,7 +66,13 @@ export function ScanStatus({ id }: { id: string }) {
                 only when the provider confirms it.
               </p>
             )}
-            {testnet ? (
+            {liveDemo && (
+              <p className="mb-4 mt-0.5 text-[13px] text-foreground-secondary">
+                <strong>Live payout demo.</strong> INR is paid from Zeb Scan&apos;s own pre-funded P2P.lol USDC; the testnet payment only authorizes it. TAZ has no value, an
+                operator approves every payout, and it is complete only when the provider confirms it.
+              </p>
+            )}
+            {testnet && !liveDemo ? (
               <p className="rounded-panel border border-border bg-surface-2 px-4 py-3 text-[13px] text-foreground-secondary">
                 <strong>Zcash testnet verified.</strong> {c.depositStatus === "accepted" ? "Your shielded ZEC payment is verified on Zcash testnet." : "Awaiting on-chain block confirmation."}
               </p>
@@ -70,6 +80,17 @@ export function ScanStatus({ id }: { id: string }) {
               <p className="rounded-panel border border-border bg-surface-2 px-4 py-3 text-[13px] text-foreground-secondary">The payout starts once your ZEC payment is verified.</p>
             ) : (
               <PayoutProgress order={order} />
+            )}
+            {lastPayoutUpdate && (
+              <p className="mt-3 text-[13px] text-foreground-secondary" aria-live="polite">
+                Latest payout update: <strong>{lastPayoutUpdate.label}</strong>
+                {lastPayoutUpdate.detail ? ` — ${lastPayoutUpdate.detail}` : ""}
+              </p>
+            )}
+            {liveDemo && order?.status === "under_review" && (
+              <Callout tone="warning" className="mt-4" title="Payout needs review">
+                The provider outcome could not be confirmed automatically. Nothing is retried automatically; an operator checks the provider order first.
+              </Callout>
             )}
 
             {order?.status === "completed" && (

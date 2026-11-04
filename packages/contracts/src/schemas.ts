@@ -57,6 +57,12 @@ export const PublicConfigZ = z.object({
   payoutRail: z.enum(["P2P_TINYFISH_WEB", "DEMO_SIMULATED"]),
   modeName: z.enum(["DEMO", "HACKATHON_TESTNET", "MAINNET_READONLY", "CONTROLLED_LIVE_PILOT"]),
   capabilities: z.object({ realChainAddresses: z.boolean(), creditsRedeemable: z.boolean(), canSubmitTransactions: z.boolean() }),
+  /**
+   * HACKATHON_TESTNET + TESTNET_LIVE_PAYOUT_DEMO: a confirmed testnet Scan & Pay payment only authorizes an
+   * operator-approved INR payout paid from Zeb Scan's own pre-funded P2P.lol USDC. False everywhere else.
+   * Defaults to false so an older API (field absent) is read as "no live payouts".
+   */
+  liveDemoPayouts: z.boolean().default(false),
 });
 
 export const FeatureStatusZ = z.object({ available: z.boolean(), reason: z.string().nullable() });

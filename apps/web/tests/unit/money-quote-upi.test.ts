@@ -73,7 +73,7 @@ describe("UPI parser", () => {
     ["upi://pay?pa=ok.user@bank&am=0", /greater than zero/],
     ["upi://pay?pa=ok.user@bank&am=-5", /invalid/],
     ["upi://pay?pa=ok.user@bank&am=1e5", /invalid/],
-    ["upi://pay?pa=ok.user@bank&pn=" + "x".repeat(600), /unusually long/],
+    ["upi://pay?pa=ok.user@bank&pn=" + "x".repeat(1100), /unusually long/],
     ["hello world", /doesn't look like/],
   ])("rejects %s", (input, err) => {
     const r = parseUpiPayload(input);

@@ -1,6 +1,6 @@
 import { maybeOne } from "@zeb/db";
 import { DomainError, ENVIRONMENT_DISPLAY, maskVpa, notFound, parseUpiPayload } from "@zeb/domain";
-import { createQuote, getQuote, quoteDto, readiness, readP2P, readZecUsd } from "@zeb/core";
+import { createQuote, getQuote, quoteDto, readiness, readP2P, readZecUsd, testnetLiveDemo, TESTNET_DEMO_FUNDING_NOTE } from "@zeb/core";
 import type { Handler, Req } from "../http";
 
 const DISCLAIMERS = [
@@ -13,6 +13,10 @@ const DISCLAIMERS = [
 
 export const getPublicConfig: Handler = async ({ ctx }) => {
   const r = await readiness(ctx);
+  const liveDemoPayouts = testnetLiveDemo(ctx);
+  const testnetNotice = liveDemoPayouts
+    ? `HACKATHON_TESTNET live payout demo: real shielded TAZ (worthless test coins). ${TESTNET_DEMO_FUNDING_NOTE} Scan & Pay only, operator-approved, at most INR ${ctx.cfg.pilot.maxPayoutInrPaise / 100n}.${(ctx.cfg.pilot.maxPayoutInrPaise % 100n).toString().padStart(2, "0")} per payment. Merchant balances are not redeemable.`
+    : "HACKATHON_TESTNET: real shielded TAZ (worthless test coins). No INR is ever paid out and balances are not redeemable.";
   return {
     environment: ctx.env,
     label: ctx.caps.label,
@@ -31,12 +35,13 @@ export const getPublicConfig: Handler = async ({ ctx }) => {
     quoteLifetimeSeconds: ctx.cfg.policy.quoteLifetimeSec,
     requiredConfirmations: ctx.cfg.policy.requiredConfirmations,
     fees: { platformFeeBps: ctx.cfg.policy.platformFeeBps, withdrawalFeeBps: ctx.cfg.policy.withdrawalFeeBps },
-    disclaimers: ctx.env === "testnet" ? ["HACKATHON_TESTNET: real shielded TAZ (worthless test coins). No INR is ever paid out and balances are not redeemable.", ...DISCLAIMERS] : ctx.env === "demo" ? ["DEMO: simulated payments only. Nothing here moves real money.", ...DISCLAIMERS] : DISCLAIMERS,
+    disclaimers: ctx.env === "testnet" ? [testnetNotice, ...DISCLAIMERS] : ctx.env === "demo" ? ["DEMO: simulated payments only. Nothing here moves real money.", ...DISCLAIMERS] : DISCLAIMERS,
     auth: { emailPassword: true, emailOtp: true, passkey: false, noirWallet: true, google: false, emailDelivery: ctx.cfg.email.mode==='smtp' || (ctx.env==='demo' && !!ctx.email) },
     wallet: { noirNetwork: ctx.env === "mainnet-readonly" || ctx.env === "mainnet-enabled" ? "zcash-mainnet" : "zcash-testnet", payWithNoir: ctx.caps.realChainAddresses },
     payoutRail: ctx.cfg.payoutRail,
     modeName: ENVIRONMENT_DISPLAY[ctx.env] as "DEMO",
     capabilities: { realChainAddresses: ctx.caps.realChainAddresses, creditsRedeemable: ctx.caps.creditsRedeemable, canSubmitTransactions: ctx.caps.canSubmitTransactions },
+    liveDemoPayouts,
   };
 };
 

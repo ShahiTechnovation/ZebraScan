@@ -77,7 +77,7 @@ export function ScanPayWizard() {
   };
 
   const onUpload = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file || uploading) return;
     setUploading(true);
     setParseError(null);
     try {
@@ -90,6 +90,14 @@ export function ScanPayWizard() {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
+  };
+
+  /** A pasted screenshot (e.g. Win+Shift+S, then Ctrl+V) is decoded like an upload. */
+  const onPasteImage = (e: React.ClipboardEvent) => {
+    const image = Array.from(e.clipboardData?.files ?? []).find((f) => f.type.startsWith("image/"));
+    if (!image) return;
+    e.preventDefault();
+    void onUpload(image);
   };
 
   const manualError = manualVpa ? validateVpa(manualVpa) : null;
@@ -166,19 +174,31 @@ export function ScanPayWizard() {
                 {tab === "camera" && <CameraScanner onResult={(t) => accept(t, "qr_camera")} onUseFallback={() => setTab("upload")} />}
                 {tab === "upload" && (
                   <div className="space-y-3">
-                    <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-2 rounded-panel border border-dashed border-border-strong bg-surface-2 p-6 text-center hover:border-accent">
+                    <label
+                      className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-2 rounded-panel border border-dashed border-border-strong bg-surface-2 p-6 text-center hover:border-accent"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        void onUpload(e.dataTransfer.files?.[0]);
+                      }}
+                    >
                       {uploading ? <Loader2 aria-hidden className="h-6 w-6 animate-spin text-foreground-secondary" /> : <ImageUp aria-hidden className="h-6 w-6 text-foreground-secondary" />}
-                      <span className="text-[14px] font-medium">{uploading ? "Reading QR…" : "Choose a QR image"}</span>
-                      <span className="text-label text-foreground-secondary">PNG, JPG or WebP · processed locally in your browser</span>
+                      <span className="text-[14px] font-medium">{uploading ? "Reading QR…" : "Choose or drop a QR image"}</span>
+                      <span className="text-label text-foreground-secondary">Screenshot or photo (PNG, JPG or WebP) · processed locally in your browser</span>
                       <input ref={fileRef} type="file" accept="image/*" className="sr-only" onChange={(e) => onUpload(e.target.files?.[0])} />
                     </label>
                   </div>
                 )}
                 {tab === "paste" && (
                   <div className="space-y-3">
-                    <FormField label="QR data" hint="Paste the text inside a UPI QR. It starts with upi://pay?">
-                      {(p) => <Textarea {...p} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder="upi://pay?pa=…&pn=…&am=…&cu=INR" className="font-mono text-[13px]" maxLength={2000} />}
+                    <FormField label="QR data" hint="Paste the text inside a UPI QR (it starts with upi://pay?) — or paste a screenshot of the QR.">
+                      {(p) => <Textarea {...p} value={paste} onChange={(e) => setPaste(e.target.value)} onPaste={onPasteImage} placeholder="upi://pay?pa=…&pn=…&am=…&cu=INR" className="font-mono text-[13px]" maxLength={2000} />}
                     </FormField>
+                    {uploading && (
+                      <p className="flex items-center gap-2 text-label text-foreground-secondary" aria-live="polite">
+                        <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> Reading QR from the pasted image…
+                      </p>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       <Button onClick={() => accept(paste, "qr_paste")} disabled={!paste.trim()}>
                         Read QR data

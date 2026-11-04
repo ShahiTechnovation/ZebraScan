@@ -1,6 +1,7 @@
 /** Demo implementations of the adapter contracts, backed by the local demo store. */
 import { demoConfig } from "@/config/demo";
 import { buildDemoQuote } from "@/lib/quote";
+import { fetchLiveRates } from "@/lib/liveRates";
 import type { DemoState } from "@/types/domain";
 import type { ZebServices } from "../adapters";
 import * as E from "./engine";
@@ -24,17 +25,20 @@ export const demoServices: ZebServices = {
   rates: {
     async getRates() {
       const now = demoNow(demoStore.getSnapshot());
+      // Live market reference (CoinGecko + Kraken median); labelled demo constants only if unavailable.
+      const live = await fetchLiveRates();
       return {
-        usdMicroPerZec: demoConfig.quote.usdMicroPerZec,
-        inrPerUsdcMinor: demoConfig.quote.inrPerUsdcMinor,
-        source: "demo",
-        provider: demoConfig.quote.provider,
-        fetchedAt: now,
+        usdMicroPerZec: live?.usdMicroPerZec ?? demoConfig.quote.usdMicroPerZec,
+        inrPerUsdcMinor: live?.inrPerUsdcMinor ?? demoConfig.quote.inrPerUsdcMinor,
+        source: live ? "live" : "demo",
+        provider: live?.provider ?? `${demoConfig.quote.provider} (live rate unavailable)`,
+        fetchedAt: live?.fetchedAt ?? now,
         expiresAt: now + demoConfig.quote.lifetimeMs,
       };
     },
     async quote(inrMinor, privacy) {
-      return buildDemoQuote({ id: "preview", inrMinor, privacy, now: demoNow(demoStore.getSnapshot()) });
+      const live = await fetchLiveRates();
+      return buildDemoQuote({ id: "preview", inrMinor, privacy, now: demoNow(demoStore.getSnapshot()), rates: live });
     },
   },
   zcash: {

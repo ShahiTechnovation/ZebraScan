@@ -248,7 +248,9 @@ class LiveStore {
       };
       es.onmessage = kick;
       for (const type of ["checkout.awaiting_zec", "checkout.deposit_seen", "checkout.confirming", "checkout.deposit_accepted", "checkout.expired_without_funds", "checkout.late_deposit", "checkout.underpaid", "checkout.overpaid", "checkout.refund_queued", "checkout.chain_reorg_review", "checkout.manual_review", "checkout.cancelled", "deposit.confirming", "deposit.reorged", "deposit.extra", "credit.locked", "receipt.issued", "refund.details_received"]) es.addEventListener(type, kick);
-      for (const p of ["payout_queued", "order_placing", "placed", "merchant_accepted", "usdc_escrowed", "inr_processing", "provider_completed", "payout_reconciled", "completed", "cancelled", "provider_timeout", "not_liquid", "provider_failed", "disputed", "manual_review", "refund_queued"]) es.addEventListener(`payout.${p}`, kick);
+      for (const p of ["payout_queued", "order_placing", "placed", "merchant_accepted", "usdc_escrowed", "inr_processing", "provider_completed", "payout_reconciled", "completed", "cancelled", "provider_timeout", "not_liquid", "provider_failed", "disputed", "manual_review", "refund_queued", "disabled",
+        // P2P_TINYFISH_WEB rail states (mirror() emits payout.<state>), e.g. the testnet live payout demo
+        "policy_checked", "liquidity_reserved", "readonly_preflight_running", "preflight_verified", "operator_approval_required", "queued", "agent_running", "order_submission_observed", "provider_accepted", "fiat_transfer_reported", "provider_completed_verified", "reconciled", "preflight_blocked", "expired", "agent_failed_before_commit", "outcome_unknown_review", "provider_cancelled", "provider_disputed", "payout_failed_recovery", "refund_pending"]) es.addEventListener(`payout.${p}`, kick);
       es.addEventListener("access_revoked", () => es?.close());
       es.onerror = () => startPolling(10_000); // keep SSE retrying; poll as a fallback meanwhile
     } else startPolling();

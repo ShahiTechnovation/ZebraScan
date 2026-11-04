@@ -42,7 +42,7 @@ export function ModeBanner() {
     return <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">Isolated test API · no real funds</div>;
   return (
     <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">
-      {live?.config?.environment === "demo" ? "Isolated test API · no real funds" : live?.config?.environment === "testnet" ? "Zcash testnet · TAZ only · INR payouts disabled" : "Mainnet read-only · payments disabled"}
+      {live?.config?.environment === "demo" ? "Isolated test API · no real funds" : live?.config?.environment === "testnet" ? (live.config.liveDemoPayouts ? "Zcash testnet · TAZ has no value · live INR payout demo paid from Zeb Scan's own P2P.lol USDC" : "Zcash testnet · TAZ only · INR payouts disabled") : "Mainnet read-only · payments disabled"}
     </div>
   );
 }

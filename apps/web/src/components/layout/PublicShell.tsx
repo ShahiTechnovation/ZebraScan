@@ -98,6 +98,7 @@ export function PublicHeader({ minimal }: { minimal?: boolean }) {
 export function PublicFooter() {
   const { isDemo, live } = useZeb();
   const testnet = !isDemo && live?.config?.label === "TEST";
+  const liveDemo = testnet && live?.config?.liveDemoPayouts === true;
   const cols = [
     {
       title: "Product",
@@ -130,7 +131,7 @@ export function PublicFooter() {
           <ZebLogo />
           <p className="mt-3 text-[13px] leading-relaxed text-foreground-secondary">Pay in ZEC. They get INR.</p>
           <p className="mt-4 inline-flex items-center gap-2 text-label text-accent">
-            <ModeBadge /> {testnet ? "Zcash testnet · TAZ has no value · no real INR" : "Demo · no live funds"}
+            <ModeBadge /> {liveDemo ? "Zcash testnet · TAZ has no value · demo INR paid by Zeb Scan" : testnet ? "Zcash testnet · TAZ has no value · no real INR" : "Demo · no live funds"}
           </p>
         </div>
         {cols.map((c) => (
@@ -150,9 +151,11 @@ export function PublicFooter() {
       </Container>
       <div className="border-t border-border">
         <Container className="py-5 text-micro leading-relaxed text-foreground-muted">
-          {testnet
+          {liveDemo
+            ? "HACKATHON_TESTNET live payout demo: shielded payments are real Zcash testnet transactions (TAZ, no monetary value), detected by a watch-only viewing key. A Scan & Pay payment only authorizes an operator-approved INR payout, which is paid from Zeb Scan's own pre-funded P2P.lol USDC. Merchant balances are not redeemable."
+            : testnet
             ? "HACKATHON_TESTNET: shielded payments are real Zcash testnet transactions (TAZ, no monetary value), detected by a watch-only viewing key. No INR is ever paid out and balances are not redeemable."
-            : "Zeb Scan is a frontend demonstration. Demo only. These are simulated transactions, not real payments or bank transfers. Prices shown are illustrative, not market data."}{" "}
+            : "Zeb Scan is a frontend demonstration. Demo only. These are simulated transactions, not real payments or bank transfers. ZEC amounts use live market reference rates (median of CoinGecko and Kraken; INR via CoinGecko USDC/INR), not a promise of execution."}{" "}
           Zeb Scan is not affiliated with or endorsed by the Zcash project, UPI/NPCI, Base or P2P.me.
         </Container>
       </div>
