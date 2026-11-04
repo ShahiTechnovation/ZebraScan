@@ -17,6 +17,7 @@ import { reconcile, refreshInventory } from "./reconcile";
 import { treasury } from "@zeb/ledger";
 import { deliverEmails } from "./mail";
 import { advanceTfPayout, type TfDeps } from "./tfpayouts";
+import { advanceP2pPreparation } from "./p2pprep";
 
 export interface JobRow {
   id: string;
@@ -41,6 +42,7 @@ export const PERIODIC: Array<{ kind: string; everyMs: number }> = [
 export function buildHandlers(exec: P2PExecutor | null, tf: TfDeps = { port: null, web: null }): Record<string, Handler> {
   return {
     "tfpayout.advance": async (ctx, job) => advanceTfPayout(ctx, tf, String(job.payload.id)),
+    "p2p.prepare": async (ctx, job) => advanceP2pPreparation(ctx, tf, String(job.payload.intentId)),
     "payout.advance": async (ctx, job) => advancePayout(ctx, exec, job.payload.kind as "scan_pay", String(job.payload.id)),
     "credit.unlock": async (ctx, job) => {
       const result = await unlockCredit(ctx, String(job.payload.creditId));

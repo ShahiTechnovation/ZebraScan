@@ -198,6 +198,8 @@ export const CheckoutPublicZ = z.object({
   deposits: z.array(DepositPublicZ),
   recipient: z.object({ vpaMasked: z.string(), payeeName: z.string().nullable() }).nullable(),
   payout: PayoutPublicZ.nullable(),
+  /** Read-only P2P preparation at P2P_INIT_CONFIRMATIONS. READY never means an order was placed or INR paid. */
+  p2pPreparation: z.object({ state: z.enum(["PENDING", "RUNNING", "READY", "BLOCKED", "HELD", "CANCELLED"]), initConfirmations: z.number().int(), reason: z.string().nullable(), updatedAt: Iso }).nullable().optional(),
   timeline: z.array(TimelineEventZ),
   paymentObservedAt: Iso.optional(),
   receiptId: z.string().optional(),

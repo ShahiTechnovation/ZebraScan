@@ -372,6 +372,7 @@ export async function checkoutPublic(q: Queryable, ctx: CoreContext, id: string)
     `SELECT id, created_at, event_type, data FROM resource_events WHERE resource=$1 ORDER BY id`,
     [`checkout:${id}`],
   );
+  const prep = await maybeOne<{ state: "PENDING" | "RUNNING" | "READY" | "BLOCKED" | "HELD" | "CANCELLED"; state_reason: string | null; updated_at: Date }>(q, `SELECT state, state_reason, updated_at FROM payout_preparations WHERE environment=$1 AND intent_id=$2`, [ctx.env, id]);
   const required = ctx.cfg.policy.requiredConfirmations;
   const canonicalDeps = deps.filter((d) => d.canonical);
   const maxConf = canonicalDeps.reduce((m, d) => Math.max(m, d.confirmations), 0);
@@ -422,6 +423,7 @@ export async function checkoutPublic(q: Queryable, ctx: CoreContext, id: string)
             honestStatus: PAYOUT_HONEST[i.payout_status] ?? i.payout_status,
           }
         : null,
+    p2pPreparation: prep ? { state: prep.state, initConfirmations: ctx.cfg.policy.p2pInitConfirmations, reason: prep.state_reason, updatedAt: new Date(prep.updated_at).toISOString() } : null,
     timeline: events.map((e) => ({ id: String(e.id), at: new Date(e.created_at).toISOString(), type: e.event_type, label: e.data.label ?? LABELS[e.event_type.replace(/^checkout\./, "")] ?? e.event_type, ...(e.data.detail ? { detail: e.data.detail } : {}) })),
     ...(deps[0] ? { paymentObservedAt: new Date(deps[0].first_seen_at).toISOString() } : {}),
     ...(i.receipt_id ? { receiptId: i.receipt_id } : {}),

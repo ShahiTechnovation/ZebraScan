@@ -18,6 +18,7 @@ import { audit, emitResource, enqueueJob, raiseException } from "./events";
 import { holdPolicy, lockIntent, transitionIntent, type IntentRow } from "./intents";
 import { assertQuoteIntegrity, type QuoteRow } from "./quotes";
 import { issuePaymentReceipt } from "./receipts";
+import { holdP2pPreparation, maybeQueueP2pPreparation } from "./p2pprep";
 import { createPayoutCommand, queueTestnetDemoPayout, testnetLiveDemo } from "./tfpayouts";
 
 export interface ScannerEvent {
@@ -46,6 +47,10 @@ interface Observation {
   intent_id: string | null; zcash_address_id: string | null; value_zatoshis: string;
   custody_booked: boolean; custody_revision: number;
   wallet_id: string | null;
+  block_height: string | number | null;
+  block_hash: string | null;
+  confirmations: number;
+  mined: boolean;
 }
 
 async function custody(t: Tx, ctx: CoreContext, obs: Observation, ev: ScannerEvent) {
@@ -151,6 +156,8 @@ export async function ingestScannerEvent(ctx: CoreContext, ev: ScannerEvent, sou
     }
     if (cur.status === "awaiting_zec" || cur.status === "deposit_seen") cur = await transitionIntent(t, ctx, cur, "confirming", { label: "Confirming", detail: `Mined at height ${ev.blockHeight}` });
     else await emitResource(t, ctx.env, `checkout:${cur.id}`, "deposit.confirming", { label: `${ev.confirmations} of ${ctx.cfg.policy.requiredConfirmations} confirmations` });
+    // 1-confirmation trigger: durable, read-only P2P preparation (never accepts or pays anything).
+    await maybeQueueP2pPreparation(t, ctx, cur, obs);
     await evaluateAcceptance(t, ctx, cur);
     return { accepted: true, duplicate: false };
   });
@@ -333,6 +340,7 @@ export async function acceptDeposit(t: Tx, ctx: CoreContext, intent: IntentRow, 
 }
 
 async function handleReorg(t: Tx, ctx: CoreContext, intent: IntentRow, depositId: string, wasAccepted: boolean) {
+  await holdP2pPreparation(t, ctx, intent.id, "source deposit reorged; preparation held until the deposit is canonical again");
   await t.query(`UPDATE payout_commands SET held=true, hold_reason='source deposit reorged', updated_at=now() WHERE environment=$1 AND (source_intent_id=$2 OR withdrawal_id IN (SELECT withdrawal_id FROM merchant_credits WHERE intent_id=$2 AND withdrawal_id IS NOT NULL)) AND state NOT IN ('RECONCILED','REFUNDED')`, [ctx.env, intent.id]);
   await emitResource(t, ctx.env, `checkout:${intent.id}`, "deposit.reorged", { label: "Chain reorganisation", detail: "A previously seen transaction was removed from the canonical chain." });
   if (OPEN.includes(intent.status) && intent.status !== "awaiting_zec") {

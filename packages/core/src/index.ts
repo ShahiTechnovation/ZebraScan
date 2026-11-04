@@ -15,6 +15,7 @@ export * from "./reconcile";
 export * from "./jobs";
 export * from "./mail";
 export * from "./tfpayouts";
+export * from "./p2pprep";
 export * from "./tfsim";
 export * from "./tfdeps";
 export * from "./tfoperator";

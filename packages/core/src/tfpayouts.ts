@@ -622,6 +622,11 @@ async function executionBlockers(t: Tx, ctx: CoreContext, deps: TfDeps, c: Payou
     if (!source || bad || !accepted) reasons.push("source deposit is not canonical and final");
     if (await maybeOne(t, `SELECT 1 FROM exceptions WHERE intent_id=$1 AND status='open' AND severity <> 'info'`, [id])) reasons.push("source under exception review");
   }
+  if (ctx.env === "mainnet-enabled" && c.flow === "SCAN_PAY" && c.source_intent_id) {
+    // The 1-confirmation preparation must exist, be READY and not held by a reorg/pause (it never authorizes by itself).
+    const prep = await maybeOne<{ state: string }>(t, `SELECT state FROM payout_preparations WHERE environment=$1 AND intent_id=$2 FOR SHARE`, [ctx.env, c.source_intent_id]);
+    if (prep?.state !== "READY") reasons.push(`P2P preparation is not ready (${prep?.state ?? "missing"})`);
+  }
   const preflight = await maybeOne<{ created_at: Date }>(t, `SELECT created_at FROM payout_attempts WHERE payout_id=$1 AND kind='preflight' AND outcome='pass' ORDER BY created_at DESC LIMIT 1`, [c.id]);
   if (!c.account_fingerprint || !preflight || now.getTime()-new Date(preflight.created_at).getTime() > ctx.cfg.pilot.capabilityMaxAgeSec*1000) reasons.push("account/session preflight stale");
   const lease = await maybeOne<{ fencing_token: string }>(t, `SELECT fencing_token FROM p2p_account_leases WHERE environment=$1 AND account_fingerprint=$2 AND payout_id=$3 FOR UPDATE`, [ctx.env, c.account_fingerprint, c.id]);
