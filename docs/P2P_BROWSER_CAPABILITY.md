@@ -1,14 +1,18 @@
 # P2P.me browser capability (TinyFish, read-only)
 
-- Checked: 2026-11-04T14:28:05.635Z (environment mainnet-readonly)
+- Checked: 2026-11-04T16:38:03.525Z (environment mainnet-readonly)
 - Result: **BLOCKED**
-- TinyFish run: not started
-- Final page origin: n/a
-- Operational account fingerprint: n/a (keyed hash; the account id itself is not stored)
+- TinyFish run: 176cd99b-7fc3-4e3d-b577-302d4ae3f059
+- Final page origin: https://app.p2p.me
+- Operational account fingerprint: 7ee6ced6da030612f18d9c43944edbea (keyed hash; the account id itself is not stored)
 - Start URL: https://app.p2p.me/ · profile: default Browser Context Profile (use_profile: true)
 
 ## Blockers
-- TINYFISH_API_KEY not configured
+- profile is not authenticated (login page shown)
+- PAY (Scan & Pay) flow not available
+- SELL flow not available
+- provider blocker: The page shows a login screen. No authenticated account is visible. The account handle, Pay/Sell UI availability, USDC balance, limits/blockers, and wallet sign
+- spendable USDC balance not visible
 
 ## Unverified dependencies (delta spec §1 A–H) — a logged-in profile proves none of these
 - A. P2P.me permits automation of user-directed payments for third-party Zeb Scan customers

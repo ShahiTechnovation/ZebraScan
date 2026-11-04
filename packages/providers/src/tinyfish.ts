@@ -52,6 +52,15 @@ export interface TinyFishPort {
   listByGoal(goalContains: string, createdAfter: string): Promise<TfRun[]>;
 }
 
+/** TinyFish rejects JSON-schema annotations ("description") in output_schema (HTTP 400 INVALID_INPUT). Strip them recursively. */
+export function stripSchemaAnnotations<T>(v: T): T {
+  if (Array.isArray(v)) return v.map(stripSchemaAnnotations) as unknown as T;
+  if (v && typeof v === "object") {
+    return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([k]) => k !== "description" && k !== "title").map(([k, x]) => [k, stripSchemaAnnotations(x)])) as T;
+  }
+  return v;
+}
+
 export async function createTinyFishPort(apiKey: string): Promise<TinyFishPort> {
   if (!apiKey || apiKey.length < 16) throw new DomainError("SYSTEM_CONFIG", "TINYFISH_API_KEY is missing or malformed");
   const { TinyFish } = await import("@tiny-fish/sdk");
@@ -59,7 +68,7 @@ export async function createTinyFishPort(apiKey: string): Promise<TinyFishPort> 
   return {
     kind: "tinyfish",
     async queue(params) {
-      const r = await client.agent.queue(params);
+      const r = await client.agent.queue({ ...params, output_schema: stripSchemaAnnotations(params.output_schema) });
       return r.run_id ? { run_id: r.run_id, error: null } : { run_id: null, error: { message: r.error?.message ?? "queue rejected", code: r.error?.code } };
     },
     async get(runId) {
