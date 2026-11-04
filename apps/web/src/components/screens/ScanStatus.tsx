@@ -31,6 +31,8 @@ export function ScanStatus({ id }: { id: string }) {
   const order = c.p2pOrderId ? state.orders.find((o) => o.id === c.p2pOrderId) ?? null : null;
   const receipt = state.receipts.find((r) => r.checkoutId === c.id);
   const stepNo = c.depositStatus === "accepted" ? 4 : 3;
+  // HACKATHON_TESTNET: TAZ is worthless; no P2P order is ever created, so never draw an order tracker.
+  const testnet = !isDemo && live?.config?.label === "TEST";
 
   return (
     <Container className="py-8 sm:py-12">
@@ -58,11 +60,17 @@ export function ScanStatus({ id }: { id: string }) {
             <h2 id="payout" className="text-[17px] font-semibold">
               INR payout
             </h2>
-            <p className="mb-4 mt-0.5 text-[13px] text-foreground-secondary">
-              After your ZEC is verified, a P2P PAY order (type 2) is funded from the USDC treasury. A liquidity provider sends INR to the receiver. The payout is complete
-              only when the provider confirms it.
-            </p>
-            {c.depositStatus !== "accepted" && !order ? (
+            {!testnet && (
+              <p className="mb-4 mt-0.5 text-[13px] text-foreground-secondary">
+                After your ZEC is verified, a P2P PAY order (type 2) is funded from the USDC treasury. A liquidity provider sends INR to the receiver. The payout is complete
+                only when the provider confirms it.
+              </p>
+            )}
+            {testnet ? (
+              <p className="rounded-panel border border-border bg-surface-2 px-4 py-3 text-[13px] text-foreground-secondary">
+                <strong>INR payout disabled on testnet.</strong> TESTNET TAZ — NO REAL INR. {c.depositStatus === "accepted" ? "Your shielded ZEC payment is real and verified on Zcash testnet; no P2P order was created and nothing was sent to the UPI ID." : "No INR is ever paid on testnet, even after the ZEC payment is verified."}
+              </p>
+            ) : c.depositStatus !== "accepted" && !order ? (
               <p className="rounded-panel border border-border bg-surface-2 px-4 py-3 text-[13px] text-foreground-secondary">The payout starts once your ZEC payment is verified.</p>
             ) : (
               <PayoutProgress order={order} />

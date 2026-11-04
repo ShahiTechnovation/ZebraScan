@@ -33,7 +33,7 @@ export function depositSteps(c: CheckoutIntent, credit?: MerchantCredit | null):
       detail: c.deposit
         ? exception
           ? c.exceptionReason ?? undefined
-          : `${c.deposit.confirmations} of ${c.deposit.requiredConfirmations} confirmations`
+          : c.deposit.confirmations >= c.deposit.requiredConfirmations ? `${c.deposit.confirmations} confirmations (${c.deposit.requiredConfirmations} required)` : `Confirming (${c.deposit.confirmations}/${c.deposit.requiredConfirmations})`
         : "Detected by wallet scanning, not by a screenshot or a reported transaction id.",
       state: state(1),
       at: c.deposit?.detectedAt,

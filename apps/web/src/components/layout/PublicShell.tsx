@@ -9,6 +9,7 @@ import { Drawer } from "@/components/ui/Modal";
 import { ModeBadge, ModeBanner } from "@/components/layout/ModeBanner";
 import { Container } from "./Container";
 import { ConnectWalletButton } from "@/components/screens/ConnectWallet";
+import { useZeb } from "@/providers/ZebProvider";
 
 /** Payment-first public nav (delta spec §9.2): Pay and Receive only; the rest lives in the footer. */
 const NAV = [
@@ -95,6 +96,8 @@ export function PublicHeader({ minimal }: { minimal?: boolean }) {
 }
 
 export function PublicFooter() {
+  const { isDemo, live } = useZeb();
+  const testnet = !isDemo && live?.config?.label === "TEST";
   const cols = [
     {
       title: "Product",
@@ -127,7 +130,7 @@ export function PublicFooter() {
           <ZebLogo />
           <p className="mt-3 text-[13px] leading-relaxed text-foreground-secondary">Pay in ZEC. They get INR.</p>
           <p className="mt-4 inline-flex items-center gap-2 text-label text-accent">
-            <ModeBadge /> Demo · no live funds
+            <ModeBadge /> {testnet ? "Zcash testnet · TAZ has no value · no real INR" : "Demo · no live funds"}
           </p>
         </div>
         {cols.map((c) => (
@@ -147,8 +150,10 @@ export function PublicFooter() {
       </Container>
       <div className="border-t border-border">
         <Container className="py-5 text-micro leading-relaxed text-foreground-muted">
-          Zeb Scan is a frontend demonstration. Demo only. These are simulated transactions, not real payments or bank transfers. Prices shown are
-          illustrative, not market data. Zeb Scan is not affiliated with or endorsed by the Zcash project, UPI/NPCI, Base or P2P.me.
+          {testnet
+            ? "HACKATHON_TESTNET: shielded payments are real Zcash testnet transactions (TAZ, no monetary value), detected by a watch-only viewing key. No INR is ever paid out and balances are not redeemable."
+            : "Zeb Scan is a frontend demonstration. Demo only. These are simulated transactions, not real payments or bank transfers. Prices shown are illustrative, not market data."}{" "}
+          Zeb Scan is not affiliated with or endorsed by the Zcash project, UPI/NPCI, Base or P2P.me.
         </Container>
       </div>
     </footer>
