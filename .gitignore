@@ -11,3 +11,5 @@ playwright-report
 # local runtime artefacts (dev mail, e2e)
 var/
 .next-connected
+
+.vercel

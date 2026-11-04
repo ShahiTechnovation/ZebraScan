@@ -63,3 +63,23 @@ Deposit detection and P2P order progression were exercised through the **demo** 
 * Payment classification: exact within `PAYMENT_TOLERANCE_ZAT` (default 0); underpaid → not accepted, full ZEC refund liability; overpaid → invoice honoured, excess recorded as ZEC refund liability; late (after submission deadline or on a closed intent) → `late_deposit`, refund review. Refunds are never sent automatically.
 * Merchant contract: net INR fixed at confirmation; treasury absorbs FX; credits locked 15 days (configurable, cannot be shortened retroactively — DB trigger).
 * Payout completion = on-chain `completed` (LP-asserted) + dispute window (1800 s) + amount reconciliation; UI says "not a bank statement".
+
+---
+
+## Delta 2026-11-04 (TinyFish rail, Noir/OTP auth, testnet watcher, redesign)
+
+Executed after this delta: `pnpm typecheck` ✅ · `pnpm lint` ✅ · `pnpm test` ✅ (49 backend unit/contract + 40 web) · `pnpm test:integration` ✅ (43 tests, 6 files) · `pnpm build` ✅ · demo browser E2E ✅ 23/23 · connected browser E2E ✅ 2/2 · `pnpm ops:p2p-preflight` ✅ ran → **BLOCKED** (no TINYFISH_API_KEY).
+
+| Item | Status | Evidence / blocker |
+| --- | --- | --- |
+| Modes DEMO / HACKATHON_TESTNET / MAINNET_READONLY / CONTROLLED_LIVE_PILOT | READY | strict aliases; testnet `canSubmitTransactions=false`, no USDC treasury, INR payout shown as disabled |
+| TinyFish payout state machine (§5.2), immutable commands, consent snapshots, per-account lease + fencing, one execute attempt per payout, separate read-only reconciliation, operator approval, hold, dual-control "verified not submitted" | TESTED (scripted port) | `tests/chaos/tinyfish-rail.test.ts` 9 scenarios incl. failed run, ambiguous queue, API rejection, recipient mismatch, provider cancel → exactly-once restore |
+| Live TinyFish / P2P.me | **BLOCKED** | `TINYFISH_API_KEY` missing; unverified A–H in `docs/P2P_BROWSER_CAPABILITY.md`; `eligible_for_payout=false` |
+| SDK on-chain executor | Reference only | no longer constructed outside DEMO; never a fallback |
+| Noir sign-in | TESTED with generated vectors | vendor verifier quirks handled (see FEEDBACK.md); real extension signature not captured |
+| Email OTP | TESTED | hashed codes, 5-attempt cap, no enumeration, not in subject |
+| Passkeys | NOT IMPLEMENTED | shown as unavailable |
+| zkool watcher (memo-matched, Ironwood, reorg detection, watch-only proof) | TESTED against documented schema only | **BLOCKED live**: no Linux runtime here (WSL VM platform not enabled, no Docker/Rust). No testnet txid exists yet |
+| Redesign | DONE | `docs/UI_SIMPLIFICATION_AUDIT.md`, before/after screenshots |
+| Secondary merchant pages | partial | new palette/nav; old layouts |
+| Git history | not created | the project directory is not a git repository; the event requires a new repo with commits made during the hack |
