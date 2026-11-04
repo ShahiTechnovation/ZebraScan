@@ -93,14 +93,24 @@ export async function expireIntents(ctx: CoreContext): Promise<number> {
 }
 
 let zkoolWatchOnlyProven = false;
+let zkoolSchemaChecked = false;
 
-/** HACKATHON_TESTNET: zkool_graphql watch-only account, memo-matched invoices. */
+/**
+ * zkool_graphql watch-only watcher (HACKATHON_TESTNET receiving; MAINNET_READONLY monitoring).
+ * Each poll: sync the account, read incoming notes (mined + mempool), map each note to the invoice
+ * whose diversified address it was paid to, and ingest idempotently. Restart-safe: every event id
+ * is derived from (network, note identity, height, confirmations), so replays are no-ops.
+ */
 export async function pollZkool(ctx: CoreContext): Promise<{ events: number; reorged: number }> {
   const z = ctx.zkool!;
-  const net = "testnet";
+  const net = z.network;
   try {
+    if (!zkoolSchemaChecked) {
+      await z.assertSchema(); // introspection: refuse to run against an incompatible zkool build
+      zkoolSchemaChecked = true;
+    }
     if (!zkoolWatchOnlyProven) {
-      await z.assertWatchOnly(); // refuse to operate a spend-capable account
+      await z.assertWatchOnly(); // refuse to operate a spend-capable account/token
       zkoolWatchOnlyProven = true;
     }
     const st = await z.status();
@@ -112,14 +122,23 @@ export async function pollZkool(ctx: CoreContext): Promise<{ events: number; reo
          nu7_active=EXCLUDED.nu7_active, last_error=NULL, updated_at=now()`,
       [ctx.env, net, st.tipHeight, st.scannedHeight, st.consensusBranchId, st.ironwoodSupported, st.state, st.version, st.nu7Active],
     );
-    const events = await z.snapshot(st.tipHeight);
+    // Do not attribute while the wallet is still catching up from its birth height (WATCHER_CATCHING_UP).
+    if (st.state !== "synced") return { events: 0, reorged: 0 };
+    const rows = await many<{ diversifier_index: string; address: string }>(
+      ctx.db,
+      `SELECT diversifier_index::text AS diversifier_index, address FROM zcash_addresses
+        WHERE environment=$1 AND network=$2 AND wallet_id=$3 AND memo_code IS NULL`,
+      [ctx.env, net, `zkool:${net}:${z.accountId}`],
+    );
+    const byIndex = new Map(rows.map((r) => [r.diversifier_index, r.address]));
+    const events = await z.snapshot(st.tipHeight, byIndex);
     for (const ev of events) await ingestScannerEvent(ctx, ev, "zkool");
-    // Reorg detection: a mined, canonical observation whose txid is no longer reported as mined.
+    // Reorg detection: a mined, canonical observation whose note is no longer reported as mined.
     const minedNow = new Set(events.filter((e) => e.blockHeight !== null).map((e) => e.outputRef));
     const known = await many<{ txid: string; output_ref: string; pool: string; value_zatoshis: string; address: string }>(
       ctx.db,
       `SELECT d.txid, d.output_ref, d.pool, d.value_zatoshis, za.address FROM deposit_observations d JOIN zcash_addresses za ON za.id=d.zcash_address_id
-        WHERE d.environment=$1 AND d.network=$2 AND d.mined AND d.canonical AND d.scan_version=zkool_graphql`,
+        WHERE d.environment=$1 AND d.network=$2 AND d.mined AND d.canonical AND d.scan_version='zkool_graphql'`,
       [ctx.env, net],
     );
     let reorged = 0;
@@ -131,8 +150,8 @@ export async function pollZkool(ctx: CoreContext): Promise<{ events: number; reo
     return { events: events.length, reorged };
   } catch (e) {
     await ctx.db.query(
-      `INSERT INTO scanner_state(environment, network, status, last_error, updated_at) VALUES ($1,$2,error,$3,now())
-       ON CONFLICT (environment, network) DO UPDATE SET status=error, last_error=EXCLUDED.last_error, updated_at=now()`,
+      `INSERT INTO scanner_state(environment, network, status, last_error, updated_at) VALUES ($1,$2,'error',$3,now())
+       ON CONFLICT (environment, network) DO UPDATE SET status='error', last_error=EXCLUDED.last_error, updated_at=now()`,
       [ctx.env, net, (e as Error).message.slice(0, 300)],
     );
     throw e;

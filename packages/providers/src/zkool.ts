@@ -1,47 +1,78 @@
 /**
- * Watch-only Zcash testnet watcher over zkool_graphql (zkool2), per the Free Society Hack testnet
- * guide (v2026-11-02): NU7 + Ironwood, lightwalletd https://testnet.zec.rocks:443.
+ * Watch-only Zcash watcher over zkool_graphql (zkool2 v6.36.0, NU7 + Ironwood), per the Free
+ * Society Hack testnet guide: lightwalletd https://testnet.zec.rocks:443.
  *
- * The zkool account MUST be created from a UFVK (`uviewtest…`) with a `birth` height: it has no
- * spending key (`pay` returns "No Signing Key"). Never point this adapter at a seed account.
+ * Schema facts this adapter relies on were read from the pinned zkool2 source
+ * (rust/src/graphql/{query,mutation,data,mod}.rs @ v6.36.0) and are re-checked at startup by
+ * `assertSchema()` via GraphQL introspection — a missing field/operation fails closed:
+ *   - mutation newAddresses(idAccount) -> Addresses { ua sapling orchard transparent diversifierIndex }
+ *       rotates the account's diversifier index (BEGIN IMMEDIATE in zkool) and returns the new set.
+ *   - mutation synchronizeAccount(idAccount, fast) -> synced height   (account-scoped auth)
+ *   - query transactionsByAccount(idAccount) { txid height notes { id pool value scope address diversifierIndex memo } }
+ *   - query unconfirmedByAccount(idAccount) { txid notes { pool scope value address diversifierIndex memo } }
+ *   - query currentHeight (lightwalletd tip)
+ *   - pool numbering 0 transparent, 1 sapling, 2 orchard, 3 ironwood; scope 0 = external (incoming)
+ *   - JWT: ES256, claims { exp, sub: accountId (0 = admin), write }. A token with write=false
+ *     cannot call `pay` ("Unauthorized"); a watch-only UFVK account cannot sign ("No Signing Key").
  *
- * Invoices are matched by a unique memo code (encrypted inside the shielded note), never by amount.
- * Operations used (documented): currentHeight, synchronize, addressByAccount, transactionsByAccount
- * { txid height time notes { pool value address scope memo } }, unconfirmedByAccount { txid value }.
- *
- * STATUS: contract-tested against a local fake of the documented schema only. Not yet exercised
- * against a live zkool_graphql (no Linux runtime on the build host) — see docs/READINESS_REPORT.md.
+ * Attribution: by default every invoice gets its OWN diversified Unified Address (address mode
+ * "rotate"), and an incoming note is attributed via its diversifier index → never by amount,
+ * never by the account's net delta. "memo" mode (one shared UA + unique encrypted memo code) is an
+ * explicit fallback only.
  */
+import { createPrivateKey, sign as edSign, type KeyObject } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { DomainError, INVOICE_MEMO_RE, addressMatchesNetwork, buildZip321, parseDecimalToMinor } from "@zeb/domain";
 import type { AddressAllocator, AllocatedAddress, DepositEvent, ScannerStatus } from "./zcash";
+
+export type ZkoolNetwork = "testnet" | "mainnet";
+export type ZkoolAddressMode = "rotate" | "memo";
 
 export interface ZkoolConfig {
   url: string; // http(s)://host:port/graphql
   accountId: number;
-  network: "testnet";
-  /** Optional JWT when zkool_graphql runs with -j. */
+  network: ZkoolNetwork;
+  /** Static bearer token (legacy). Prefer jwtPrivateKeyPem: tokens are then short-lived and account-scoped. */
   jwt?: string;
-  /** zkool `pools` argument for addressByAccount; 4 = Ironwood-only UA (documented). */
+  /** ES256 private key (PKCS#8 PEM) whose public half the zkool server was started with (-j). */
+  jwtPrivateKeyPem?: string;
+  /** Address mode; default "rotate" (unique diversified UA per invoice). */
+  addressMode?: ZkoolAddressMode;
+  /** zkool `pools` for addressByAccount in memo mode; 4 = Ironwood receiver only, 6 = + Sapling. */
   pools?: number;
+  /** Wallet birth height (watch-only import) for health display. */
+  birthHeight?: number;
   fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }
 
-interface ZkoolNote {
+export interface ZkoolNote {
+  id?: number;
   pool: number;
   value: number | string;
   address?: string | null;
   scope: number;
+  diversifierIndex?: number | string | null;
   memo?: string | null;
 }
 interface ZkoolTx {
-  id: number;
   txid: string;
   height: number | null;
-  time?: number | string | null;
   notes: ZkoolNote[];
 }
+interface ZkoolUnconfirmed {
+  txid: string;
+  notes?: ZkoolNote[] | null;
+}
+export interface ZkoolAddresses {
+  ua: string | null;
+  sapling?: string | null;
+  orchard?: string | null;
+  transparent?: string | null;
+  diversifierIndex: number | string;
+}
 
-const POOL: Record<number, DepositEvent["pool"] | undefined> = { 0: "transparent", 1: "sapling", 2: "orchard", 3: "ironwood" };
+export const ZKOOL_POOL: Record<number, DepositEvent["pool"] | undefined> = { 0: "transparent", 1: "sapling", 2: "orchard", 3: "ironwood" };
 
 /** Decimal ZEC (number or string, as zkool returns) → zatoshis, exact. */
 export function zecToZat(v: number | string): bigint {
@@ -56,20 +87,75 @@ export function memoCode(memo: string | null | undefined): string | null {
   return m && INVOICE_MEMO_RE.test(m) ? m : null;
 }
 
+function b64url(b: Buffer | string): string {
+  return Buffer.from(b).toString("base64").replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+/** ES256 JWT in zkool's claim shape. `sub` 0 = admin (bootstrap only); otherwise the account id. */
+export function signZkoolJwt(key: KeyObject, claims: { sub: number; write: boolean; ttlSeconds?: number }, nowSec = Math.floor(Date.now() / 1000)): string {
+  const header = b64url(JSON.stringify({ alg: "ES256", typ: "JWT" }));
+  const payload = b64url(JSON.stringify({ sub: claims.sub, write: claims.write, exp: nowSec + (claims.ttlSeconds ?? 300) }));
+  const sig = edSign("sha256", Buffer.from(`${header}.${payload}`), { key, dsaEncoding: "ieee-p1363" });
+  return `${header}.${payload}.${b64url(sig)}`;
+}
+
+export function loadPemFromEnv(env: { file?: string; pem?: string }): string | undefined {
+  if (env.pem) return env.pem.replace(/\\n/g, "\n");
+  if (env.file) return readFileSync(env.file, "utf8");
+  return undefined;
+}
+
+/** Stable note identity shared by mempool and mined sightings of the same output. */
+export function noteRef(txid: string, n: ZkoolNote, occurrence: number): string {
+  return `${txid}:p${n.pool}:d${n.diversifierIndex ?? "x"}:${zecToZat(n.value).toString()}:${occurrence}`;
+}
+
+const REQUIRED_SCHEMA: Record<string, string[]> = {
+  Query: ["currentHeight", "transactionsByAccount", "unconfirmedByAccount", "addressByAccount"],
+  Mutation: ["newAddresses", "synchronizeAccount", "pay"],
+  Note: ["pool", "value", "scope", "address", "diversifierIndex", "memo"],
+  Addresses: ["ua", "diversifierIndex"],
+};
+
 export class ZkoolWatcher implements AddressAllocator {
   readonly kind = "zkool" as const;
-  private ua: string | null = null;
+  readonly addressMode: ZkoolAddressMode;
+  readonly network: ZkoolNetwork;
+  private sharedUa: string | null = null;
+  private key: KeyObject | null = null;
+  private allocLock: Promise<unknown> = Promise.resolve();
+
   constructor(private cfg: ZkoolConfig) {
     if (!/^https?:\/\//.test(cfg.url)) throw new DomainError("SYSTEM_CONFIG", "ZKOOL_GRAPHQL_URL must be http(s)");
+    if (cfg.network !== "testnet" && cfg.network !== "mainnet") throw new DomainError("SYSTEM_CONFIG", "zkool network must be testnet or mainnet");
+    this.network = cfg.network;
+    this.addressMode = cfg.addressMode ?? "rotate";
+    if (cfg.jwtPrivateKeyPem) this.key = createPrivateKey(cfg.jwtPrivateKeyPem);
   }
 
-  async gql<T>(query: string): Promise<T> {
+  get accountId(): number {
+    return this.cfg.accountId;
+  }
+
+  private bearer(): string | undefined {
+    if (this.key) return signZkoolJwt(this.key, { sub: this.cfg.accountId, write: false });
+    return this.cfg.jwt;
+  }
+
+  async gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
     const f = this.cfg.fetchImpl ?? fetch;
-    const res = await f(this.cfg.url, {
-      method: "POST",
-      headers: { "content-type": "application/json", ...(this.cfg.jwt ? { authorization: `Bearer ${this.cfg.jwt}` } : {}) },
-      body: JSON.stringify({ query }),
-    });
+    const token = this.bearer();
+    let res: Response;
+    try {
+      res = await f(this.cfg.url, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(variables ? { query, variables } : { query }),
+        signal: AbortSignal.timeout(this.cfg.timeoutMs ?? 120_000),
+      });
+    } catch (e) {
+      throw new DomainError("WALLET_WATCHER_HTTP", `zkool_graphql unreachable: ${(e as Error).message.slice(0, 120)}`, undefined, { retryable: true });
+    }
     if (!res.ok) throw new DomainError("WALLET_WATCHER_HTTP", `zkool_graphql HTTP ${res.status}`, undefined, { retryable: true });
     const body = (await res.json()) as { data?: T; errors?: Array<{ message: string }> };
     if (body.errors?.length) throw new DomainError("WALLET_WATCHER_ERROR", `zkool_graphql: ${body.errors.map((e) => e.message).join("; ").slice(0, 200)}`, undefined, { retryable: true });
@@ -77,104 +163,184 @@ export class ZkoolWatcher implements AddressAllocator {
     return body.data;
   }
 
-  /** Proves the account is watch-only: `pay` must fail with "No Signing Key". */
-  async assertWatchOnly(): Promise<void> {
+  /** Introspects the live server and fails closed if an operation/field this adapter uses is missing. */
+  async assertSchema(): Promise<Record<string, string[]>> {
+    const names = Object.keys(REQUIRED_SCHEMA);
+    const q = `{ ${names.map((n, i) => `t${i}: __type(name: "${n}") { name fields { name } }`).join(" ")} }`;
+    const d = await this.gql<Record<string, { name: string; fields: Array<{ name: string }> } | null>>(q);
+    const seen: Record<string, string[]> = {};
+    names.forEach((n, i) => {
+      const fields = (d[`t${i}`]?.fields ?? []).map((f) => f.name);
+      seen[n] = fields;
+      const missing = REQUIRED_SCHEMA[n]!.filter((f) => !fields.includes(f));
+      if (missing.length) throw new DomainError("WALLET_SCHEMA_MISMATCH", `zkool_graphql ${n} lacks ${missing.join(", ")} — adapter refuses to run`);
+    });
+    return seen;
+  }
+
+  /**
+   * Proves THIS process cannot spend: `pay` with our token must fail with either
+   * "Unauthorized" (read-only token) or "No Signing Key" (watch-only UFVK account).
+   */
+  async assertWatchOnly(): Promise<"read_only_token" | "no_signing_key"> {
     try {
       await this.gql(`mutation { pay(idAccount: ${this.cfg.accountId}, payment: { recipients: [], confirmations: 1 }) }`);
     } catch (e) {
-      if (/No Signing Key/i.test((e as Error).message)) return;
-      throw new DomainError("WALLET_NOT_WATCH_ONLY", `could not prove the zkool account is watch-only: ${(e as Error).message.slice(0, 160)}`);
+      const m = (e as Error).message;
+      if (/No Signing Key/i.test(m)) return "no_signing_key";
+      if (/Unauthorized/i.test(m)) return "read_only_token";
+      throw new DomainError("WALLET_NOT_WATCH_ONLY", `could not prove the zkool account is watch-only: ${m.slice(0, 160)}`);
     }
     throw new DomainError("WALLET_NOT_WATCH_ONLY", "zkool account accepted a pay call — it holds a spending key; refusing to use it");
   }
 
-  async receivingAddress(): Promise<string> {
-    if (this.ua) return this.ua;
-    const pools = this.cfg.pools ?? 4;
-    const d = await this.gql<{ addressByAccount: { ua: string } }>(`{ addressByAccount(idAccount: ${this.cfg.accountId}, pools: ${pools}) { ua } }`);
-    const ua = d.addressByAccount?.ua;
-    if (!ua || !addressMatchesNetwork(ua, "testnet") || !ua.startsWith("utest1")) throw new DomainError("WALLET_ADDRESS_INVALID", "zkool returned a non-testnet or non-unified address");
-    this.ua = ua;
+  private checkAddress(ua: string | null | undefined): string {
+    const prefix = this.network === "testnet" ? "utest1" : "u1";
+    if (!ua || !ua.startsWith(prefix) || !addressMatchesNetwork(ua, this.network)) {
+      throw new DomainError("WALLET_ADDRESS_INVALID", `zkool returned a non-${this.network} or non-unified address`);
+    }
     return ua;
   }
 
-  async allocate(input: { invoiceId: string; diversifierIndex: bigint; amountZat: bigint; memoCode?: string }): Promise<AllocatedAddress> {
-    if (!input.memoCode || !INVOICE_MEMO_RE.test(input.memoCode)) throw new DomainError("WALLET_MEMO_REQUIRED", "memo-matched watcher requires an invoice memo code");
-    const address = await this.receivingAddress();
+  /** Memo mode only: the account's current shared UA. */
+  async receivingAddress(): Promise<string> {
+    if (this.sharedUa) return this.sharedUa;
+    const pools = this.cfg.pools ?? 4;
+    const d = await this.gql<{ addressByAccount: { ua: string } }>(`{ addressByAccount(idAccount: ${this.cfg.accountId}, pools: ${pools}) { ua } }`);
+    this.sharedUa = this.checkAddress(d.addressByAccount?.ua);
+    return this.sharedUa;
+  }
+
+  /**
+   * Rotate mode: next diversified UA (Ironwood + Sapling receivers, no transparent).
+   * Serialized in-process; skips indexes at or below `minDiversifierIndex` (e.g. after the zkool
+   * DB was recreated and its dindex restarted) so an address is never handed to two invoices.
+   */
+  async nextAddress(minDiversifierIndex = 0n): Promise<{ ua: string; diversifierIndex: bigint; sapling: string | null; orchard: string | null }> {
+    const run = async () => {
+      for (let i = 0; i < 5000; i++) {
+        const d = await this.gql<{ newAddresses: ZkoolAddresses }>(`mutation { newAddresses(idAccount: ${this.cfg.accountId}) { ua sapling orchard transparent diversifierIndex } }`);
+        const a = d.newAddresses;
+        const idx = BigInt(String(a.diversifierIndex).split(".")[0]!);
+        if (idx < minDiversifierIndex) continue;
+        const ua = this.checkAddress(a.ua);
+        return { ua, diversifierIndex: idx, sapling: a.sapling ?? null, orchard: a.orchard ?? null };
+      }
+      throw new DomainError("WALLET_ADDRESS_EXHAUSTED", "could not advance zkool diversifier index past the used range");
+    };
+    const p = this.allocLock.then(run, run);
+    this.allocLock = p.catch(() => undefined);
+    return p;
+  }
+
+  async allocate(input: { invoiceId: string; diversifierIndex: bigint; amountZat: bigint; memoCode?: string; minDiversifierIndex?: bigint }): Promise<AllocatedAddress> {
+    if (this.addressMode === "memo") {
+      if (!input.memoCode || !INVOICE_MEMO_RE.test(input.memoCode)) throw new DomainError("WALLET_MEMO_REQUIRED", "memo-matched watcher requires an invoice memo code");
+      const address = await this.receivingAddress();
+      return {
+        address,
+        addressType: "unified",
+        receivers: (this.cfg.pools ?? 4) === 4 ? ["ironwood"] : ["ironwood", "sapling"],
+        accountId: String(this.cfg.accountId),
+        diversifierIndex: input.diversifierIndex.toString(),
+        walletId: `zkool:${this.network}:${this.cfg.accountId}`,
+        birthdayHeight: this.cfg.birthHeight ?? null,
+        zip321Uri: buildZip321(address, input.amountZat, input.memoCode),
+        memoCode: input.memoCode,
+      };
+    }
+    const a = await this.nextAddress(input.minDiversifierIndex ?? 0n);
     return {
-      address,
+      address: a.ua,
       addressType: "unified",
-      receivers: this.cfg.pools === 4 || this.cfg.pools === undefined ? ["ironwood"] : ["ironwood", "sapling"],
+      receivers: a.sapling ? ["ironwood", "sapling"] : ["ironwood"],
       accountId: String(this.cfg.accountId),
-      diversifierIndex: input.diversifierIndex.toString(),
-      walletId: `zkool:${this.cfg.accountId}`,
-      birthdayHeight: null,
-      zip321Uri: buildZip321(address, input.amountZat, input.memoCode),
-      memoCode: input.memoCode,
+      diversifierIndex: a.diversifierIndex.toString(),
+      walletId: `zkool:${this.network}:${this.cfg.accountId}`,
+      birthdayHeight: this.cfg.birthHeight ?? null,
+      zip321Uri: buildZip321(a.ua, input.amountZat),
     };
   }
 
   async status(): Promise<ScannerStatus> {
-    const synced = await this.gql<{ synchronize: number }>(`mutation { synchronize(idAccounts: [${this.cfg.accountId}], fast: false) }`);
     const h = await this.gql<{ currentHeight: number }>(`{ currentHeight }`);
-    const scanned = Number(synced.synchronize ?? 0);
+    const synced = await this.gql<{ synchronizeAccount: number }>(`mutation { synchronizeAccount(idAccount: ${this.cfg.accountId}, fast: false) }`);
     const tip = Number(h.currentHeight ?? 0);
+    const scanned = Number(synced.synchronizeAccount ?? 0);
+    if (!(tip > 0)) throw new DomainError("WALLET_WATCHER_ERROR", "zkool reported no chain tip");
     return {
-      network: "testnet",
+      network: this.network,
       tipHeight: tip,
       tipHash: "",
       tipTime: new Date().toISOString(),
-      scannedHeight: scanned || tip,
-      consensusBranchId: "77190ad9", // NU7 testnet branch per event guide; zkool exposes no branch query
-      ironwoodSupported: true, // zkool2 Oct-2026 releases produce/scan Ironwood (event guide)
-      nu7Active: true,
-      state: tip > 0 && (scanned === 0 || tip - scanned <= 3) ? "synced" : "syncing",
-      walletBirthday: 0,
+      scannedHeight: scanned,
+      consensusBranchId: "",
+      ironwoodSupported: true, // zkool2 6.36 scans Ironwood (pool 3); verified by schema + live notes
+      nu7Active: this.network === "testnet" ? true : tip >= MAINNET_NU7_HEIGHT,
+      state: scanned > 0 && tip - scanned <= 3 ? "synced" : "syncing",
+      walletBirthday: this.cfg.birthHeight ?? 0,
       version: "zkool_graphql",
     };
   }
 
   /**
    * Snapshot of incoming (scope 0) notes as scanner events. Confirmations = tip - height + 1.
-   * Mempool sightings come from unconfirmedByAccount (display only).
+   * Mempool notes (unconfirmedByAccount, which keeps listing mined txids) become display-only
+   * `note_seen` events. `addressByIndex` maps diversifier index → the invoice UA we issued.
    */
-  async snapshot(tip: number): Promise<DepositEvent[]> {
+  async snapshot(tip: number, addressByIndex: Map<string, string> = new Map()): Promise<DepositEvent[]> {
+    const id = this.cfg.accountId;
     const d = await this.gql<{ transactionsByAccount: ZkoolTx[] }>(
-      `{ transactionsByAccount(idAccount: ${this.cfg.accountId}) { id txid height time notes { pool value address scope memo } } }`,
+      `{ transactionsByAccount(idAccount: ${id}) { txid height notes { id pool value scope address diversifierIndex memo } } }`,
     );
-    const u = await this.gql<{ unconfirmedByAccount: Array<{ txid: string; value: number | string }> }>(`{ unconfirmedByAccount(idAccount: ${this.cfg.accountId}) { txid value } }`).catch(() => ({ unconfirmedByAccount: [] }));
-    const address = await this.receivingAddress();
+    const u = await this.gql<{ unconfirmedByAccount: ZkoolUnconfirmed[] }>(
+      `{ unconfirmedByAccount(idAccount: ${id}) { txid notes { pool scope value address diversifierIndex memo } } }`,
+    ).catch(() => ({ unconfirmedByAccount: [] as ZkoolUnconfirmed[] }));
+    const shared = this.addressMode === "memo" ? await this.receivingAddress() : null;
     const out: DepositEvent[] = [];
     const mined = new Set<string>();
-    for (const t of d.transactionsByAccount ?? []) {
-      if (!/^[0-9a-f]{64}$/.test(t.txid)) continue;
-      t.notes.forEach((n, idx) => {
-        if (n.scope !== 0) return; // scope 1 = change
-        const pool = POOL[n.pool];
-        if (!pool || pool === "orchard") return; // Orchard is sealed on NU6.3: never accept as new funds
-        const confirmations = t.height ? Math.max(0, tip - t.height + 1) : 0;
-        if (t.height) mined.add(t.txid);
+    const toEvents = (txid: string, height: number | null, notes: ZkoolNote[]) => {
+      const occ = new Map<string, number>();
+      for (const n of notes) {
+        if (n.scope !== 0) continue; // scope 1 = change / internal
+        const pool = ZKOOL_POOL[n.pool];
+        if (!pool || pool === "transparent" || pool === "orchard") continue; // shielded only; Orchard is sealed (NU6.3) — never new funds
+        const base = `${n.pool}:${n.diversifierIndex ?? "x"}:${zecToZat(n.value)}`;
+        const k = occ.get(base) ?? 0;
+        occ.set(base, k + 1);
+        const ref = noteRef(txid, n, k);
+        const dindex = n.diversifierIndex === null || n.diversifierIndex === undefined ? null : String(n.diversifierIndex).split(".")[0]!;
+        const address = shared ?? (dindex !== null ? addressByIndex.get(dindex) : undefined) ?? n.address ?? `unmapped:${ref}`;
+        const confirmations = height ? Math.max(0, tip - height + 1) : 0;
         out.push({
-          eventId: `zkool:${t.txid}:${idx}:${t.height ?? "mempool"}:${Math.min(confirmations, 100)}`,
-          kind: t.height ? "note_confirmed" : "note_seen",
-          network: "testnet",
+          eventId: `zkool:${this.network}:${ref}:${height ?? "mempool"}:${Math.min(confirmations, 100)}`,
+          kind: height ? "note_confirmed" : "note_seen",
+          network: this.network,
           pool,
-          txid: t.txid,
-          outputRef: `${t.txid}:note${idx}`,
+          txid,
+          outputRef: ref,
           valueZatoshis: zecToZat(n.value).toString(),
           address,
-          blockHeight: t.height,
+          blockHeight: height,
           blockHash: null,
           confirmations,
           scanVersion: "zkool_graphql",
           memo: n.memo ?? null,
         });
-      });
+      }
+    };
+    for (const t of d.transactionsByAccount ?? []) {
+      if (!/^[0-9a-f]{64}$/.test(t.txid)) continue;
+      if (t.height) mined.add(t.txid);
+      toEvents(t.txid, t.height && t.height > 0 ? t.height : null, t.notes ?? []);
     }
     for (const x of u.unconfirmedByAccount ?? []) {
-      if (mined.has(x.txid)) continue; // zkool keeps listing mined txids here (documented)
-      // No per-note memo for mempool rows: display-only sighting, never matched to an invoice by amount.
+      if (mined.has(x.txid) || !/^[0-9a-f]{64}$/.test(x.txid)) continue; // zkool keeps listing mined txids (documented)
+      toEvents(x.txid, null, x.notes ?? []);
     }
     return out;
   }
 }
+
+/** Zcash Foundation (Zebra 7.0.0 release, 2026-10-22): mainnet NU7 scheduled at this height. Display only — re-verify before launch. */
+export const MAINNET_NU7_HEIGHT = 3_543_405;

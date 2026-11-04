@@ -57,7 +57,7 @@ export interface DepositEvent {
 
 export interface AddressAllocator {
   readonly kind: "gateway" | "demo" | "zkool";
-  allocate(input: { invoiceId: string; network: ZcashNetwork | "demo"; privacyMode: "shielded" | "transparent"; diversifierIndex: bigint; amountZat: bigint; memoCode?: string }): Promise<AllocatedAddress>;
+  allocate(input: { invoiceId: string; network: ZcashNetwork | "demo"; privacyMode: "shielded" | "transparent"; diversifierIndex: bigint; amountZat: bigint; memoCode?: string; minDiversifierIndex?: bigint }): Promise<AllocatedAddress>;
 }
 
 export interface GatewayConfig {

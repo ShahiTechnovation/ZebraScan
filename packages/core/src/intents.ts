@@ -112,13 +112,21 @@ export async function createIntent(ctx: CoreContext, input: CreateIntentInput): 
   } else if (!input.merchantId) throw new DomainError("VALIDATION_MERCHANT", "Merchant checkout requires a merchant");
 
   const network = ctx.env === "demo" ? "demo" : ctx.cfg.zcashNetwork!;
-  const accountId = ctx.cfg.zcashGateway?.accountId ?? "demo";
+  const accountId = ctx.cfg.zcashGateway?.accountId ?? (ctx.zkool ? String(ctx.zkool.accountId) : "demo");
   const intentId = newId("intent");
   const index = await burnAddressIndex(ctx, network, accountId);
-  // Memo-matched watchers (zkool): one high-entropy ASCII code per invoice, carried in the encrypted memo.
-  const memoCode = ctx.allocator.kind === "zkool" ? `ZEB-${randomToken(10).toUpperCase().slice(0, 16)}` : undefined;
-  if (ctx.allocator.kind === "zkool" && pre.privacy_mode !== "shielded") throw new DomainError("QUOTE_PRIVACY_NOT_ALLOWED", "Memo-matched testnet invoices require a shielded payment");
-  const addr = await ctx.allocator.allocate({ invoiceId: intentId, network: network as "testnet", privacyMode: pre.privacy_mode, diversifierIndex: index, amountZat: BigInt(pre.zec_zatoshis), memoCode });
+  // zkool: default = unique diversified UA per invoice (matched by diversifier index). Memo mode
+  // (shared UA + one high-entropy code in the encrypted memo) is an explicit fallback only.
+  const memoMode = ctx.allocator.kind === "zkool" && ctx.zkool?.addressMode === "memo";
+  const memoCode = memoMode ? `ZEB-${randomToken(10).toUpperCase().slice(0, 16)}` : undefined;
+  if (ctx.allocator.kind === "zkool" && pre.privacy_mode !== "shielded") throw new DomainError("QUOTE_PRIVACY_NOT_ALLOWED", "Zcash testnet invoices require a shielded payment");
+  let minDiversifierIndex: bigint | undefined;
+  if (ctx.allocator.kind === "zkool" && !memoMode && ctx.zkool) {
+    // Never hand out an index we already issued (e.g. the zkool DB was recreated and its dindex restarted).
+    const used = await one<{ m: string | null }>(ctx.db, `SELECT max(diversifier_index)::text AS m FROM zcash_addresses WHERE environment=$1 AND network=$2 AND wallet_id=$3`, [ctx.env, network, `zkool:${ctx.zkool.network}:${ctx.zkool.accountId}`]);
+    minDiversifierIndex = used.m ? BigInt(used.m) + 1n : 0n;
+  }
+  const addr = await ctx.allocator.allocate({ invoiceId: intentId, network: network as "testnet", privacyMode: pre.privacy_mode, diversifierIndex: index, amountZat: BigInt(pre.zec_zatoshis), memoCode, minDiversifierIndex });
   if (ctx.env !== "demo" && !addressMatchesNetwork(addr.address, ctx.cfg.zcashNetwork!)) throw new DomainError("WALLET_NETWORK_MISMATCH", "gateway returned an address for the wrong network");
 
   const created = await tx(ctx.db, async (t) => {

@@ -4,6 +4,7 @@
  * below are conservative PROPOSALS, not verified partner facts (spec §7.3).
  */
 import { DomainError, parseEnvironment, zcashNetworkFor, type Environment, type ZcashNetwork } from "@zeb/domain";
+import { loadPemFromEnv } from "@zeb/providers";
 
 export interface Policy {
   quoteLifetimeSec: number;
@@ -52,7 +53,7 @@ export interface Config {
   kms: { provider: "local"; keks: string; activeKek: string };
   zcashGateway: { url: string; accountId: string; tls?: { certPath: string; keyPath: string; caPath: string } } | null;
   /** HACKATHON_TESTNET watch-only watcher (zkool_graphql UFVK account, memo-matched invoices). */
-  zkool: { url: string; accountId: number; jwt?: string; pools: number } | null;
+  zkool: { url: string; accountId: number; network: "testnet" | "mainnet"; jwt?: string; jwtPrivateKeyPem?: string; pools: number; addressMode: "rotate" | "memo"; birthHeight?: number } | null;
   p2p: { chainId: string; rpcUrl: string; diamondAddress: string; subgraphUrl: string; usdcAddress: string; diamondCodeHash?: string } | null;
   treasuryAddress: string | null;
   signer: { mode: "none" } | { mode: "testnet-file"; keyFile: string } | { mode: "remote"; url: string; authHeader?: string };
@@ -120,9 +121,34 @@ export function loadConfig(env: Env = process.env): Config {
 
   let zkool: Config["zkool"] = null;
   if (env.ZKOOL_GRAPHQL_URL) {
-    if (environment !== "testnet") throw new DomainError("SYSTEM_CONFIG", "ZKOOL_GRAPHQL_URL (memo-matched watcher) is only permitted in HACKATHON_TESTNET");
+    // zkool watch-only watcher: HACKATHON_TESTNET (receiving) or MAINNET_READONLY (monitoring only;
+    // mainnet-readonly never opens payouts). Never in demo or mainnet-enabled.
+    if (environment !== "testnet" && environment !== "mainnet-readonly") throw new DomainError("SYSTEM_CONFIG", "ZKOOL_GRAPHQL_URL is only permitted in HACKATHON_TESTNET or MAINNET_READONLY");
     if (zcashGateway) throw new DomainError("SYSTEM_CONFIG", "configure either ZCASH_GATEWAY_URL or ZKOOL_GRAPHQL_URL, not both");
-    zkool = { url: env.ZKOOL_GRAPHQL_URL, accountId: int(env, "ZKOOL_ACCOUNT_ID", 1, 1, 1_000_000), jwt: env.ZKOOL_JWT || undefined, pools: int(env, "ZKOOL_ADDRESS_POOLS", 4, 1, 15) };
+    const zNet = environment === "testnet" ? "testnet" : "mainnet";
+    if (env.ZKOOL_NETWORK && env.ZKOOL_NETWORK !== zNet) throw new DomainError("SYSTEM_CONFIG", `ZKOOL_NETWORK=${env.ZKOOL_NETWORK} conflicts with environment ${environment} (expects ${zNet})`);
+    if (env.ZCASH_SPEND_KEY_REF) throw new DomainError("SYSTEM_CONFIG", "ZCASH_SPEND_KEY_REF must be blank on API/worker processes (watch-only)");
+    const mode = env.ZKOOL_ADDRESS_MODE ?? "rotate";
+    if (mode !== "rotate" && mode !== "memo") throw new DomainError("SYSTEM_CONFIG", "ZKOOL_ADDRESS_MODE must be rotate or memo");
+    let pem: string | undefined;
+    try {
+      pem = loadPemFromEnv({ file: env.ZKOOL_JWT_PRIVATE_KEY_FILE, pem: env.ZKOOL_JWT_PRIVATE_KEY });
+    } catch (e) {
+      throw new DomainError("SYSTEM_CONFIG", `ZKOOL_JWT_PRIVATE_KEY_FILE unreadable: ${(e as Error).message.slice(0, 80)}`);
+    }
+    if (!pem && !env.ZKOOL_JWT && !/^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(env.ZKOOL_GRAPHQL_URL)) {
+      throw new DomainError("SYSTEM_CONFIG", "a non-local ZKOOL_GRAPHQL_URL requires JWT auth (ZKOOL_JWT_PRIVATE_KEY_FILE)");
+    }
+    zkool = {
+      url: env.ZKOOL_GRAPHQL_URL,
+      accountId: int(env, "ZKOOL_ACCOUNT_ID", 1, 1, 1_000_000),
+      network: zNet,
+      jwt: env.ZKOOL_JWT || undefined,
+      jwtPrivateKeyPem: pem,
+      pools: int(env, "ZKOOL_ADDRESS_POOLS", 4, 1, 15),
+      addressMode: mode,
+      birthHeight: env.ZKOOL_BIRTH_HEIGHT ? int(env, "ZKOOL_BIRTH_HEIGHT", 0, 1, 100_000_000) : undefined,
+    };
   }
 
   const p2p =

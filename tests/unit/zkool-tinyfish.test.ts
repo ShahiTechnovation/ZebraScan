@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { generateKeyPairSync, verify } from "node:crypto";
 import { buildZip321, encodeZip321Memo, assertZip321Matches } from "@zeb/domain";
 import {
   ZkoolWatcher,
+  signZkoolJwt,
   memoCode,
   zecToZat,
   buildExecuteGoal,
@@ -25,17 +27,69 @@ function fakeZkool(handlers: Record<string, unknown>, calls: string[] = []) {
   }) as unknown as typeof fetch;
 }
 
-describe("zkool_graphql watcher (documented schema, fake server)", () => {
-  it("refuses a spend-capable account and accepts a watch-only one", async () => {
+describe("zkool_graphql watcher (schema from pinned zkool2 6.36.0 source, fake server)", () => {
+  it("refuses a spend-capable account; accepts No Signing Key (watch-only) or Unauthorized (read-only token)", async () => {
     const watchOnly = new ZkoolWatcher({ url: "http://127.0.0.1:8000/graphql", accountId: 1, network: "testnet", fetchImpl: fakeZkool({ pay: { errors: [{ message: "No Signing Key" }] } }) });
-    await expect(watchOnly.assertWatchOnly()).resolves.toBeUndefined();
+    await expect(watchOnly.assertWatchOnly()).resolves.toBe("no_signing_key");
+    const ro = new ZkoolWatcher({ url: "http://127.0.0.1:8000/graphql", accountId: 1, network: "testnet", fetchImpl: fakeZkool({ pay: { errors: [{ message: "Unauthorized" }] } }) });
+    await expect(ro.assertWatchOnly()).resolves.toBe("read_only_token");
     const spendy = new ZkoolWatcher({ url: "http://127.0.0.1:8000/graphql", accountId: 1, network: "testnet", fetchImpl: fakeZkool({ pay: { data: { pay: TX("a") } } }) });
     await expect(spendy.assertWatchOnly()).rejects.toThrow(/spending key/);
   });
 
-  it("allocates a memo-tagged ZIP-321 invoice on an Ironwood-only UA (pools: 4)", async () => {
+  it("signs short-lived, account-scoped, read-only ES256 JWTs in zkool's claim shape", async () => {
+    const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const tok = signZkoolJwt(privateKey, { sub: 7, write: false }, 1_000);
+    const [h, p, sig] = tok.split(".");
+    expect(JSON.parse(Buffer.from(h!, "base64url").toString())).toEqual({ alg: "ES256", typ: "JWT" });
+    expect(JSON.parse(Buffer.from(p!, "base64url").toString())).toEqual({ sub: 7, write: false, exp: 1_300 });
+    expect(verify("sha256", Buffer.from(`${h}.${p}`), { key: publicKey, dsaEncoding: "ieee-p1363" }, Buffer.from(sig!, "base64url"))).toBe(true);
+    const seen: string[] = [];
+    const w = new ZkoolWatcher({
+      url: "https://z.example/graphql",
+      accountId: 7,
+      network: "testnet",
+      jwtPrivateKeyPem: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+      fetchImpl: (async (_u: string, init: RequestInit) => {
+        seen.push(String((init.headers as Record<string, string>).authorization));
+        return new Response(JSON.stringify({ data: { currentHeight: 5 } }));
+      }) as unknown as typeof fetch,
+    });
+    await w.gql("{ currentHeight }");
+    expect(seen[0]).toMatch(/^Bearer ey/);
+  });
+
+  it("rotate mode: one fresh diversified UA per invoice, no memo, skips already-issued indexes, serialized", async () => {
+    let d = 0;
+    const w = new ZkoolWatcher({
+      url: "http://x/graphql",
+      accountId: 3,
+      network: "testnet",
+      fetchImpl: fakeZkool({
+        newAddresses: () => {
+          d++;
+          return { data: { newAddresses: { ua: `utest1${"pzry9x8gf2tvdw"[d]}${"q".repeat(100)}`, sapling: null, orchard: null, transparent: null, diversifierIndex: d } } };
+        },
+      }),
+    });
+    const [a, b] = await Promise.all([
+      w.allocate({ invoiceId: "pi_a", diversifierIndex: 0n, amountZat: 1_000_000n }),
+      w.allocate({ invoiceId: "pi_b", diversifierIndex: 1n, amountZat: 1_000_000n }),
+    ]);
+    expect(a.address).not.toBe(b.address);
+    expect(new Set([a.diversifierIndex, b.diversifierIndex]).size).toBe(2);
+    expect(a.zip321Uri).toBe(`zcash:${a.address}?amount=0.01`);
+    expect(a.memoCode).toBeUndefined();
+    expect(a.walletId).toBe("zkool:testnet:3");
+    const c = await w.allocate({ invoiceId: "pi_c", diversifierIndex: 2n, amountZat: 1n, minDiversifierIndex: 10n });
+    expect(c.diversifierIndex).toBe("10");
+    const bad = new ZkoolWatcher({ url: "http://x/graphql", accountId: 3, network: "testnet", fetchImpl: fakeZkool({ newAddresses: { data: { newAddresses: { ua: `u1${"q".repeat(100)}`, diversifierIndex: 1 } } } }) });
+    await expect(bad.allocate({ invoiceId: "pi_x", diversifierIndex: 0n, amountZat: 1n })).rejects.toThrow(/non-testnet/);
+  });
+
+  it("memo mode (explicit fallback): shared Ironwood-only UA (pools: 4) + memo code in the URI", async () => {
     const calls: string[] = [];
-    const w = new ZkoolWatcher({ url: "http://x/graphql", accountId: 3, network: "testnet", fetchImpl: fakeZkool({ addressByAccount: { data: { addressByAccount: { ua: UA } } } }, calls) });
+    const w = new ZkoolWatcher({ url: "http://x/graphql", accountId: 3, network: "testnet", addressMode: "memo", fetchImpl: fakeZkool({ addressByAccount: { data: { addressByAccount: { ua: UA } } } }, calls) });
     const a = await w.allocate({ invoiceId: "pi_x", diversifierIndex: 0n, amountZat: 1_234_567n, memoCode: "ZEB-ABCDEFGHJKMNPQRS" });
     expect(calls[0]).toContain("pools: 4");
     expect(a.zip321Uri).toBe(`zcash:${UA}?amount=0.01234567&memo=${encodeZip321Memo("ZEB-ABCDEFGHJKMNPQRS")}`);
@@ -44,29 +98,61 @@ describe("zkool_graphql watcher (documented schema, fake server)", () => {
     await expect(w.allocate({ invoiceId: "pi_y", diversifierIndex: 1n, amountZat: 1n })).rejects.toThrow(/memo/);
   });
 
-  it("maps incoming scope-0 notes to events; ignores change, Orchard and mempool-only rows; confirmations from height", async () => {
+  it("maps incoming scope-0 notes by diversifier index; ignores change/Orchard/transparent; mempool note keeps the same identity when mined", async () => {
+    const UA5 = `utest1${"5".repeat(100)}`;
     const w = new ZkoolWatcher({
       url: "http://x/graphql",
       accountId: 1,
       network: "testnet",
       fetchImpl: fakeZkool({
-        addressByAccount: { data: { addressByAccount: { ua: UA } } },
         transactionsByAccount: {
           data: {
             transactionsByAccount: [
-              { id: 1, txid: TX("a"), height: 100, notes: [{ pool: 3, value: 0.0123, scope: 0, memo: "ZEB-ABCDEFGHJKMNPQRS" }, { pool: 3, value: 0.5, scope: 1, memo: null }] },
-              { id: 2, txid: TX("b"), height: 101, notes: [{ pool: 2, value: 1, scope: 0, memo: null }] },
-              { id: 3, txid: TX("c"), height: null, notes: [{ pool: 1, value: "0.00000001", scope: 0, memo: "hi" }] },
+              { txid: TX("a"), height: 100, notes: [{ id: 1, pool: 3, value: 0.0123, scope: 0, diversifierIndex: 5, address: "x", memo: null }, { id: 2, pool: 3, value: 0.5, scope: 1, diversifierIndex: 0, memo: null }] },
+              { txid: TX("b"), height: 101, notes: [{ id: 3, pool: 2, value: 1, scope: 0, diversifierIndex: 5, memo: null }, { id: 4, pool: 0, value: 1, scope: 0, memo: null }] },
+              { txid: TX("d"), height: 102, notes: [{ id: 5, pool: 1, value: 0.2, scope: 0, diversifierIndex: 99, address: "ztestsapling1unknown", memo: null }] },
             ],
           },
         },
-        unconfirmedByAccount: { data: { unconfirmedByAccount: [{ txid: TX("a"), value: 0.0123 }] } },
+        unconfirmedByAccount: {
+          data: {
+            unconfirmedByAccount: [
+              { txid: TX("a"), notes: [{ pool: 3, value: 0.0123, scope: 0, diversifierIndex: 5 }] },
+              { txid: TX("c"), notes: [{ pool: 3, value: "0.00000001", scope: 0, diversifierIndex: 5 }, { pool: 3, value: 2, scope: 1, diversifierIndex: 0 }] },
+            ],
+          },
+        },
       }),
     });
-    const ev = await w.snapshot(104);
-    expect(ev).toHaveLength(2);
-    expect(ev[0]).toMatchObject({ kind: "note_confirmed", pool: "ironwood", txid: TX("a"), valueZatoshis: "1230000", confirmations: 5, memo: "ZEB-ABCDEFGHJKMNPQRS" });
-    expect(ev[1]).toMatchObject({ kind: "note_seen", pool: "sapling", valueZatoshis: "1", blockHeight: null });
+    const ev = await w.snapshot(104, new Map([["5", UA5]]));
+    expect(ev).toHaveLength(3);
+    expect(ev[0]).toMatchObject({ kind: "note_confirmed", pool: "ironwood", txid: TX("a"), valueZatoshis: "1230000", confirmations: 5, address: UA5 });
+    expect(ev[1]).toMatchObject({ kind: "note_confirmed", pool: "sapling", address: "ztestsapling1unknown" });
+    expect(ev[2]).toMatchObject({ kind: "note_seen", pool: "ironwood", txid: TX("c"), valueZatoshis: "1", blockHeight: null, address: UA5 });
+    const mined = new ZkoolWatcher({
+      url: "http://x/graphql",
+      accountId: 1,
+      network: "testnet",
+      fetchImpl: fakeZkool({
+        transactionsByAccount: { data: { transactionsByAccount: [{ txid: TX("c"), height: 103, notes: [{ id: 9, pool: 3, value: "0.00000001", scope: 0, diversifierIndex: 5 }] }] } },
+        unconfirmedByAccount: { data: { unconfirmedByAccount: [] } },
+      }),
+    });
+    const ev2 = await mined.snapshot(104, new Map([["5", UA5]]));
+    expect(ev2[0]!.outputRef).toBe(ev[2]!.outputRef);
+    expect(ev2[0]!.eventId).not.toBe(ev[2]!.eventId);
+  });
+
+  it("introspection fails closed when the server lacks an operation the adapter uses", async () => {
+    const full: Record<string, string[]> = {
+      Query: ["currentHeight", "transactionsByAccount", "unconfirmedByAccount", "addressByAccount"],
+      Mutation: ["newAddresses", "synchronizeAccount", "pay"],
+      Note: ["pool", "value", "scope", "address", "diversifierIndex", "memo"],
+      Addresses: ["ua", "diversifierIndex"],
+    };
+    const mk = (types: Record<string, string[]>) => fakeZkool({ __type: { data: Object.fromEntries(Object.values(types).map((f, i) => [`t${i}`, { name: "x", fields: f.map((name) => ({ name })) }])) } });
+    await expect(new ZkoolWatcher({ url: "http://x/graphql", accountId: 1, network: "testnet", fetchImpl: mk(full) }).assertSchema()).resolves.toBeTruthy();
+    await expect(new ZkoolWatcher({ url: "http://x/graphql", accountId: 1, network: "testnet", fetchImpl: mk({ ...full, Mutation: ["synchronizeAccount", "pay"] }) }).assertSchema()).rejects.toThrow(/newAddresses/);
   });
 
   it("parses exact amounts and memo codes", () => {
@@ -75,7 +161,7 @@ describe("zkool_graphql watcher (documented schema, fake server)", () => {
     expect(() => zecToZat("1e-8")).toThrow();
     expect(memoCode(" ZEB-ABCDEFGHJKMNPQRS ")).toBe("ZEB-ABCDEFGHJKMNPQRS");
     expect(memoCode("order 42")).toBeNull();
-    expect(buildZip321("tmXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", 1n, "ZEB-ABCDEFGHJKMNPQRS")).not.toContain("memo"); // never memo to transparent
+    expect(buildZip321("tmXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", 1n, "ZEB-ABCDEFGHJKMNPQRS")).not.toContain("memo");
   });
 });
 
