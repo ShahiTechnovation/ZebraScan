@@ -9,6 +9,7 @@ import { usesTreasury, type CoreContext } from "./context";
 import { emitResource, enqueueJob } from "./events";
 
 export async function unlockCredit(ctx: CoreContext, creditId: string): Promise<"unlocked" | "not_due" | "blocked" | "noop"> {
+  if (ctx.env === "testnet" || ctx.env === "mainnet-readonly") return "blocked";
   return tx(ctx.db, async (t) => {
     const c = await maybeOne<{ id: string; merchant_id: string; intent_id: string | null; status: CreditStatus; unlocks_at: Date; amount_inr_paise: string; version: number }>(
       t,

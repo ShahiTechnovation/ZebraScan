@@ -39,7 +39,7 @@ export default function OpengraphImage() {
             Scan & Pay, merchant QR terminal and payment links — Zcash payments connected to local INR settlement experiences.
           </div>
         </div>
-        <div style={{ display: "flex", fontSize: 22, color: "#76571C" }}>Demo frontend · no live funds</div>
+        <div style={{ display: "flex", fontSize: 22, color: "#76571C" }}>Shielded Point-of-Sale & Settlement</div>
       </div>
     ),
     size,

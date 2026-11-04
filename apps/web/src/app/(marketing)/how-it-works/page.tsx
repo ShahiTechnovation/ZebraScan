@@ -4,7 +4,6 @@ import { ArrowRight, Eye, EyeOff, Link2, QrCode, ScanLine } from "lucide-react";
 import { Container } from "@/components/layout/Container";
 import { ButtonLink } from "@/components/ui/Button";
 import { Section, SectionIntro } from "@/components/marketing/Primitives";
-import { demoConfig } from "@/config/demo";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -38,7 +37,7 @@ const MODES = [
       ["Withdraw", "Request a withdrawal. A P2P SELL order sends INR to your registered UPI-linked account when a provider completes it."],
     ],
     outcomes: ["Credit locked during cooldown", "Available to withdraw after cooldown", "Underpaid, overpaid or late payments held for refund — no credit"],
-    cta: { href: "/login?next=/app/terminal", label: "Open the terminal demo" },
+    cta: { href: "/login?next=/app/terminal", label: "Open the terminal" },
   },
   {
     id: "payment-links",
@@ -52,7 +51,7 @@ const MODES = [
       ["Same settlement", "Credits follow the same cooldown and withdrawal path as the terminal."],
     ],
     outcomes: ["Active", "Exhausted — use limit reached by confirmed payments", "Expired or revoked — no new checkouts"],
-    cta: { href: "/login?next=/app/links/new", label: "Create a demo link" },
+    cta: { href: "/login?next=/app/links/new", label: "Create payment link" },
   },
 ];
 
@@ -148,7 +147,7 @@ export default function HowItWorksPage() {
             ["Payout waiting", "A Scan & Pay payout waits for ZEC confirmations, then for a liquidity provider to accept and complete the INR transfer. It isn't complete until the provider confirms."],
             [
               "Merchant cooldown",
-              `New merchant credits are locked before they can be withdrawn. This demo uses an example ${demoConfig.cooldownDays}-day policy — not a live contractual promise.`,
+              "New merchant credits are protected during an initial cooldown window to verify on-chain finality before withdrawal.",
             ],
             ["Balances are liabilities", "A merchant's balance is an INR-denominated amount Zeb Scan owes. It is not a bank deposit. A live service must back it with reserved liquidity."],
           ].map(([t, b]) => (

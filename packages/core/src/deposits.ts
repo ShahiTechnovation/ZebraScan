@@ -12,7 +12,7 @@
 import { createHash } from "node:crypto";
 import { many, maybeOne, one, tx, type Tx } from "@zeb/db";
 import { classifyPayment, DomainError, INVOICE_MEMO_RE, newId, payoutMachine, type IntentStatus } from "@zeb/domain";
-import { postJournal, treasury } from "@zeb/ledger";
+import { postJournal, reverseJournal, treasury } from "@zeb/ledger";
 import { usesTreasury, type CoreContext } from "./context";
 import { audit, emitResource, enqueueJob, raiseException } from "./events";
 import { holdPolicy, lockIntent, transitionIntent, type IntentRow } from "./intents";
@@ -40,48 +40,81 @@ export interface ScannerEvent {
 const OPEN: IntentStatus[] = ["awaiting_zec", "deposit_seen", "confirming"];
 const LATE_TARGETS: IntentStatus[] = ["expired_without_funds", "cancelled"];
 
+interface Observation {
+  id: string; first_seen_at: Date; accepted: boolean; canonical: boolean;
+  intent_id: string | null; zcash_address_id: string | null; value_zatoshis: string;
+  custody_booked: boolean; custody_revision: number;
+}
+
+async function custody(t: Tx, ctx: CoreContext, obs: Observation, ev: ScannerEvent) {
+  const event = `custody:${obs.id}:${obs.custody_revision}`;
+  if (ev.kind === "note_reorged" && obs.custody_booked) {
+    await reverseJournal(t, ctx.env, event, `${event}:reorg`, "Noncanonical refundable output; hold for canonical rescan");
+    await t.query(`UPDATE deposit_observations SET custody_booked=false, custody_revision=custody_revision+1 WHERE id=$1`, [obs.id]);
+  } else if (!obs.custody_booked && ev.kind !== "note_reorged" && ev.blockHeight !== null && ev.confirmations >= ctx.cfg.policy.requiredConfirmations) {
+    await postJournal(t, ctx.env, { eventId: event, kind: "refund_liability", memo: `Confirmed custody output ${obs.id}; requires refund review`, lines: [
+      { account: "zcash_asset", debit: BigInt(obs.value_zatoshis) },
+      { account: "customer_refunds_due", credit: BigInt(obs.value_zatoshis) },
+    ] });
+    await t.query(`UPDATE deposit_observations SET custody_booked=true WHERE id=$1`, [obs.id]);
+  }
+}
+
 export async function ingestScannerEvent(ctx: CoreContext, ev: ScannerEvent, source = "zcash-gateway"): Promise<{ accepted: boolean; duplicate: boolean }> {
   if (ctx.env !== "demo" && ev.network !== ctx.cfg.zcashNetwork) throw new DomainError("WALLET_NETWORK_MISMATCH", "event network does not match environment", undefined, { status: 400 });
   return tx(ctx.db, async (t) => {
+    // Serialize all versions of an output, including formerly unattributed outputs.
+    await t.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, [JSON.stringify([ctx.env, ev.network, ev.pool, ev.txid, ev.outputRef])]);
     const payloadHash = createHash("sha256").update(JSON.stringify(ev)).digest("hex");
     const ins = await t.query(`INSERT INTO inbound_event_receipts(source, event_id, environment, payload_hash) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`, [source, ev.eventId, ctx.env, payloadHash]);
     if (ins.rowCount === 0) return { accepted: false, duplicate: true };
 
     // Matching: memo code (memo-matched watcher) or unique address — never by amount.
     const code = ev.memo?.trim() && INVOICE_MEMO_RE.test(ev.memo.trim()) ? ev.memo.trim() : null;
-    const addr = code
+    const persisted = await maybeOne<Observation>(t, `SELECT * FROM deposit_observations WHERE environment=$1 AND network=$2 AND pool=$3 AND txid=$4 AND output_ref=$5 FOR UPDATE`, [ctx.env, ev.network, ev.pool, ev.txid, ev.outputRef]);
+    if (persisted && BigInt(persisted.value_zatoshis) !== BigInt(ev.valueZatoshis)) throw new DomainError("WALLET_OUTPUT_CONFLICT", "wallet output value changed");
+    const addr = persisted?.intent_id ? { id: persisted.zcash_address_id!, intent_id: persisted.intent_id } : code
       ? await maybeOne<{ id: string; intent_id: string }>(t, `SELECT id, intent_id FROM zcash_addresses WHERE environment=$1 AND network=$2 AND address=$3 AND memo_code=$4`, [ctx.env, ev.network, ev.address, code])
       : await maybeOne<{ id: string; intent_id: string }>(t, `SELECT id, intent_id FROM zcash_addresses WHERE environment=$1 AND network=$2 AND address=$3 AND memo_code IS NULL`, [ctx.env, ev.network, ev.address]);
-    if (!addr) {
-      // Owned by our viewing key but not mapped to an invoice: never guess; escalate.
-      // Owned by our viewing key but no matching invoice memo/address (e.g. missing or mistyped memo): escalate for manual refund.
-      await raiseException(t, ctx.env, { kind: "unattributed_deposit", severity: "urgent", details: { txid: ev.txid, outputRef: ev.outputRef, value: ev.valueZatoshis, memoPresent: !!ev.memo } });
-      return { accepted: false, duplicate: false };
-    }
-    const intent = await lockIntent(t, ctx, addr.intent_id);
+    const intent = addr ? await lockIntent(t, ctx, addr.intent_id) : null;
     const mined = ev.blockHeight !== null && ev.kind !== "note_reorged";
 
-    const obs = await one<{ id: string; first_seen_at: Date; accepted: boolean; canonical: boolean }>(
+    const obs = await one<Observation>(
       t,
-      `INSERT INTO deposit_observations(id, environment, network, pool, txid, output_ref, value_zatoshis, zcash_address_id, intent_id, block_height, block_hash, mined, confirmations, canonical, scan_version)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+      `INSERT INTO deposit_observations(id, environment, network, pool, txid, output_ref, value_zatoshis, zcash_address_id, intent_id, block_height, block_hash, mined, confirmations, canonical, scan_version, observed_address)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        ON CONFLICT (environment, network, pool, txid, output_ref) DO UPDATE SET
+         intent_id=coalesce(deposit_observations.intent_id, EXCLUDED.intent_id), zcash_address_id=coalesce(deposit_observations.zcash_address_id, EXCLUDED.zcash_address_id),
          block_height = EXCLUDED.block_height, block_hash = EXCLUDED.block_hash, mined = EXCLUDED.mined,
          confirmations = EXCLUDED.confirmations, canonical = EXCLUDED.canonical, scan_version = EXCLUDED.scan_version,
          reorged_at = CASE WHEN EXCLUDED.canonical THEN deposit_observations.reorged_at ELSE now() END, updated_at = now()
-       RETURNING id, first_seen_at, accepted, canonical`,
-      [newId("deposit"), ctx.env, ev.network, ev.pool, ev.txid, ev.outputRef, ev.valueZatoshis, addr.id, intent.id, ev.blockHeight, ev.blockHash, mined, ev.kind === "note_reorged" ? 0 : ev.confirmations, ev.kind !== "note_reorged", ev.scanVersion],
+       RETURNING *`,
+      [newId("deposit"), ctx.env, ev.network, ev.pool, ev.txid, ev.outputRef, ev.valueZatoshis, addr?.id ?? null, intent?.id ?? null, ev.blockHeight, ev.blockHash, mined, ev.kind === "note_reorged" ? 0 : ev.confirmations, ev.kind !== "note_reorged", ev.scanVersion, ev.address],
     );
 
+    if (!intent) {
+      await custody(t, ctx, obs, ev);
+      await raiseException(t, ctx.env, { kind: "unattributed_deposit", severity: "urgent", depositId: obs.id, details: { txid: ev.txid, outputRef: ev.outputRef, value: ev.valueZatoshis, memoPresent: !!ev.memo } });
+      return { accepted: false, duplicate: false };
+    }
+
     if (ev.kind === "note_reorged") {
+      await custody(t, ctx, obs, ev);
       await handleReorg(t, ctx, intent, obs.id, obs.accepted);
       return { accepted: true, duplicate: false };
+    }
+
+    if (persisted && !persisted.intent_id && obs.custody_booked) {
+      // Late attribution must not turn an already booked refund into a second asset/credit.
+      await raiseException(t, ctx.env, { kind: "custody_attribution_review", severity: "urgent", intentId: intent.id, depositId: obs.id });
+      return { accepted: false, duplicate: false };
     }
 
     // Late: the note appeared after the submission deadline, or the intent was already closed.
     const lateBySeen = new Date(obs.first_seen_at) > new Date(intent.deposit_submission_deadline);
     if (LATE_TARGETS.includes(intent.status) || (OPEN.includes(intent.status) && lateBySeen && intent.status === "awaiting_zec")) {
       await markLate(t, ctx, intent, ev);
+      await custody(t, ctx, obs, ev);
       return { accepted: true, duplicate: false };
     }
     if (!OPEN.includes(intent.status)) {
@@ -89,8 +122,9 @@ export async function ingestScannerEvent(ctx: CoreContext, ev: ScannerEvent, sou
       // (confirmations were updated above). Not an additional deposit.
       if (obs.accepted) return { accepted: true, duplicate: true };
       // Additional output on an already-decided intent (e.g. second payment): refund review, never silently absorbed.
-      if (!obs.accepted) await raiseException(t, ctx.env, { kind: "extra_deposit", severity: "warning", intentId: intent.id, details: { txid: ev.txid, status: intent.status } });
-      await emitResource(t, ctx.env, `checkout:${intent.id}`, "deposit.extra", { label: "Additional ZEC detected", detail: "Routed to refund review." });
+      await custody(t, ctx, obs, ev);
+      if (!obs.accepted) await raiseException(t, ctx.env, { kind: "extra_deposit", severity: "warning", intentId: intent.id, depositId: obs.id, details: { txid: ev.txid, status: intent.status } });
+      if (!persisted) await emitResource(t, ctx.env, `checkout:${intent.id}`, "deposit.extra", { label: "Additional ZEC detected", detail: "Refund review requires canonical confirmations." });
       return { accepted: true, duplicate: false };
     }
 
@@ -113,7 +147,6 @@ async function markLate(t: Tx, ctx: CoreContext, intent: IntentRow, ev: ScannerE
     await transitionIntent(t, ctx, cur, "late_deposit", { label: "Late deposit received", detail: "ZEC arrived after this invoice closed. It will be reviewed for refund.", set: { exception_reason: "late_deposit" } });
     await treasury.setState(t, ctx.env, cur.id, "released");
   }
-  await recordRefundLiability(t, ctx, intent.id, `late:${ev.txid}:${ev.outputRef}`, BigInt(ev.valueZatoshis));
   await raiseException(t, ctx.env, { kind: "late_deposit", severity: "warning", intentId: intent.id, details: { value: ev.valueZatoshis } });
 }
 
@@ -133,10 +166,14 @@ async function recordRefundLiability(t: Tx, ctx: CoreContext, intentId: string, 
 
 async function evaluateAcceptance(t: Tx, ctx: CoreContext, intent: IntentRow) {
   const required = ctx.cfg.policy.requiredConfirmations;
-  const deps = await many<{ id: string; value_zatoshis: string; confirmations: number }>(t, `SELECT id, value_zatoshis, confirmations FROM deposit_observations WHERE intent_id=$1 AND canonical AND mined`, [intent.id]);
+  const deps = await many<Observation & { confirmations: number; block_height: number }>(t, `SELECT * FROM deposit_observations WHERE intent_id=$1 AND canonical AND mined`, [intent.id]);
   const total = deps.reduce((s, d) => s + BigInt(d.value_zatoshis), 0n);
   await t.query(`UPDATE payment_intents SET received_zatoshis=$2 WHERE id=$1`, [intent.id, total.toString()]);
   if (deps.length === 0 || deps.some((d) => d.confirmations < required)) return;
+  if (deps.some((d) => d.custody_booked || d.custody_revision > 0)) {
+    await raiseException(t, ctx.env, { kind: "custody_attribution_review", severity: "urgent", intentId: intent.id });
+    return;
+  }
 
   const quote = await one<QuoteRow>(t, `SELECT * FROM quotes WHERE id=$1`, [intent.quote_id]);
   assertQuoteIntegrity(quote);
@@ -145,7 +182,7 @@ async function evaluateAcceptance(t: Tx, ctx: CoreContext, intent: IntentRow) {
   let cur = await lockIntent(t, ctx, intent.id);
   if (cls === "underpaid") {
     await transitionIntent(t, ctx, cur, "underpaid", { label: "Underpaid", detail: `Received less ZEC than quoted. The payment was not accepted and will be reviewed for refund.`, set: { exception_reason: "underpaid" } });
-    await recordRefundLiability(t, ctx, intent.id, "underpaid", total);
+    for (const d of deps) await custody(t, ctx, d, { kind: "note_confirmed", blockHeight: d.block_height, confirmations: d.confirmations } as ScannerEvent);
     await treasury.setState(t, ctx.env, intent.id, "released");
     await raiseException(t, ctx.env, { kind: "underpaid", severity: "warning", intentId: intent.id, details: { received: total.toString(), due: due.toString() } });
     return;
@@ -187,6 +224,16 @@ export async function acceptDeposit(t: Tx, ctx: CoreContext, intent: IntentRow, 
     ],
   });
   if (excess > 0n) await recordRefundLiability(t, ctx, intent.id, "overpaid_excess", excess);
+
+  if (ctx.env === "testnet") {
+    // TAZ proves receiving only; INR is display/reference metadata, never an asset or entitlement.
+    if (intent.link_id) await t.query(`UPDATE payment_links SET successful_uses=successful_uses+1, updated_at=now() WHERE id=$1`, [intent.link_id]);
+    await emitResource(t, ctx.env, `checkout:${intent.id}`, "payout.disabled", { label: "ZEC confirmed on testnet", detail: "Nonredeemable test receipt. INR payouts and withdrawals are disabled on testnet." });
+    if (intent.merchant_id) await emitResource(t, ctx.env, `merchant:${intent.merchant_id}`, "payment.testnet_received", { intentId: intent.id });
+    await issuePaymentReceipt(t, ctx, intent.id);
+    await audit(t, ctx.env, { actorType: "system", action: "deposit.accept", target: intent.id, details: { received: receivedZat.toString(), due: due.toString(), nonredeemable: true } });
+    return;
+  }
 
   if (intent.mode === "scan_pay") {
     await postJournal(t, ctx.env, {
@@ -270,6 +317,7 @@ export async function acceptDeposit(t: Tx, ctx: CoreContext, intent: IntentRow, 
 }
 
 async function handleReorg(t: Tx, ctx: CoreContext, intent: IntentRow, depositId: string, wasAccepted: boolean) {
+  await t.query(`UPDATE payout_commands SET held=true, hold_reason='source deposit reorged', updated_at=now() WHERE environment=$1 AND (source_intent_id=$2 OR withdrawal_id IN (SELECT withdrawal_id FROM merchant_credits WHERE intent_id=$2 AND withdrawal_id IS NOT NULL)) AND state NOT IN ('RECONCILED','REFUNDED')`, [ctx.env, intent.id]);
   await emitResource(t, ctx.env, `checkout:${intent.id}`, "deposit.reorged", { label: "Chain reorganisation", detail: "A previously seen transaction was removed from the canonical chain." });
   if (OPEN.includes(intent.status) && intent.status !== "awaiting_zec") {
     await transitionIntent(t, ctx, intent, "chain_reorg_review", { label: "Re-checking after chain reorganisation", set: { exception_reason: "reorg_before_finality" } });

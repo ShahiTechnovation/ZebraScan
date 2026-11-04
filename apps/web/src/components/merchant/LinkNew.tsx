@@ -6,7 +6,7 @@ import { useNow, useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { formatInr, parseInrToMinor } from "@/lib/money";
 import { formatDate } from "@/lib/format";
-import { validateLink, type LinkErrors, type LinkInput } from "@/services/demo/engine";
+import { validateLink, type LinkErrors, type LinkInput } from "@/services/model";
 import { MerchantPageHeader } from "@/components/layout/AppShell";
 import { NotConnectedNotice } from "@/components/layout/ModeBanner";
 import { Button, ButtonLink } from "@/components/ui/Button";

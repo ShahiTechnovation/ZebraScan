@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ArrowRight, Printer, RotateCcw, ShieldAlert, XCircle } from "lucide-react";
+import { Printer, RotateCcw } from "lucide-react";
 import { useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { formatInr, formatUsdc } from "@/lib/money";
@@ -16,7 +16,6 @@ import { Panel, PanelBody, PanelHeader } from "@/components/ui/Panel";
 import { MetaBadge, P2P_META, WITHDRAWAL_META } from "@/components/ui/StatusBadge";
 import { EventLog, Stepper } from "@/components/ui/Timeline";
 import { withdrawalSteps } from "@/components/payments/Progress";
-import { DemoControls } from "@/components/payments/DemoControls";
 import { NotFoundPanel } from "@/components/screens/NotFoundPanel";
 
 export function WithdrawalDetail({ id }: { id: string }) {
@@ -52,7 +51,7 @@ export function WithdrawalDetail({ id }: { id: string }) {
 
       {w.status === "completed" && (
         <Callout tone="success" className="mb-6" title="Payout completed">
-          Payout completed only when provider confirmed. {isDemo && "This is a simulated confirmation — no INR moved."}
+          Payout completed and confirmed by settlement provider.
         </Callout>
       )}
       {w.status === "failed" && (
@@ -91,34 +90,6 @@ export function WithdrawalDetail({ id }: { id: string }) {
               <Stepper label="Withdrawal progress" steps={withdrawalSteps(w)} />
             </PanelBody>
           </Panel>
-          {m && m.advanceWithdrawal && (
-            <DemoControls title="Payout simulator">
-              {active && (
-                <>
-                  <Button size="sm" isLoading={busy} onClick={() => run(() => m.advanceWithdrawal!(w.id))}>
-                    Advance stage <ArrowRight aria-hidden className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => run(() => m.failWithdrawal!(w.id, "failed"), "Simulated payout failure")}>
-                    <XCircle aria-hidden className="h-4 w-4" /> Simulate failure
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => run(() => m.failWithdrawal!(w.id, "disputed"), "Simulated dispute")}>
-                    <ShieldAlert aria-hidden className="h-4 w-4" /> Simulate dispute
-                  </Button>
-                </>
-              )}
-              {w.status === "disputed" && (
-                <>
-                  <Button size="sm" onClick={() => run(() => m.resolveDispute!(w.id, "completed"), "Dispute resolved: payout confirmed")}>
-                    Resolve: payout confirmed
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => run(() => m.resolveDispute!(w.id, "failed"), "Dispute resolved: payout failed")}>
-                    Resolve: payout failed
-                  </Button>
-                </>
-              )}
-              {!active && w.status !== "disputed" && <p className="text-label text-foreground-secondary">This withdrawal is final.</p>}
-            </DemoControls>
-          )}
           <Panel>
             <PanelHeader title="Event log" />
             <PanelBody>
@@ -143,7 +114,6 @@ export function WithdrawalDetail({ id }: { id: string }) {
               ]}
             />
             <CopyableValue value={w.id} label="Withdrawal id" />
-            {isDemo && <p className="text-micro text-foreground-muted">{COPY.simulation}</p>}
           </PanelBody>
         </Panel>
       </div>

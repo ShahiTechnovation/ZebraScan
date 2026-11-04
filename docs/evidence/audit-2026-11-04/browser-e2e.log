@@ -1,0 +1,110 @@
+
+> zeb-scan-monorepo@0.2.0 test:e2e P:\Zebra Scan\zeb-scan
+> pnpm --filter @zeb/web test:e2e
+
+
+> @zeb/web@0.1.0 test:e2e P:\Zebra Scan\zeb-scan\apps\web
+> playwright test
+
+[WebServer] (node:31636) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:8532) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 23 tests using 4 workers
+
+(node:8396) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2696) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14408) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  3 [desktop] › tests\e2e\links.spec.ts:88:5 › revoke, duplicate, search and filter respond (5.7s)
+  ok  4 [desktop] › tests\e2e\merchant.spec.ts:4:5 › onboarding → shop name everywhere → terminal payment credited exactly once (acceptance 1, 2) (9.7s)
+  ok  5 [desktop] › tests\e2e\merchant.spec.ts:47:5 › counter QR opens an independent checkout, never a permanent ZEC address (acceptance 5) (4.9s)
+  ok  6 [desktop] › tests\e2e\merchant.spec.ts:74:5 › cooldown, withdrawal reservation, failure and explicit recovery (acceptance 7) (4.7s)
+  ok  8 [desktop] › tests\e2e\routes.spec.ts:42:7 › merchant routes render without overflow or errors @360 (2.7s)
+  ok  7 [desktop] › tests\e2e\routes.spec.ts:29:7 › public routes render without overflow or errors @360 (7.0s)
+  x   2 [desktop] › tests\e2e\links.spec.ts:4:5 › fixed single-use link: public pay, exhausted, second visitor blocked (acceptance 3) (18.8s)
+(node:27848) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   1 [desktop] › tests\e2e\links.spec.ts:40:5 › variable reusable link: two sessions, distinct ids and payloads, two records (acceptance 4) (20.3s)
+  ok 10 [desktop] › tests\e2e\routes.spec.ts:42:7 › merchant routes render without overflow or errors @375 (3.9s)
+(node:15144) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  9 [desktop] › tests\e2e\routes.spec.ts:29:7 › public routes render without overflow or errors @375 (8.2s)
+  ok 13 [desktop] › tests\e2e\routes.spec.ts:42:7 › merchant routes render without overflow or errors @768 (5.5s)
+  ok 11 [desktop] › tests\e2e\routes.spec.ts:29:7 › public routes render without overflow or errors @768 (9.4s)
+  ok 12 [desktop] › tests\e2e\routes.spec.ts:29:7 › public routes render without overflow or errors @1440 (9.6s)
+  ok 14 [desktop] › tests\e2e\routes.spec.ts:42:7 › merchant routes render without overflow or errors @1440 (6.2s)
+  ok 15 [desktop] › tests\e2e\routes.spec.ts:57:5 › seeded detail pages are reachable by clicking through (4.0s)
+  ok 17 [desktop] › tests\e2e\routes.spec.ts:97:5 › merchant console is gated without a session (1.4s)
+  ok 16 [desktop] › tests\e2e\routes.spec.ts:78:5 › unknown routes and ids show branded not-found (2.7s)
+  ok 20 [desktop] › tests\e2e\scan.spec.ts:75:5 › upload QR image decodes; camera falls back gracefully (1.8s)
+  ok 19 [desktop] › tests\e2e\scan.spec.ts:53:5 › manual UPI entry and failed payout recovery (2.6s)
+  ok 18 [desktop] › tests\e2e\scan.spec.ts:7:5 › paste → confirm → amount edit → pay → P2P progression → receipt (acceptance 6) (3.6s)
+  ok 22 [desktop] › tests\e2e\scan.spec.ts:127:5 › underpaid deposit raises exception and no credit (2.3s)
+  ok 23 [desktop] › tests\e2e\scan.spec.ts:141:5 › keyboard: modal traps focus and closes on Escape; skip link works (2.0s)
+  ok 21 [desktop] › tests\e2e\scan.spec.ts:94:5 › quote expiry disables pay, refresh makes a new quote, late deposit is an exception (acceptance 8) (3.6s)
+
+
+  1) [desktop] › tests\e2e\links.spec.ts:4:5 › fixed single-use link: public pay, exhausted, second visitor blocked (acceptance 3) 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Exhausted').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('Exhausted').first() with timeout 10000ms
+      - waiting for getByText('Exhausted').first()
+
+
+      29 |
+      30 |   await page.reload();
+    > 31 |   await expect(page.getByText("Exhausted").first()).toBeVisible();
+         |                                                     ^
+      32 |   await expect(page.getByText("Successful payments").locator("..").getByText("1", { exact: true })).toBeVisible();
+      33 |
+      34 |   const second = await context.newPage();
+        at P:\Zebra Scan\zeb-scan\apps\web\tests\e2e\links.spec.ts:31:53
+
+    Error Context: test-results\links-fixed-single-use-lin-314c7-sitor-blocked-acceptance-3--desktop\error-context.md
+
+  2) [desktop] › tests\e2e\links.spec.ts:40:5 › variable reusable link: two sessions, distinct ids and payloads, two records (acceptance 4) 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Successful payments').locator('..').getByText('2', { exact: true })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('Successful payments').locator('..').getByText('2', { exact: true }) with timeout 10000ms
+      - waiting for getByText('Successful payments').locator('..').getByText('2', { exact: true })
+
+
+      81 |   }
+      82 |   await page.reload();
+    > 83 |   await expect(page.getByText("Successful payments").locator("..").getByText("2", { exact: true })).toBeVisible();
+         |                                                                                                     ^
+      84 |   await page.goto("/app/transactions");
+      85 |   await expect(page.locator("table tbody tr")).toHaveCount(2);
+      86 | });
+        at P:\Zebra Scan\zeb-scan\apps\web\tests\e2e\links.spec.ts:83:101
+
+    Error Context: test-results\links-variable-reusable-li-6b4f9-s-two-records-acceptance-4--desktop\error-context.md
+
+  2 failed
+    [desktop] › tests\e2e\links.spec.ts:4:5 › fixed single-use link: public pay, exhausted, second visitor blocked (acceptance 3) 
+    [desktop] › tests\e2e\links.spec.ts:40:5 › variable reusable link: two sessions, distinct ids and payloads, two records (acceptance 4) 
+  21 passed (42.6s)
+P:\Zebra Scan\zeb-scan\apps\web:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @zeb/web@0.1.0 test:e2e: `playwright test`
+Exit status 1
+ ELIFECYCLE  Command failed with exit code 1.

@@ -25,7 +25,7 @@ export async function refreshInventory(ctx: CoreContext): Promise<{ usdc?: strin
 
 export interface ReconResult {
   ok: boolean;
-  checks: Array<{ name: string; ok: boolean; detail: string }>;
+  checks: Array<{ name: string; ok: boolean; status: "PASS" | "FAIL" | "BLOCKED"; detail: string }>;
 }
 
 export async function reconcile(ctx: CoreContext, kind = "periodic"): Promise<ReconResult> {
@@ -33,7 +33,7 @@ export async function reconcile(ctx: CoreContext, kind = "periodic"): Promise<Re
   const runId = newId("audit").replace(/^aud_/, "rec_");
   await ctx.db.query(`INSERT INTO reconciliation_runs(id, environment, kind) VALUES ($1,$2,$3)`, [runId, env, kind]);
   const checks: ReconResult["checks"] = [];
-  const add = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
+  const add = (name: string, ok: boolean, detail: string, blocked = false) => checks.push({ name, ok, status: blocked ? "BLOCKED" : ok ? "PASS" : "FAIL", detail });
 
   const unbalanced = await findUnbalancedJournals(ctx.db, env);
   add("ledger_balanced", unbalanced.length === 0, unbalanced.length ? `unbalanced journals: ${unbalanced.slice(0, 5).join(",")}` : "all journals balanced per currency");
@@ -41,7 +41,7 @@ export async function reconcile(ctx: CoreContext, kind = "periodic"): Promise<Re
   const cap = await treasury.treasuryCapacity(ctx.db, env, { inventoryMaxAgeMs: ctx.cfg.policy.treasuryInventoryMaxAgeSec * 1000, bufferMicros: 0n }, ctx.now());
   // A stale/unknown inventory is not a ledger discrepancy: it already blocks new holds and closes
   // receiving via readiness. Only a fresh observation that is BELOW active allocations is.
-  if (cap.stale) add("allocations_within_inventory", true, `skipped: USDC inventory not freshly observed (active ${cap.activeMicros})`);
+  if (cap.stale) add("allocations_within_inventory", false, `USDC inventory not freshly observed (active ${cap.activeMicros})`, true);
   else add("allocations_within_inventory", cap.activeMicros <= cap.inventoryMicros, `active ${cap.activeMicros} vs inventory ${cap.inventoryMicros}`);
 
   // Merchant liability per status: ledger vs credits table.
@@ -60,14 +60,14 @@ export async function reconcile(ctx: CoreContext, kind = "periodic"): Promise<Re
   const resOk = ledOf("merchant_credits_withdrawal_reserved") === crOf("withdrawal_reserved");
   add(
     "merchant_liability_matches_credits",
-    frozen > 0n ? true : lockedOk && availOk && resOk,
+    lockedOk && availOk && resOk,
     `locked ${ledOf("merchant_credits_locked")}/${crOf("credit_locked")}, available ${ledOf("merchant_credits_available")}/${crOf("credit_available")}, reserved ${ledOf("merchant_credits_withdrawal_reserved")}/${crOf("withdrawal_reserved")}${frozen > 0n ? `, frozen ${frozen} under review` : ""}`,
   );
 
   // Every accepted merchant intent has exactly one original credit (or a refund route).
   const orphan = await one<{ n: string }>(
     ctx.db,
-    `SELECT count(*) AS n FROM payment_intents pi WHERE pi.environment=$1 AND pi.mode <> 'scan_pay' AND pi.status='deposit_accepted'
+    `SELECT count(*) AS n FROM payment_intents pi WHERE pi.environment=$1 AND pi.environment<>'testnet' AND pi.mode <> 'scan_pay' AND pi.status='deposit_accepted'
        AND NOT EXISTS (SELECT 1 FROM merchant_credits c WHERE c.intent_id=pi.id AND c.parent_credit_id IS NULL)`,
     [env],
   );
@@ -82,11 +82,15 @@ export async function reconcile(ctx: CoreContext, kind = "periodic"): Promise<Re
     [env],
   );
   add("escrow_matches_orders", escrowLedger === BigInt(escrowOrders.total ?? "0"), `ledger ${escrowLedger} vs open escrowed orders ${escrowOrders.total ?? 0}`);
+  const unverified = await one<{ n: string }>(ctx.db, `SELECT count(*) AS n FROM payout_commands c WHERE c.environment=$1 AND c.state='RECONCILED' AND NOT EXISTS (SELECT 1 FROM payout_settlement_evidence e WHERE e.payout_id=c.id AND e.outcome='delivered' AND e.command_hash=c.command_hash)`, [env]);
+  add("payouts_have_independent_evidence", unverified.n === "0", `${unverified.n} finalized payouts without independent evidence`);
+  const reorgs = await one<{ n: string }>(ctx.db, `SELECT count(*) AS n FROM deposit_observations WHERE environment=$1 AND accepted AND NOT canonical`, [env]);
+  add("accepted_deposits_canonical", reorgs.n === "0", `${reorgs.n} accepted noncanonical outputs`);
 
   const ok = checks.every((c) => c.ok);
   await tx(ctx.db, async (t) => {
     await t.query(`UPDATE reconciliation_runs SET finished_at=now(), ok=$2, result=$3 WHERE id=$1`, [runId, ok, JSON.stringify({ checks })]);
-    if (!ok) {
+    if (checks.some((c) => c.status === "FAIL")) {
       for (const f of ["scanPay", "withdrawals"]) {
         await t.query(
           `INSERT INTO feature_gates(environment, feature, enabled, reason, updated_by) VALUES ($1,$2,false,$3,'system:reconciliation')

@@ -1,0 +1,25 @@
+
+> zeb-scan-monorepo@0.2.0 lint P:\Zebra Scan\zeb-scan
+> pnpm -r run lint
+
+Scope: 10 of 11 workspace projects
+packages/domain lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/contracts lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/domain lint: Done
+packages/contracts lint: Done
+apps/web lint$ eslint src tests --max-warnings=0
+packages/providers lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/db lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/security lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/db lint: Done
+packages/security lint: Done
+apps/web lint: Done
+packages/providers lint: Done
+packages/ledger lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/ledger lint: Done
+packages/core lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/core lint: Done
+apps/worker lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+apps/api lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+apps/worker lint: Done
+apps/api lint: Done

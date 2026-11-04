@@ -20,7 +20,7 @@
  * never by the account's net delta. "memo" mode (one shared UA + unique encrypted memo code) is an
  * explicit fallback only.
  */
-import { createPrivateKey, sign as edSign, type KeyObject } from "node:crypto";
+import { sign as edSign, type KeyObject } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DomainError, INVOICE_MEMO_RE, addressMatchesNetwork, buildZip321, parseDecimalToMinor } from "@zeb/domain";
 import type { AddressAllocator, AllocatedAddress, DepositEvent, ScannerStatus } from "./zcash";
@@ -32,9 +32,11 @@ export interface ZkoolConfig {
   url: string; // http(s)://host:port/graphql
   accountId: number;
   network: ZkoolNetwork;
-  /** Static bearer token (legacy). Prefer jwtPrivateKeyPem: tokens are then short-lived and account-scoped. */
+  /** Short-lived viewer token issued by an isolated operator service. */
   jwt?: string;
-  /** ES256 private key (PKCS#8 PEM) whose public half the zkool server was started with (-j). */
+  /** Refreshed atomically by an isolated issuer; read at each request. */
+  jwtFile?: string;
+  /** Rejected: retained in the type only to produce a clear migration error. */
   jwtPrivateKeyPem?: string;
   /** Address mode; default "rotate" (unique diversified UA per invoice). */
   addressMode?: ZkoolAddressMode;
@@ -76,7 +78,7 @@ export const ZKOOL_POOL: Record<number, DepositEvent["pool"] | undefined> = { 0:
 
 /** Decimal ZEC (number or string, as zkool returns) → zatoshis, exact. */
 export function zecToZat(v: number | string): bigint {
-  const s = typeof v === "number" ? v.toFixed(8) : v;
+  const s = typeof v === "number" ? String(v) : v;
   if (!/^\d+(\.\d{1,8})?$/.test(s)) throw new DomainError("WALLET_AMOUNT_FORMAT", `unexpected ZEC amount ${String(v).slice(0, 20)}`);
   return parseDecimalToMinor(s, 8);
 }
@@ -122,7 +124,6 @@ export class ZkoolWatcher implements AddressAllocator {
   readonly addressMode: ZkoolAddressMode;
   readonly network: ZkoolNetwork;
   private sharedUa: string | null = null;
-  private key: KeyObject | null = null;
   private allocLock: Promise<unknown> = Promise.resolve();
 
   constructor(private cfg: ZkoolConfig) {
@@ -130,7 +131,8 @@ export class ZkoolWatcher implements AddressAllocator {
     if (cfg.network !== "testnet" && cfg.network !== "mainnet") throw new DomainError("SYSTEM_CONFIG", "zkool network must be testnet or mainnet");
     this.network = cfg.network;
     this.addressMode = cfg.addressMode ?? "rotate";
-    if (cfg.jwtPrivateKeyPem) this.key = createPrivateKey(cfg.jwtPrivateKeyPem);
+    if (cfg.jwtPrivateKeyPem) throw new DomainError("SYSTEM_CONFIG", "JWT issuer private keys are prohibited in wallet watcher processes");
+    if (!Number.isSafeInteger(cfg.accountId) || cfg.accountId <= 0) throw new DomainError("SYSTEM_CONFIG", "watcher requires a non-admin account");
   }
 
   get accountId(): number {
@@ -138,8 +140,20 @@ export class ZkoolWatcher implements AddressAllocator {
   }
 
   private bearer(): string | undefined {
-    if (this.key) return signZkoolJwt(this.key, { sub: this.cfg.accountId, write: false });
-    return this.cfg.jwt;
+    const token = this.cfg.jwtFile ? readFileSync(this.cfg.jwtFile, "utf8").trim() : this.cfg.jwt;
+    if (!token) {
+      if (!this.cfg.fetchImpl) throw new DomainError("WALLET_AUTH_REQUIRED", "An account-scoped viewer token is required");
+      return undefined; // injectable transport for isolated tests only
+    }
+    try {
+      const parts = token.split(".");
+      const header = JSON.parse(Buffer.from(parts[0]!, "base64url").toString());
+      const claims = JSON.parse(Buffer.from(parts[1]!, "base64url").toString());
+      const now = Math.floor(Date.now()/1000);
+      if (parts.length !== 3 || header.alg !== "ES256" || claims.sub !== this.cfg.accountId || claims.write !== false || !Number.isSafeInteger(claims.exp) || claims.exp <= now || claims.exp > now+3600) throw new Error("scope or expiry");
+    } catch { throw new DomainError("WALLET_AUTH_SCOPE", "Viewer credential must be unexpired, account-scoped, read-only and valid for at most one hour"); }
+    // Signature is verified by zkool with the operator-provisioned public key.
+    return token;
   }
 
   async gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {

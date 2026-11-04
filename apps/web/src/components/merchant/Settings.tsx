@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LogOut, RotateCcw, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { validateVpa } from "@/lib/upi";
@@ -11,14 +11,13 @@ import { useToast } from "@/providers/ToastProvider";
 import { COPY } from "@/config/mode";
 import type { Merchant } from "@/types/domain";
 import { MerchantPageHeader } from "@/components/layout/AppShell";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Blocks";
 import { FormField, Input, Segmented, Select, Switch } from "@/components/ui/Field";
-import { ConfirmDialog } from "@/components/ui/Modal";
 import { Panel, PanelBody, PanelFooter, PanelHeader } from "@/components/ui/Panel";
 
-type Tab = "business" | "payout" | "privacy" | "preferences" | "demo";
-const TABS: Tab[] = ["business", "payout", "privacy", "preferences", "demo"];
+type Tab = "business" | "payout" | "privacy" | "preferences";
+const TABS: Tab[] = ["business", "payout", "privacy", "preferences"];
 const CATEGORIES = ["Food & beverage", "Retail", "Groceries", "Services", "Education", "Health & wellness", "Travel & transport", "Events", "Other"];
 
 export function Settings() {
@@ -30,7 +29,7 @@ export function Settings() {
   if (!merchant) return null;
   return (
     <>
-      <MerchantPageHeader title="Settings" description="Your shop profile, payout destination, privacy defaults and demo data." />
+      <MerchantPageHeader title="Settings" description="Your shop profile, payout destination, and privacy defaults." />
       <Segmented<Tab>
         label="Settings sections"
         role="tabs"
@@ -45,7 +44,6 @@ export function Settings() {
           { value: "payout", label: "Payout UPI" },
           { value: "privacy", label: "Privacy" },
           { value: "preferences", label: "Preferences" },
-          { value: "demo", label: "Demo & data" },
         ]}
       />
       <div role="tabpanel" className="max-w-2xl">
@@ -53,7 +51,6 @@ export function Settings() {
         {tab === "payout" && <PayoutTab key={merchant.id} merchant={merchant} />}
         {tab === "privacy" && <PrefsTab key={merchant.id} merchant={merchant} kind="privacy" />}
         {tab === "preferences" && <PrefsTab key={merchant.id} merchant={merchant} kind="preferences" />}
-        {tab === "demo" && <DemoTab />}
       </div>
     </>
   );
@@ -74,7 +71,7 @@ function BusinessTab({ merchant }: { merchant: Merchant }) {
         <FormField label="Business name" error={nameErr}>
           {(p) => <Input {...p} value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />}
         </FormField>
-        <FormField label="Merchant handle" hint="Handles can't be changed in the demo. Your counter link can be regenerated from Counter QR.">
+        <FormField label="Merchant handle" hint="Handles are unique identifiers. Your counter link can be regenerated from Counter QR.">
           {(p) => <Input {...p} value={merchant.handle} disabled className="font-mono" />}
         </FormField>
         <FormField label="Category">
@@ -211,64 +208,3 @@ function PrefsTab({ merchant, kind }: { merchant: Merchant; kind: "privacy" | "p
   );
 }
 
-function DemoTab() {
-  const { demo, isDemo } = useZeb();
-  const router = useRouter();
-  const toast = useToast();
-  const [resetOpen, setResetOpen] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
-  if (!isDemo || !demo)
-    return (
-      <Panel>
-        <PanelBody>
-          <p className="text-[14px] text-foreground-secondary">{COPY.notConnected}</p>
-        </PanelBody>
-      </Panel>
-    );
-  return (
-    <div className="space-y-6">
-      <Panel>
-        <PanelHeader title="Demo data" description="Everything is stored in this browser's local storage." />
-        <PanelBody className="space-y-3 text-[13px] text-foreground-secondary">
-          <p>{COPY.simulation}</p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="danger" onClick={() => setResetOpen(true)} disabled={!hydrated}>
-              <RotateCcw aria-hidden className="h-4 w-4" /> Reset demo data
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                demo.signOut();
-                router.push("/login");
-              }}
-            >
-              <LogOut aria-hidden className="h-4 w-4" /> Sign out of demo
-            </Button>
-          </div>
-        </PanelBody>
-      </Panel>
-      <Panel>
-        <PanelHeader title="Treasury ops view" description="A demo-only admin overview. It isn't part of merchant navigation and has no transfer controls." />
-        <PanelBody>
-          <ButtonLink href="/app/ops" variant="secondary">
-            Open demo ops view
-          </ButtonLink>
-        </PanelBody>
-      </Panel>
-      <ConfirmDialog
-        open={resetOpen}
-        onClose={() => setResetOpen(false)}
-        onConfirm={() => {
-          demo.reset();
-          toast("Demo data reset to the sample seed");
-          router.push("/login");
-        }}
-        title="Reset all demo data?"
-        description="This deletes every demo merchant, link, checkout, credit and withdrawal in this browser and restores the sample seed. It can't be undone."
-        confirmLabel="Reset demo data"
-        confirmVariant="danger"
-      />
-    </div>
-  );
-}

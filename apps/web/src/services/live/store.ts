@@ -7,7 +7,7 @@
 
 import type { PublicConfigZ } from "@zeb/contracts";
 import type { z } from "zod";
-import { emptyState } from "@/services/demo/engine";
+import { emptyState } from "@/services/model";
 import type { CheckoutIntent, DemoState, Merchant, P2POrder, PaymentLink, Receipt } from "@/types/domain";
 import { API_BASE, api, checkoutTokens, setCsrf } from "./api";
 import { mapCheckout, mapCredit, mapLedger, mapLink, mapMerchant, mapReceipt, mapWithdrawal } from "./map";

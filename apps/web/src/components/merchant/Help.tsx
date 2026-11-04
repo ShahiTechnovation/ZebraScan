@@ -29,7 +29,7 @@ const TROUBLE = [
   },
   {
     q: "Why can't I withdraw my balance yet?",
-    a: `New credits are locked during cooldown (example demo policy: ${demoConfig.cooldownDays} days). Check the unlock dates on the Settlements page. Only one withdrawal can be in progress at a time.`,
+    a: `New credits are locked during the settlement cooldown (${demoConfig.cooldownDays} days). Check the unlock dates on the Settlements page. Only one withdrawal can be in progress at a time.`,
   },
   {
     q: "A withdrawal failed or is disputed",
@@ -87,8 +87,8 @@ export function Help() {
           <Panel>
             <PanelHeader title="Contact" />
             <PanelBody className="text-[13px] leading-relaxed text-foreground-secondary">
-              This demo build has no support desk, email or chat. For product questions see the <Link href="/faq" className="link">FAQ</Link> and{" "}
-              <Link href="/how-it-works" className="link">How it works</Link>.
+              For support inquiries or network status questions, refer to the <Link href="/faq" className="link">FAQ</Link> and{" "}
+              <Link href="/how-it-works" className="link">How it works</Link> or reach out to your account representative.
             </PanelBody>
           </Panel>
         </div>

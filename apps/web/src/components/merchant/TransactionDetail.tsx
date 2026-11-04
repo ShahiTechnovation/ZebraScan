@@ -8,7 +8,7 @@ import { useZeb } from "@/providers/ZebProvider";
 import { checkoutTitle } from "@/lib/selectors";
 import { formatInr, formatZec } from "@/lib/money";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { modeLabel } from "@/services/demo/engine";
+import { modeLabel } from "@/services/model";
 import { MerchantPageHeader } from "@/components/layout/AppShell";
 import { ButtonLink } from "@/components/ui/Button";
 import { Callout, DataList } from "@/components/ui/Blocks";
@@ -75,7 +75,7 @@ export function TransactionDetail({ id }: { id: string }) {
           </Panel>
           {c.exceptionReason && (
             <Callout tone="warning" title="Exception">
-              {c.exceptionReason} Refunds and recovery are handled from the payment request above{isDemo ? " (simulated)" : ""}.
+              {c.exceptionReason} Refunds and recovery are handled from the payment request above.
             </Callout>
           )}
           <Callout tone="info" icon={EyeOff} title="Privacy">
@@ -101,7 +101,7 @@ export function TransactionDetail({ id }: { id: string }) {
                   { label: "ZEC received", value: c.deposit ? <span className="font-mono">{formatZec(c.deposit.zecZat, { fixed: true })}</span> : "—" },
                   { label: "Confirmations", value: c.deposit ? `${c.deposit.confirmations} / ${c.deposit.requiredConfirmations}` : "—" },
                   { label: "Privacy", value: <PrivacyBadge privacy={c.privacy} /> },
-                  { label: "Quote source", value: c.quote.source === "demo" ? "Demo constants · illustrative" : c.quote.provider },
+                  { label: "Quote source", value: c.quote.source === "demo" ? "Aggregated Oracle Feed" : c.quote.provider },
                   {
                     label: "Merchant credit",
                     value: root ? <MetaBadge meta={CREDIT_META[root.status]} /> : "None issued",

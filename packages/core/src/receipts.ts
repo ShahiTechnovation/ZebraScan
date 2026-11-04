@@ -64,7 +64,10 @@ export async function receiptView(q: Queryable, ctx: CoreContext, id: string) {
   let statusNote = "";
   if (r.intent_id) {
     const i = await one<{ mode: string; status: string; payout_status: string }>(q, `SELECT mode, status, payout_status FROM payment_intents WHERE id=$1`, [r.intent_id]);
-    if (i.mode === "scan_pay") {
+    if (ctx.env === "testnet") {
+      status = i.status === "deposit_accepted" ? "zec_confirmed_testnet" : i.status;
+      statusNote = i.status === "deposit_accepted" ? "ZEC received and verified on testnet. INR is a nonredeemable reference amount. INR payouts and withdrawals are disabled." : `Testnet payment status: ${i.status}.`;
+    } else if (i.mode === "scan_pay") {
       status = i.payout_status === "completed" ? "completed" : i.status === "deposit_accepted" ? `zec_received/${i.payout_status}` : i.status;
       statusNote = i.payout_status === "completed" ? PAYOUT_HONEST.completed! : `ZEC received. INR payout: ${PAYOUT_HONEST[i.payout_status] ?? i.payout_status}.`;
     } else {

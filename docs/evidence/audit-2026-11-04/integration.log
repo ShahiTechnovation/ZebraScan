@@ -1,0 +1,378 @@
+
+> zeb-scan-monorepo@0.2.0 test:integration P:\Zebra Scan\zeb-scan
+> vitest run --config vitest.integration.config.ts
+
+
+ RUN  v3.2.7 P:/Zebra Scan/zeb-scan
+
+ ❯ tests/chaos/tinyfish-rail.test.ts (9 tests | 9 failed) 787ms
+   × TinyFish payout rail > happy path: preflight → operator approval → order observed → separate reconciliation → RECONCILED 50ms
+     → password authentication failed for user "zebscan"
+   × TinyFish payout rail > authorized terms are immutable at the database level 135ms
+     → password authentication failed for user "zebscan"
+   × TinyFish payout rail > preflight on a login page blocks the payout (a COMPLETED run is not readiness) 30ms
+     → password authentication failed for user "zebscan"
+   × TinyFish payout rail > execute run FAILED after possible click → OUTCOME_UNKNOWN_REVIEW, no retry, account lease held 27ms
+     → password authentication failed for user "zebscan"
+   × TinyFish payout rail > ambiguous queue error → OUTCOME_UNKNOWN_REVIEW; never re-queued 129ms
+     → password authentication failed for user "zebscan"
+   × TinyFish payout rail > explicit API rejection (never started) → AGENT_FAILED_BEFORE_COMMIT and frees the lease 26ms
+     → password authentication failed for user "zebscan"
+   × TinyFish payout rail > recipient mismatch after submission → urgent review, never completed 130ms
+     → password authentication failed for user "zebscan"
+   × TinyFish payout rail > verified-not-submitted needs a read-only reconciliation that finds no order, plus dual control 128ms
+     → password authentication failed for user "zebscan"
+   × TinyFish payout rail > merchant withdrawal via SELL: provider cancels → credits restored exactly once 132ms
+     → password authentication failed for user "zebscan"
+ ❯ tests/chaos/payout-faults.test.ts (6 tests | 6 failed) 298ms
+   × payout fault injection > ambiguous placement broadcast → manual_review, never resubmitted 51ms
+     → password authentication failed for user "zebscan"
+   × payout fault injection > LP cancels before escrow → new attempt → completes 28ms
+     → password authentication failed for user "zebscan"
+   × payout fault injection > cancellation after escrow posts an escrow-return journal and keeps the ledger balanced 28ms
+     → password authentication failed for user "zebscan"
+   × payout fault injection > open dispute → disputed + urgent exception 26ms
+     → password authentication failed for user "zebscan"
+   × payout fault injection > a crashed worker's lease expires and another worker resumes 28ms
+     → password authentication failed for user "zebscan"
+   × payout fault injection > definite (pre-broadcast) placement failure retries, then exhausts to refund_queued 136ms
+     → password authentication failed for user "zebscan"
+ ❯ tests/integration/flows.test.ts (18 tests | 18 skipped) 54ms
+   ↓ public > serves config, health, openapi and honest demo labels
+   ↓ public > parses UPI QR server-side and rejects non-UPI payloads
+   ↓ public > quotes with exact integer-string money and rejects out-of-policy amounts
+   ↓ public > requires Idempotency-Key, replays exactly, and rejects key reuse with a different body
+   ↓ Scan & Pay (PAY orderType 2) > runs quote → intent → deposit → confirmations → accepted → P2P PAY → completed, with balanced ledger
+   ↓ Scan & Pay (PAY orderType 2) > matches two same-amount concurrent invoices by address, never by amount
+   ↓ Scan & Pay (PAY orderType 2) > routes underpayment to review without accepting it
+   ↓ Scan & Pay (PAY orderType 2) > detects late deposits after expiry and never accepts them
+   ↓ Scan & Pay (PAY orderType 2) > cancel is only allowed before any deposit
+   ↓ merchant terminal, credits and withdrawal (SELL orderType 1) > credits locked → available → withdraw → completed; ledger reconciles
+   ↓ merchant terminal, credits and withdrawal (SELL orderType 1) > cancels a withdrawal before provider commitment and restores credits exactly once
+   ↓ merchant terminal, credits and withdrawal (SELL orderType 1) > enforces RBAC and tenant isolation
+   ↓ payment links > opening does not consume quota; a use-limit-1 link refunds a second paid checkout
+   ↓ payment links > revoke blocks new checkouts but keeps an in-flight one payable
+   ↓ ledger and safety invariants > ledger is append-only and rejects unbalanced journals at the database level
+   ↓ ledger and safety invariants > duplicate scanner events are harmless; reorg after acceptance freezes the credit
+   ↓ ledger and safety invariants > internal endpoints require a valid HMAC signature
+   ↓ ledger and safety invariants > final reconciliation across all flows is clean
+ ❯ tests/integration/auth-wallet.test.ts (7 tests | 7 skipped) 142ms
+   ↓ Noir wallet sign-in > issues an ASCII, origin-bound, single-use challenge with the required statement
+   ↓ Noir wallet sign-in > valid signature → session; same wallet signs in to the same account; replay rejected
+   ↓ Noir wallet sign-in > rejects tampered messages, foreign keys, wrong network addresses and non-derived signing
+   ↓ Noir wallet sign-in > expired challenge is rejected
+   ↓ email OTP > delivers a code, verifies once, marks email verified; wrong codes are rate-limited
+   ↓ email OTP > same response for unknown emails (no enumeration)
+   ↓ payout readiness (public, sanitized) > is strictly not eligible without a rail and a fresh PASS capability report
+ ❯ tests/integration/memo-matching.test.ts (1 test | 1 skipped) 43ms
+   ↓ two same-amount invoices on ONE shared address are told apart only by memo
+ ❯ tests/integration/reconcile.test.ts (2 tests | 2 skipped) 46ms
+   ↓ reconciliation gates > does not freeze when inventory was never observed
+   ↓ reconciliation gates > freezes Scan & Pay and withdrawals when allocations exceed a fresh inventory observation
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/integration/auth-wallet.test.ts [ tests/integration/auth-wallet.test.ts ]
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/integration/auth-wallet.test.ts:41:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/19]⎯
+
+ FAIL  tests/integration/flows.test.ts [ tests/integration/flows.test.ts ]
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/integration/flows.test.ts:11:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/19]⎯
+
+ FAIL  tests/integration/memo-matching.test.ts [ tests/integration/memo-matching.test.ts ]
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/integration/memo-matching.test.ts:9:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/19]⎯
+
+ FAIL  tests/integration/reconcile.test.ts [ tests/integration/reconcile.test.ts ]
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/integration/reconcile.test.ts:11:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/19]⎯
+
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/chaos/payout-faults.test.ts > payout fault injection > ambiguous placement broadcast → manual_review, never resubmitted
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/chaos/payout-faults.test.ts:127:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/19]⎯
+
+ FAIL  tests/chaos/payout-faults.test.ts > payout fault injection > LP cancels before escrow → new attempt → completes
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/chaos/payout-faults.test.ts:147:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/19]⎯
+
+ FAIL  tests/chaos/payout-faults.test.ts > payout fault injection > cancellation after escrow posts an escrow-return journal and keeps the ledger balanced
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/chaos/payout-faults.test.ts:175:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/19]⎯
+
+ FAIL  tests/chaos/payout-faults.test.ts > payout fault injection > open dispute → disputed + urgent exception
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/chaos/payout-faults.test.ts:195:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/19]⎯
+
+ FAIL  tests/chaos/payout-faults.test.ts > payout fault injection > a crashed worker's lease expires and another worker resumes
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/chaos/payout-faults.test.ts:204:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/19]⎯
+
+ FAIL  tests/chaos/payout-faults.test.ts > payout fault injection > definite (pre-broadcast) placement failure retries, then exhausts to refund_queued
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ tests/chaos/payout-faults.test.ts:217:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/19]⎯
+
+ FAIL  tests/chaos/tinyfish-rail.test.ts > TinyFish payout rail > happy path: preflight → operator approval → order observed → separate reconciliation → RECONCILED
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ setup tests/chaos/tinyfish-rail.test.ts:57:7
+ ❯ tests/chaos/tinyfish-rail.test.ts:75:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/19]⎯
+
+ FAIL  tests/chaos/tinyfish-rail.test.ts > TinyFish payout rail > authorized terms are immutable at the database level
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ setup tests/chaos/tinyfish-rail.test.ts:57:7
+ ❯ tests/chaos/tinyfish-rail.test.ts:104:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/19]⎯
+
+ FAIL  tests/chaos/tinyfish-rail.test.ts > TinyFish payout rail > preflight on a login page blocks the payout (a COMPLETED run is not readiness)
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ setup tests/chaos/tinyfish-rail.test.ts:57:7
+ ❯ tests/chaos/tinyfish-rail.test.ts:110:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/19]⎯
+
+ FAIL  tests/chaos/tinyfish-rail.test.ts > TinyFish payout rail > execute run FAILED after possible click → OUTCOME_UNKNOWN_REVIEW, no retry, account lease held
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ setup tests/chaos/tinyfish-rail.test.ts:57:7
+ ❯ tests/chaos/tinyfish-rail.test.ts:120:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/19]⎯
+
+ FAIL  tests/chaos/tinyfish-rail.test.ts > TinyFish payout rail > ambiguous queue error → OUTCOME_UNKNOWN_REVIEW; never re-queued
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ setup tests/chaos/tinyfish-rail.test.ts:57:7
+ ❯ tests/chaos/tinyfish-rail.test.ts:139:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/19]⎯
+
+ FAIL  tests/chaos/tinyfish-rail.test.ts > TinyFish payout rail > explicit API rejection (never started) → AGENT_FAILED_BEFORE_COMMIT and frees the lease
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ setup tests/chaos/tinyfish-rail.test.ts:57:7
+ ❯ tests/chaos/tinyfish-rail.test.ts:149:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/19]⎯
+
+ FAIL  tests/chaos/tinyfish-rail.test.ts > TinyFish payout rail > recipient mismatch after submission → urgent review, never completed
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ setup tests/chaos/tinyfish-rail.test.ts:57:7
+ ❯ tests/chaos/tinyfish-rail.test.ts:160:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/19]⎯
+
+ FAIL  tests/chaos/tinyfish-rail.test.ts > TinyFish payout rail > verified-not-submitted needs a read-only reconciliation that finds no order, plus dual control
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ setup tests/chaos/tinyfish-rail.test.ts:57:7
+ ❯ tests/chaos/tinyfish-rail.test.ts:171:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/19]⎯
+
+ FAIL  tests/chaos/tinyfish-rail.test.ts > TinyFish payout rail > merchant withdrawal via SELL: provider cancels → credits restored exactly once
+error: password authentication failed for user "zebscan"
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11
+ ❯ resetDb tests/integration/harness.ts:24:3
+     22| export async function resetDb(): Promise<Db> {
+     23|   const db = createPool(requireTestDb(), { max: 10, applicationName: "…
+     24|   await db.query("DROP SCHEMA IF EXISTS public CASCADE");
+       |   ^
+     25|   await db.query("CREATE SCHEMA public");
+     26|   await db.query("DROP TABLE IF EXISTS schema_migrations");
+ ❯ makeHarness tests/integration/harness.ts:40:14
+ ❯ setup tests/chaos/tinyfish-rail.test.ts:57:7
+ ❯ tests/chaos/tinyfish-rail.test.ts:184:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/19]⎯
+
+
+ Test Files  6 failed (6)
+      Tests  15 failed | 28 skipped (43)
+   Start at  21:30:35
+   Duration  15.37s (transform 677ms, setup 0ms, collect 11.63s, tests 1.37s, environment 1ms, prepare 1.02s)
+
+ ELIFECYCLE  Command failed with exit code 1.

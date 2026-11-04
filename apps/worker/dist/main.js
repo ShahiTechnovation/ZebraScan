@@ -528,210 +528,6 @@ function buildZip321(address, zat, memo) {
 }
 var INVOICE_MEMO_RE = /^ZEB-[0-9A-Z]{12,20}$/;
 
-// ../../packages/core/src/config.ts
-function int(env, key, dflt, min = 0, max = Number.MAX_SAFE_INTEGER) {
-  const raw = env[key];
-  if (raw === void 0 || raw === "") return dflt;
-  if (!/^\d+$/.test(raw)) throw new DomainError("SYSTEM_CONFIG", `${key} must be a non-negative integer`);
-  const v = Number(raw);
-  if (v < min || v > max) throw new DomainError("SYSTEM_CONFIG", `${key} must be between ${min} and ${max}`);
-  return v;
-}
-function big(env, key, dflt) {
-  const raw = env[key];
-  if (raw === void 0 || raw === "") return dflt;
-  if (!/^\d+$/.test(raw)) throw new DomainError("SYSTEM_CONFIG", `${key} must be an integer string`);
-  return BigInt(raw);
-}
-function req(env, key) {
-  const v = env[key];
-  if (!v) throw new DomainError("SYSTEM_CONFIG", `${key} is required`);
-  return v;
-}
-function loadConfig(env = process.env) {
-  const environment = parseEnvironment(env.ZEB_ENVIRONMENT);
-  const expectedNet = zcashNetworkFor(environment);
-  if (env.ZCASH_NETWORK && env.ZCASH_NETWORK !== expectedNet) {
-    throw new DomainError("SYSTEM_CONFIG", `ZCASH_NETWORK=${env.ZCASH_NETWORK} conflicts with environment ${environment} (expects ${expectedNet})`);
-  }
-  const tokenSecret = req(env, "ZEB_TOKEN_SECRET");
-  if (tokenSecret.length < 32) throw new DomainError("SYSTEM_CONFIG", "ZEB_TOKEN_SECRET must be at least 32 characters");
-  const gwUrl = env.ZCASH_GATEWAY_URL;
-  const zcashGateway = gwUrl && environment !== "demo" ? {
-    url: gwUrl.replace(/\/$/, ""),
-    accountId: env.ZCASH_ACCOUNT_ID ?? "0",
-    tls: env.ZCASH_GATEWAY_TLS_CERT ? { certPath: req(env, "ZCASH_GATEWAY_TLS_CERT"), keyPath: req(env, "ZCASH_GATEWAY_TLS_KEY"), caPath: req(env, "ZCASH_GATEWAY_TLS_CA") } : void 0
-  } : null;
-  let zkool = null;
-  if (env.ZKOOL_GRAPHQL_URL) {
-    if (environment !== "testnet") throw new DomainError("SYSTEM_CONFIG", "ZKOOL_GRAPHQL_URL (memo-matched watcher) is only permitted in HACKATHON_TESTNET");
-    if (zcashGateway) throw new DomainError("SYSTEM_CONFIG", "configure either ZCASH_GATEWAY_URL or ZKOOL_GRAPHQL_URL, not both");
-    zkool = { url: env.ZKOOL_GRAPHQL_URL, accountId: int(env, "ZKOOL_ACCOUNT_ID", 1, 1, 1e6), jwt: env.ZKOOL_JWT || void 0, pools: int(env, "ZKOOL_ADDRESS_POOLS", 4, 1, 15) };
-  }
-  const p2p = env.P2P_DIAMOND_ADDRESS && environment !== "demo" ? {
-    chainId: req(env, "P2P_CHAIN_ID"),
-    rpcUrl: req(env, "BASE_RPC_URL"),
-    diamondAddress: req(env, "P2P_DIAMOND_ADDRESS"),
-    subgraphUrl: req(env, "P2P_SUBGRAPH_URL"),
-    usdcAddress: req(env, "P2P_USDC_ADDRESS"),
-    diamondCodeHash: env.P2P_DIAMOND_CODE_HASH || void 0
-  } : null;
-  if (p2p && environment === "testnet" && p2p.chainId !== "84532") throw new DomainError("SYSTEM_CONFIG", "testnet must use Base Sepolia (84532) for P2P");
-  if (p2p && environment.startsWith("mainnet") && p2p.chainId !== "8453") throw new DomainError("SYSTEM_CONFIG", "mainnet must use Base (8453) for P2P");
-  const signerMode = env.BASE_SIGNER_MODE ?? "none";
-  let signer;
-  if (signerMode === "none") signer = { mode: "none" };
-  else if (signerMode === "testnet-file") {
-    if (environment !== "testnet") throw new DomainError("SYSTEM_CONFIG", "BASE_SIGNER_MODE=testnet-file is only permitted in testnet");
-    signer = { mode: "testnet-file", keyFile: req(env, "BASE_SIGNER_KEY_FILE") };
-  } else if (signerMode === "remote") signer = { mode: "remote", url: req(env, "BASE_SIGNER_URL"), authHeader: env.BASE_SIGNER_AUTH };
-  else throw new DomainError("SYSTEM_CONFIG", `BASE_SIGNER_MODE=${signerMode} is not valid (none|testnet-file|remote)`);
-  const emailMode = env.EMAIL_MODE ?? "none";
-  let email;
-  if (emailMode === "none") email = { mode: "none" };
-  else if (emailMode === "smtp") email = { mode: "smtp", url: req(env, "SMTP_URL"), from: req(env, "EMAIL_FROM") };
-  else if (emailMode === "dev-file") {
-    if (environment.startsWith("mainnet")) throw new DomainError("SYSTEM_CONFIG", "EMAIL_MODE=dev-file is not permitted on mainnet");
-    email = { mode: "dev-file", dir: env.EMAIL_DEV_DIR ?? "./var/dev-mail" };
-  } else throw new DomainError("SYSTEM_CONFIG", `EMAIL_MODE=${emailMode} is not valid (none|smtp|dev-file)`);
-  const kmsProvider = env.ZEB_KMS_PROVIDER ?? "local";
-  if (kmsProvider !== "local") throw new DomainError("SYSTEM_CONFIG", `ZEB_KMS_PROVIDER=${kmsProvider} has no adapter in this build; implement KeyProvider (docs/SECURITY.md)`);
-  const isDemo = environment === "demo";
-  const policy = {
-    quoteLifetimeSec: int(env, "QUOTE_LIFETIME_SECONDS", isDemo ? 90 : 600, 30, 3600),
-    fundingGraceSec: int(env, "FUNDING_GRACE_SECONDS", isDemo ? 30 : 300, 0, 3600),
-    finalityWindowSec: int(env, "FINALITY_WINDOW_SECONDS", 7200, 60, 172800),
-    // Testnet evidence demo: 1 block (event guide). Mainnet values require risk review.
-    requiredConfirmations: int(env, "REQUIRED_CONFIRMATIONS", isDemo ? 3 : environment === "testnet" ? 1 : 10, 1, 1e3),
-    platformFeeBps: int(env, "PLATFORM_FEE_BPS", 50, 0, 1e3),
-    p2pSpreadReserveBps: int(env, "P2P_SPREAD_RESERVE_BPS", 100, 0, 2e3),
-    zecVolatilityPremiumBps: int(env, "ZEC_VOLATILITY_PREMIUM_BPS", 150, 0, 2e3),
-    minInrPaise: big(env, "MIN_INR_PAISE", 100n),
-    maxInrPaise: big(env, "MAX_INR_PAISE", isDemo ? 1000000n : 200000n),
-    creditCooldownSec: int(env, "CREDIT_COOLDOWN_SECONDS", 15 * 86400, 0, 365 * 86400),
-    creditPolicyVersion: env.CREDIT_POLICY_VERSION ?? "cooldown-proposal-2026-11",
-    withdrawalFeeBps: int(env, "WITHDRAWAL_FEE_BPS", 75, 0, 1e3),
-    minWithdrawalInrPaise: big(env, "MIN_WITHDRAWAL_INR_PAISE", 10000n),
-    payoutDestinationCoolingSec: int(env, "PAYOUT_DEST_COOLING_SECONDS", isDemo ? 0 : 86400, 0, 30 * 86400),
-    treasuryBufferMicros: big(env, "TREASURY_BUFFER_MICROS", 50000000n),
-    treasuryInventoryMaxAgeSec: int(env, "TREASURY_INVENTORY_MAX_AGE_SECONDS", isDemo ? 10 * 365 * 86400 : 300, 30, 10 * 365 * 86400),
-    paymentToleranceZat: big(env, "PAYMENT_TOLERANCE_ZAT", 0n),
-    stepUpValiditySec: int(env, "STEP_UP_VALIDITY_SECONDS", 300, 60, 3600),
-    sessionTtlSec: int(env, "SESSION_TTL_SECONDS", 7 * 86400, 600, 30 * 86400),
-    payoutAcceptTimeoutSec: int(env, "PAYOUT_ACCEPT_TIMEOUT_SECONDS", 900, 60, 86400),
-    payoutCompletionTimeoutSec: int(env, "PAYOUT_COMPLETION_TIMEOUT_SECONDS", 3600, 300, 7 * 86400),
-    payoutDisputeWindowSec: int(env, "PAYOUT_DISPUTE_WINDOW_SECONDS", isDemo ? 0 : 1800, 0, 7 * 86400),
-    maxPayoutAttempts: int(env, "MAX_PAYOUT_ATTEMPTS", 3, 1, 10),
-    priceMaxAgeSec: int(env, "PRICE_MAX_AGE_SECONDS", 120, 5, 3600),
-    priceMaxDeviationBps: int(env, "PRICE_MAX_DEVIATION_BPS", 150, 1, 5e3),
-    priceMinSources: int(env, "PRICE_MIN_SOURCES", 2, 1, 5),
-    scannerMaxLagBlocks: int(env, "SCANNER_MAX_LAG_BLOCKS", 3, 0, 1e3),
-    scannerMaxTipAgeSec: int(env, "SCANNER_MAX_TIP_AGE_SECONDS", 900, 60, 86400)
-  };
-  if (policy.minInrPaise <= 0n || policy.minInrPaise > policy.maxInrPaise) throw new DomainError("SYSTEM_CONFIG", "MIN_INR_PAISE must be > 0 and <= MAX_INR_PAISE");
-  return {
-    environment,
-    zcashNetwork: expectedNet,
-    databaseUrl: req(env, "DATABASE_URL"),
-    apiPort: int(env, "API_PORT", 4e3, 1, 65535),
-    apiHost: env.API_HOST ?? "127.0.0.1",
-    webOrigins: (env.WEB_ORIGINS ?? "http://localhost:3000").split(",").map((s) => s.trim()).filter(Boolean),
-    appBaseUrl: (env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
-    tokenSecret,
-    internalHmacSecret: env.INTERNAL_HMAC_SECRET && env.INTERNAL_HMAC_SECRET.length >= 32 ? env.INTERNAL_HMAC_SECRET : null,
-    kms: { provider: "local", keks: req(env, "ZEB_LOCAL_KEKS"), activeKek: req(env, "ZEB_ACTIVE_KEK") },
-    zcashGateway,
-    zkool,
-    p2p,
-    treasuryAddress: env.TREASURY_ADDRESS || null,
-    signer,
-    prices: { sources: (env.PRICE_SOURCES ?? "coingecko,kraken").split(",").map((s) => s.trim()).filter(Boolean), coingeckoApiKey: env.COINGECKO_API_KEY || void 0 },
-    email,
-    approvals: { legal: env.LEGAL_APPROVAL_REF || null, provider: env.PROVIDER_APPROVAL_REF || null },
-    payoutRail: (() => {
-      const r = env.PAYOUT_RAIL ?? (environment === "demo" ? "DEMO_SIMULATED" : "P2P_TINYFISH_WEB");
-      if (r !== "P2P_TINYFISH_WEB" && r !== "DEMO_SIMULATED") throw new DomainError("SYSTEM_CONFIG", `PAYOUT_RAIL=${r} is not valid (P2P_TINYFISH_WEB | DEMO_SIMULATED)`);
-      if (r === "DEMO_SIMULATED" && environment !== "demo") throw new DomainError("SYSTEM_CONFIG", "PAYOUT_RAIL=DEMO_SIMULATED is only permitted in DEMO");
-      return r;
-    })(),
-    // TINYFISH_API_KEY is read by the worker/API process only; it never reaches the web bundle.
-    tinyfish: { apiKey: env.TINYFISH_API_KEY || null, startUrl: env.P2P_ALLOWED_START_URL || null, profileId: env.TINYFISH_PROFILE_ID || void 0, extraOrigins: (env.P2P_ALLOWED_EXTRA_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean) },
-    pilot: {
-      livePayoutsEnabled: env.LIVE_PAYOUTS_ENABLED === "true",
-      requireOperatorApproval: true,
-      maxUnattendedPayoutInrPaise: 0n,
-      maxPayoutInrPaise: big(env, "PILOT_MAX_PAYOUT_INR_PAISE", 0n),
-      dailyMaxUsdcMicros: big(env, "PILOT_DAILY_MAX_USDC_MICROS", 0n),
-      capabilityMaxAgeSec: int(env, "P2P_CAPABILITY_MAX_AGE_SECONDS", 1800, 60, 86400),
-      approvalTtlSec: int(env, "OPERATOR_APPROVAL_TTL_SECONDS", 900, 60, 86400),
-      runMaxDurationSec: int(env, "TINYFISH_MAX_DURATION_SECONDS", 150, 30, 900),
-      runMaxSteps: int(env, "TINYFISH_MAX_STEPS", 28, 5, 100)
-    },
-    cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE === "true" : environment !== "demo",
-    policy
-  };
-}
-
-// ../../packages/db/src/index.ts
-import pg from "pg";
-
-// ../../packages/db/src/migrate.ts
-import { createHash } from "crypto";
-import { readdirSync, readFileSync } from "fs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
-var MIGRATIONS_DIR = process.env.MIGRATIONS_DIR ?? join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
-
-// ../../packages/db/src/index.ts
-pg.types.setTypeParser(1700, (v) => v);
-pg.types.setTypeParser(20, (v) => v);
-function createPool(connectionString, opts = {}) {
-  if (!connectionString) throw new Error("DATABASE_URL is required");
-  return new pg.Pool({
-    connectionString,
-    max: opts.max ?? 10,
-    application_name: opts.applicationName ?? "zeb-scan",
-    statement_timeout: 15e3,
-    idle_in_transaction_session_timeout: 3e4
-  });
-}
-var RETRYABLE = /* @__PURE__ */ new Set(["40001", "40P01"]);
-async function tx(db, fn, opts = {}) {
-  const retries = opts.retries ?? 5;
-  for (let attempt = 0; ; attempt++) {
-    const client = await db.connect();
-    try {
-      await client.query(`BEGIN ISOLATION LEVEL ${opts.isolation ?? "READ COMMITTED"}`);
-      const out = await fn(client);
-      await client.query("COMMIT");
-      return out;
-    } catch (err) {
-      await client.query("ROLLBACK").catch(() => void 0);
-      const code = err.code;
-      if (code && RETRYABLE.has(code) && attempt < retries) {
-        await new Promise((r) => setTimeout(r, 10 * 2 ** attempt + Math.floor(Math.random() * 20)));
-        continue;
-      }
-      throw err;
-    } finally {
-      client.release();
-    }
-  }
-}
-async function one(q, sql, params = []) {
-  const r = await q.query(sql, params);
-  if (r.rowCount !== 1) throw new Error(`expected exactly one row, got ${r.rowCount}`);
-  return r.rows[0];
-}
-async function maybeOne(q, sql, params = []) {
-  const r = await q.query(sql, params);
-  return r.rows[0] ?? null;
-}
-async function many(q, sql, params = []) {
-  const r = await q.query(sql, params);
-  return r.rows;
-}
-
 // ../../packages/providers/src/http.ts
 var HttpError = class extends Error {
   constructor(message, status, retryable) {
@@ -1045,19 +841,19 @@ var P2PClient = class {
 };
 
 // ../../packages/providers/src/signer.ts
-import { readFileSync as readFileSync2, statSync } from "fs";
+import { readFileSync, statSync } from "fs";
 import { createWalletClient, http as http2, serializeTransaction } from "viem";
 import { privateKeyToAccount, toAccount } from "viem/accounts";
 
 // ../../packages/providers/src/zcash.ts
 import { Agent } from "undici";
-import { readFileSync as readFileSync3 } from "fs";
+import { readFileSync as readFileSync2 } from "fs";
 var ZcashGatewayClient = class {
   constructor(cfg2) {
     this.cfg = cfg2;
     if (cfg2.tls) {
       this.dispatcher = new Agent({
-        connect: { cert: readFileSync3(cfg2.tls.certPath), key: readFileSync3(cfg2.tls.keyPath), ca: readFileSync3(cfg2.tls.caPath), rejectUnauthorized: true }
+        connect: { cert: readFileSync2(cfg2.tls.certPath), key: readFileSync2(cfg2.tls.keyPath), ca: readFileSync2(cfg2.tls.caPath), rejectUnauthorized: true }
       });
     }
   }
@@ -1119,7 +915,7 @@ var DemoAddressAllocator = class {
 
 // ../../packages/providers/src/email.ts
 import { mkdirSync, writeFileSync } from "fs";
-import { join as join2 } from "path";
+import { join } from "path";
 import { createTransport } from "nodemailer";
 var SmtpEmailProvider = class {
   name = "smtp";
@@ -1142,7 +938,7 @@ var DevFileEmailProvider = class {
   name = "dev-file";
   async send(m) {
     const name = `${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}-${m.subject.replace(/[^a-z0-9]+/gi, "-").slice(0, 40)}.txt`;
-    writeFileSync(join2(this.dir, name), `To: ${m.to}
+    writeFileSync(join(this.dir, name), `To: ${m.to}
 Subject: ${m.subject}
 
 ${m.text}
@@ -1181,134 +977,256 @@ If this was not you, sign in, revoke your sessions and contact support immediate
 };
 
 // ../../packages/providers/src/zkool.ts
-var POOL = { 0: "transparent", 1: "sapling", 2: "orchard", 3: "ironwood" };
+import { createPrivateKey, sign as edSign } from "crypto";
+import { readFileSync as readFileSync3 } from "fs";
+var ZKOOL_POOL = { 0: "transparent", 1: "sapling", 2: "orchard", 3: "ironwood" };
 function zecToZat(v) {
   const s = typeof v === "number" ? v.toFixed(8) : v;
   if (!/^\d+(\.\d{1,8})?$/.test(s)) throw new DomainError("WALLET_AMOUNT_FORMAT", `unexpected ZEC amount ${String(v).slice(0, 20)}`);
   return parseDecimalToMinor(s, 8);
 }
+function b64url(b) {
+  return Buffer.from(b).toString("base64").replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+function signZkoolJwt(key, claims, nowSec = Math.floor(Date.now() / 1e3)) {
+  const header = b64url(JSON.stringify({ alg: "ES256", typ: "JWT" }));
+  const payload = b64url(JSON.stringify({ sub: claims.sub, write: claims.write, exp: nowSec + (claims.ttlSeconds ?? 300) }));
+  const sig = edSign("sha256", Buffer.from(`${header}.${payload}`), { key, dsaEncoding: "ieee-p1363" });
+  return `${header}.${payload}.${b64url(sig)}`;
+}
+function loadPemFromEnv(env) {
+  if (env.pem) return env.pem.replace(/\\n/g, "\n");
+  if (env.file) return readFileSync3(env.file, "utf8");
+  return void 0;
+}
+function noteRef(txid, n, occurrence) {
+  return `${txid}:p${n.pool}:d${n.diversifierIndex ?? "x"}:${zecToZat(n.value).toString()}:${occurrence}`;
+}
+var REQUIRED_SCHEMA = {
+  Query: ["currentHeight", "transactionsByAccount", "unconfirmedByAccount", "addressByAccount"],
+  Mutation: ["newAddresses", "synchronizeAccount", "pay"],
+  Note: ["pool", "value", "scope", "address", "diversifierIndex", "memo"],
+  Addresses: ["ua", "diversifierIndex"]
+};
 var ZkoolWatcher = class {
   constructor(cfg2) {
     this.cfg = cfg2;
     if (!/^https?:\/\//.test(cfg2.url)) throw new DomainError("SYSTEM_CONFIG", "ZKOOL_GRAPHQL_URL must be http(s)");
+    if (cfg2.network !== "testnet" && cfg2.network !== "mainnet") throw new DomainError("SYSTEM_CONFIG", "zkool network must be testnet or mainnet");
+    this.network = cfg2.network;
+    this.addressMode = cfg2.addressMode ?? "rotate";
+    if (cfg2.jwtPrivateKeyPem) this.key = createPrivateKey(cfg2.jwtPrivateKeyPem);
   }
   cfg;
   kind = "zkool";
-  ua = null;
-  async gql(query) {
+  addressMode;
+  network;
+  sharedUa = null;
+  key = null;
+  allocLock = Promise.resolve();
+  get accountId() {
+    return this.cfg.accountId;
+  }
+  bearer() {
+    if (this.key) return signZkoolJwt(this.key, { sub: this.cfg.accountId, write: false });
+    return this.cfg.jwt;
+  }
+  async gql(query, variables) {
     const f = this.cfg.fetchImpl ?? fetch;
-    const res = await f(this.cfg.url, {
-      method: "POST",
-      headers: { "content-type": "application/json", ...this.cfg.jwt ? { authorization: `Bearer ${this.cfg.jwt}` } : {} },
-      body: JSON.stringify({ query })
-    });
+    const token = this.bearer();
+    let res;
+    try {
+      res = await f(this.cfg.url, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...token ? { authorization: `Bearer ${token}` } : {} },
+        body: JSON.stringify(variables ? { query, variables } : { query }),
+        signal: AbortSignal.timeout(this.cfg.timeoutMs ?? 12e4)
+      });
+    } catch (e) {
+      throw new DomainError("WALLET_WATCHER_HTTP", `zkool_graphql unreachable: ${e.message.slice(0, 120)}`, void 0, { retryable: true });
+    }
     if (!res.ok) throw new DomainError("WALLET_WATCHER_HTTP", `zkool_graphql HTTP ${res.status}`, void 0, { retryable: true });
     const body = await res.json();
     if (body.errors?.length) throw new DomainError("WALLET_WATCHER_ERROR", `zkool_graphql: ${body.errors.map((e) => e.message).join("; ").slice(0, 200)}`, void 0, { retryable: true });
     if (!body.data) throw new DomainError("WALLET_WATCHER_ERROR", "zkool_graphql returned no data", void 0, { retryable: true });
     return body.data;
   }
-  /** Proves the account is watch-only: `pay` must fail with "No Signing Key". */
+  /** Introspects the live server and fails closed if an operation/field this adapter uses is missing. */
+  async assertSchema() {
+    const names = Object.keys(REQUIRED_SCHEMA);
+    const q = `{ ${names.map((n, i) => `t${i}: __type(name: "${n}") { name fields { name } }`).join(" ")} }`;
+    const d = await this.gql(q);
+    const seen = {};
+    names.forEach((n, i) => {
+      const fields = (d[`t${i}`]?.fields ?? []).map((f) => f.name);
+      seen[n] = fields;
+      const missing = REQUIRED_SCHEMA[n].filter((f) => !fields.includes(f));
+      if (missing.length) throw new DomainError("WALLET_SCHEMA_MISMATCH", `zkool_graphql ${n} lacks ${missing.join(", ")} \u2014 adapter refuses to run`);
+    });
+    return seen;
+  }
+  /**
+   * Proves THIS process cannot spend: `pay` with our token must fail with either
+   * "Unauthorized" (read-only token) or "No Signing Key" (watch-only UFVK account).
+   */
   async assertWatchOnly() {
     try {
       await this.gql(`mutation { pay(idAccount: ${this.cfg.accountId}, payment: { recipients: [], confirmations: 1 }) }`);
     } catch (e) {
-      if (/No Signing Key/i.test(e.message)) return;
-      throw new DomainError("WALLET_NOT_WATCH_ONLY", `could not prove the zkool account is watch-only: ${e.message.slice(0, 160)}`);
+      const m = e.message;
+      if (/No Signing Key/i.test(m)) return "no_signing_key";
+      if (/Unauthorized/i.test(m)) return "read_only_token";
+      throw new DomainError("WALLET_NOT_WATCH_ONLY", `could not prove the zkool account is watch-only: ${m.slice(0, 160)}`);
     }
     throw new DomainError("WALLET_NOT_WATCH_ONLY", "zkool account accepted a pay call \u2014 it holds a spending key; refusing to use it");
   }
-  async receivingAddress() {
-    if (this.ua) return this.ua;
-    const pools = this.cfg.pools ?? 4;
-    const d = await this.gql(`{ addressByAccount(idAccount: ${this.cfg.accountId}, pools: ${pools}) { ua } }`);
-    const ua = d.addressByAccount?.ua;
-    if (!ua || !addressMatchesNetwork(ua, "testnet") || !ua.startsWith("utest1")) throw new DomainError("WALLET_ADDRESS_INVALID", "zkool returned a non-testnet or non-unified address");
-    this.ua = ua;
+  checkAddress(ua) {
+    const prefix = this.network === "testnet" ? "utest1" : "u1";
+    if (!ua || !ua.startsWith(prefix) || !addressMatchesNetwork(ua, this.network)) {
+      throw new DomainError("WALLET_ADDRESS_INVALID", `zkool returned a non-${this.network} or non-unified address`);
+    }
     return ua;
   }
+  /** Memo mode only: the account's current shared UA. */
+  async receivingAddress() {
+    if (this.sharedUa) return this.sharedUa;
+    const pools = this.cfg.pools ?? 4;
+    const d = await this.gql(`{ addressByAccount(idAccount: ${this.cfg.accountId}, pools: ${pools}) { ua } }`);
+    this.sharedUa = this.checkAddress(d.addressByAccount?.ua);
+    return this.sharedUa;
+  }
+  /**
+   * Rotate mode: next diversified UA (Ironwood + Sapling receivers, no transparent).
+   * Serialized in-process; skips indexes at or below `minDiversifierIndex` (e.g. after the zkool
+   * DB was recreated and its dindex restarted) so an address is never handed to two invoices.
+   */
+  async nextAddress(minDiversifierIndex = 0n) {
+    const run = async () => {
+      for (let i = 0; i < 5e3; i++) {
+        const d = await this.gql(`mutation { newAddresses(idAccount: ${this.cfg.accountId}) { ua sapling orchard transparent diversifierIndex } }`);
+        const a = d.newAddresses;
+        const idx = BigInt(String(a.diversifierIndex).split(".")[0]);
+        if (idx < minDiversifierIndex) continue;
+        const ua = this.checkAddress(a.ua);
+        return { ua, diversifierIndex: idx, sapling: a.sapling ?? null, orchard: a.orchard ?? null };
+      }
+      throw new DomainError("WALLET_ADDRESS_EXHAUSTED", "could not advance zkool diversifier index past the used range");
+    };
+    const p = this.allocLock.then(run, run);
+    this.allocLock = p.catch(() => void 0);
+    return p;
+  }
   async allocate(input) {
-    if (!input.memoCode || !INVOICE_MEMO_RE.test(input.memoCode)) throw new DomainError("WALLET_MEMO_REQUIRED", "memo-matched watcher requires an invoice memo code");
-    const address = await this.receivingAddress();
+    if (this.addressMode === "memo") {
+      if (!input.memoCode || !INVOICE_MEMO_RE.test(input.memoCode)) throw new DomainError("WALLET_MEMO_REQUIRED", "memo-matched watcher requires an invoice memo code");
+      const address = await this.receivingAddress();
+      return {
+        address,
+        addressType: "unified",
+        receivers: (this.cfg.pools ?? 4) === 4 ? ["ironwood"] : ["ironwood", "sapling"],
+        accountId: String(this.cfg.accountId),
+        diversifierIndex: input.diversifierIndex.toString(),
+        walletId: `zkool:${this.network}:${this.cfg.accountId}`,
+        birthdayHeight: this.cfg.birthHeight ?? null,
+        zip321Uri: buildZip321(address, input.amountZat, input.memoCode),
+        memoCode: input.memoCode
+      };
+    }
+    const a = await this.nextAddress(input.minDiversifierIndex ?? 0n);
     return {
-      address,
+      address: a.ua,
       addressType: "unified",
-      receivers: this.cfg.pools === 4 || this.cfg.pools === void 0 ? ["ironwood"] : ["ironwood", "sapling"],
+      receivers: a.sapling ? ["ironwood", "sapling"] : ["ironwood"],
       accountId: String(this.cfg.accountId),
-      diversifierIndex: input.diversifierIndex.toString(),
-      walletId: `zkool:${this.cfg.accountId}`,
-      birthdayHeight: null,
-      zip321Uri: buildZip321(address, input.amountZat, input.memoCode),
-      memoCode: input.memoCode
+      diversifierIndex: a.diversifierIndex.toString(),
+      walletId: `zkool:${this.network}:${this.cfg.accountId}`,
+      birthdayHeight: this.cfg.birthHeight ?? null,
+      zip321Uri: buildZip321(a.ua, input.amountZat)
     };
   }
   async status() {
-    const synced = await this.gql(`mutation { synchronize(idAccounts: [${this.cfg.accountId}], fast: false) }`);
     const h = await this.gql(`{ currentHeight }`);
-    const scanned = Number(synced.synchronize ?? 0);
+    const synced = await this.gql(`mutation { synchronizeAccount(idAccount: ${this.cfg.accountId}, fast: false) }`);
     const tip = Number(h.currentHeight ?? 0);
+    const scanned = Number(synced.synchronizeAccount ?? 0);
+    if (!(tip > 0)) throw new DomainError("WALLET_WATCHER_ERROR", "zkool reported no chain tip");
     return {
-      network: "testnet",
+      network: this.network,
       tipHeight: tip,
       tipHash: "",
       tipTime: (/* @__PURE__ */ new Date()).toISOString(),
-      scannedHeight: scanned || tip,
-      consensusBranchId: "77190ad9",
-      // NU7 testnet branch per event guide; zkool exposes no branch query
+      scannedHeight: scanned,
+      consensusBranchId: "",
       ironwoodSupported: true,
-      // zkool2 Oct-2026 releases produce/scan Ironwood (event guide)
-      nu7Active: true,
-      state: tip > 0 && (scanned === 0 || tip - scanned <= 3) ? "synced" : "syncing",
-      walletBirthday: 0,
+      // zkool2 6.36 scans Ironwood (pool 3); verified by schema + live notes
+      nu7Active: this.network === "testnet" ? true : tip >= MAINNET_NU7_HEIGHT,
+      state: scanned > 0 && tip - scanned <= 3 ? "synced" : "syncing",
+      walletBirthday: this.cfg.birthHeight ?? 0,
       version: "zkool_graphql"
     };
   }
   /**
    * Snapshot of incoming (scope 0) notes as scanner events. Confirmations = tip - height + 1.
-   * Mempool sightings come from unconfirmedByAccount (display only).
+   * Mempool notes (unconfirmedByAccount, which keeps listing mined txids) become display-only
+   * `note_seen` events. `addressByIndex` maps diversifier index → the invoice UA we issued.
    */
-  async snapshot(tip) {
+  async snapshot(tip, addressByIndex = /* @__PURE__ */ new Map()) {
+    const id = this.cfg.accountId;
     const d = await this.gql(
-      `{ transactionsByAccount(idAccount: ${this.cfg.accountId}) { id txid height time notes { pool value address scope memo } } }`
+      `{ transactionsByAccount(idAccount: ${id}) { txid height notes { id pool value scope address diversifierIndex memo } } }`
     );
-    const u = await this.gql(`{ unconfirmedByAccount(idAccount: ${this.cfg.accountId}) { txid value } }`).catch(() => ({ unconfirmedByAccount: [] }));
-    const address = await this.receivingAddress();
+    const u = await this.gql(
+      `{ unconfirmedByAccount(idAccount: ${id}) { txid notes { pool scope value address diversifierIndex memo } } }`
+    ).catch(() => ({ unconfirmedByAccount: [] }));
+    const shared = this.addressMode === "memo" ? await this.receivingAddress() : null;
     const out = [];
     const mined = /* @__PURE__ */ new Set();
-    for (const t of d.transactionsByAccount ?? []) {
-      if (!/^[0-9a-f]{64}$/.test(t.txid)) continue;
-      t.notes.forEach((n, idx) => {
-        if (n.scope !== 0) return;
-        const pool = POOL[n.pool];
-        if (!pool || pool === "orchard") return;
-        const confirmations = t.height ? Math.max(0, tip - t.height + 1) : 0;
-        if (t.height) mined.add(t.txid);
+    const toEvents = (txid, height, notes) => {
+      const occ = /* @__PURE__ */ new Map();
+      for (const n of notes) {
+        if (n.scope !== 0) continue;
+        const pool = ZKOOL_POOL[n.pool];
+        if (!pool || pool === "transparent" || pool === "orchard") continue;
+        const base2 = `${n.pool}:${n.diversifierIndex ?? "x"}:${zecToZat(n.value)}`;
+        const k = occ.get(base2) ?? 0;
+        occ.set(base2, k + 1);
+        const ref = noteRef(txid, n, k);
+        const dindex = n.diversifierIndex === null || n.diversifierIndex === void 0 ? null : String(n.diversifierIndex).split(".")[0];
+        const address = shared ?? (dindex !== null ? addressByIndex.get(dindex) : void 0) ?? n.address ?? `unmapped:${ref}`;
+        const confirmations = height ? Math.max(0, tip - height + 1) : 0;
         out.push({
-          eventId: `zkool:${t.txid}:${idx}:${t.height ?? "mempool"}:${Math.min(confirmations, 100)}`,
-          kind: t.height ? "note_confirmed" : "note_seen",
-          network: "testnet",
+          eventId: `zkool:${this.network}:${ref}:${height ?? "mempool"}:${Math.min(confirmations, 100)}`,
+          kind: height ? "note_confirmed" : "note_seen",
+          network: this.network,
           pool,
-          txid: t.txid,
-          outputRef: `${t.txid}:note${idx}`,
+          txid,
+          outputRef: ref,
           valueZatoshis: zecToZat(n.value).toString(),
           address,
-          blockHeight: t.height,
+          blockHeight: height,
           blockHash: null,
           confirmations,
           scanVersion: "zkool_graphql",
           memo: n.memo ?? null
         });
-      });
+      }
+    };
+    for (const t of d.transactionsByAccount ?? []) {
+      if (!/^[0-9a-f]{64}$/.test(t.txid)) continue;
+      if (t.height) mined.add(t.txid);
+      toEvents(t.txid, t.height && t.height > 0 ? t.height : null, t.notes ?? []);
     }
     for (const x of u.unconfirmedByAccount ?? []) {
-      if (mined.has(x.txid)) continue;
+      if (mined.has(x.txid) || !/^[0-9a-f]{64}$/.test(x.txid)) continue;
+      toEvents(x.txid, null, x.notes ?? []);
     }
     return out;
   }
 };
+var MAINNET_NU7_HEIGHT = 3543405;
 
 // ../../packages/providers/src/tinyfish.ts
-import { createHash as createHash2 } from "crypto";
+import { createHash } from "crypto";
 import { z } from "zod";
 async function createTinyFishPort(apiKey) {
   if (!apiKey || apiKey.length < 16) throw new DomainError("SYSTEM_CONFIG", "TINYFISH_API_KEY is missing or malformed");
@@ -1499,7 +1417,234 @@ function sameVpa(visible, expected) {
   return visible.trim().toLowerCase() === expected.trim().toLowerCase();
 }
 function accountFingerprint(identifier, secret) {
-  return createHash2("sha256").update(`p2p-account:${secret}:${identifier.trim().toLowerCase()}`).digest("hex").slice(0, 32);
+  return createHash("sha256").update(`p2p-account:${secret}:${identifier.trim().toLowerCase()}`).digest("hex").slice(0, 32);
+}
+
+// ../../packages/core/src/config.ts
+function int(env, key, dflt, min = 0, max = Number.MAX_SAFE_INTEGER) {
+  const raw = env[key];
+  if (raw === void 0 || raw === "") return dflt;
+  if (!/^\d+$/.test(raw)) throw new DomainError("SYSTEM_CONFIG", `${key} must be a non-negative integer`);
+  const v = Number(raw);
+  if (v < min || v > max) throw new DomainError("SYSTEM_CONFIG", `${key} must be between ${min} and ${max}`);
+  return v;
+}
+function big(env, key, dflt) {
+  const raw = env[key];
+  if (raw === void 0 || raw === "") return dflt;
+  if (!/^\d+$/.test(raw)) throw new DomainError("SYSTEM_CONFIG", `${key} must be an integer string`);
+  return BigInt(raw);
+}
+function req(env, key) {
+  const v = env[key];
+  if (!v) throw new DomainError("SYSTEM_CONFIG", `${key} is required`);
+  return v;
+}
+function loadConfig(env = process.env) {
+  const environment = parseEnvironment(env.ZEB_ENVIRONMENT);
+  const expectedNet = zcashNetworkFor(environment);
+  if (env.ZCASH_NETWORK && env.ZCASH_NETWORK !== expectedNet) {
+    throw new DomainError("SYSTEM_CONFIG", `ZCASH_NETWORK=${env.ZCASH_NETWORK} conflicts with environment ${environment} (expects ${expectedNet})`);
+  }
+  const tokenSecret = req(env, "ZEB_TOKEN_SECRET");
+  if (tokenSecret.length < 32) throw new DomainError("SYSTEM_CONFIG", "ZEB_TOKEN_SECRET must be at least 32 characters");
+  const gwUrl = env.ZCASH_GATEWAY_URL;
+  const zcashGateway = gwUrl && environment !== "demo" ? {
+    url: gwUrl.replace(/\/$/, ""),
+    accountId: env.ZCASH_ACCOUNT_ID ?? "0",
+    tls: env.ZCASH_GATEWAY_TLS_CERT ? { certPath: req(env, "ZCASH_GATEWAY_TLS_CERT"), keyPath: req(env, "ZCASH_GATEWAY_TLS_KEY"), caPath: req(env, "ZCASH_GATEWAY_TLS_CA") } : void 0
+  } : null;
+  let zkool = null;
+  if (env.ZKOOL_GRAPHQL_URL) {
+    if (environment !== "testnet" && environment !== "mainnet-readonly") throw new DomainError("SYSTEM_CONFIG", "ZKOOL_GRAPHQL_URL is only permitted in HACKATHON_TESTNET or MAINNET_READONLY");
+    if (zcashGateway) throw new DomainError("SYSTEM_CONFIG", "configure either ZCASH_GATEWAY_URL or ZKOOL_GRAPHQL_URL, not both");
+    const zNet = environment === "testnet" ? "testnet" : "mainnet";
+    if (env.ZKOOL_NETWORK && env.ZKOOL_NETWORK !== zNet) throw new DomainError("SYSTEM_CONFIG", `ZKOOL_NETWORK=${env.ZKOOL_NETWORK} conflicts with environment ${environment} (expects ${zNet})`);
+    if (env.ZCASH_SPEND_KEY_REF) throw new DomainError("SYSTEM_CONFIG", "ZCASH_SPEND_KEY_REF must be blank on API/worker processes (watch-only)");
+    const mode = env.ZKOOL_ADDRESS_MODE ?? "rotate";
+    if (mode !== "rotate" && mode !== "memo") throw new DomainError("SYSTEM_CONFIG", "ZKOOL_ADDRESS_MODE must be rotate or memo");
+    let pem;
+    try {
+      pem = loadPemFromEnv({ file: env.ZKOOL_JWT_PRIVATE_KEY_FILE, pem: env.ZKOOL_JWT_PRIVATE_KEY });
+    } catch (e) {
+      throw new DomainError("SYSTEM_CONFIG", `ZKOOL_JWT_PRIVATE_KEY_FILE unreadable: ${e.message.slice(0, 80)}`);
+    }
+    if (!pem && !env.ZKOOL_JWT && !/^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(env.ZKOOL_GRAPHQL_URL)) {
+      throw new DomainError("SYSTEM_CONFIG", "a non-local ZKOOL_GRAPHQL_URL requires JWT auth (ZKOOL_JWT_PRIVATE_KEY_FILE)");
+    }
+    zkool = {
+      url: env.ZKOOL_GRAPHQL_URL,
+      accountId: int(env, "ZKOOL_ACCOUNT_ID", 1, 1, 1e6),
+      network: zNet,
+      jwt: env.ZKOOL_JWT || void 0,
+      jwtPrivateKeyPem: pem,
+      pools: int(env, "ZKOOL_ADDRESS_POOLS", 4, 1, 15),
+      addressMode: mode,
+      birthHeight: env.ZKOOL_BIRTH_HEIGHT ? int(env, "ZKOOL_BIRTH_HEIGHT", 0, 1, 1e8) : void 0
+    };
+  }
+  const p2p = env.P2P_DIAMOND_ADDRESS && environment !== "demo" ? {
+    chainId: req(env, "P2P_CHAIN_ID"),
+    rpcUrl: req(env, "BASE_RPC_URL"),
+    diamondAddress: req(env, "P2P_DIAMOND_ADDRESS"),
+    subgraphUrl: req(env, "P2P_SUBGRAPH_URL"),
+    usdcAddress: req(env, "P2P_USDC_ADDRESS"),
+    diamondCodeHash: env.P2P_DIAMOND_CODE_HASH || void 0
+  } : null;
+  if (p2p && environment === "testnet" && p2p.chainId !== "84532") throw new DomainError("SYSTEM_CONFIG", "testnet must use Base Sepolia (84532) for P2P");
+  if (p2p && environment.startsWith("mainnet") && p2p.chainId !== "8453") throw new DomainError("SYSTEM_CONFIG", "mainnet must use Base (8453) for P2P");
+  const signerMode = env.BASE_SIGNER_MODE ?? "none";
+  let signer;
+  if (signerMode === "none") signer = { mode: "none" };
+  else if (signerMode === "testnet-file") {
+    if (environment !== "testnet") throw new DomainError("SYSTEM_CONFIG", "BASE_SIGNER_MODE=testnet-file is only permitted in testnet");
+    signer = { mode: "testnet-file", keyFile: req(env, "BASE_SIGNER_KEY_FILE") };
+  } else if (signerMode === "remote") signer = { mode: "remote", url: req(env, "BASE_SIGNER_URL"), authHeader: env.BASE_SIGNER_AUTH };
+  else throw new DomainError("SYSTEM_CONFIG", `BASE_SIGNER_MODE=${signerMode} is not valid (none|testnet-file|remote)`);
+  const emailMode = env.EMAIL_MODE ?? "none";
+  let email;
+  if (emailMode === "none") email = { mode: "none" };
+  else if (emailMode === "smtp") email = { mode: "smtp", url: req(env, "SMTP_URL"), from: req(env, "EMAIL_FROM") };
+  else if (emailMode === "dev-file") {
+    if (environment.startsWith("mainnet")) throw new DomainError("SYSTEM_CONFIG", "EMAIL_MODE=dev-file is not permitted on mainnet");
+    email = { mode: "dev-file", dir: env.EMAIL_DEV_DIR ?? "./var/dev-mail" };
+  } else throw new DomainError("SYSTEM_CONFIG", `EMAIL_MODE=${emailMode} is not valid (none|smtp|dev-file)`);
+  const kmsProvider = env.ZEB_KMS_PROVIDER ?? "local";
+  if (kmsProvider !== "local") throw new DomainError("SYSTEM_CONFIG", `ZEB_KMS_PROVIDER=${kmsProvider} has no adapter in this build; implement KeyProvider (docs/SECURITY.md)`);
+  const isDemo = environment === "demo";
+  const policy = {
+    quoteLifetimeSec: int(env, "QUOTE_LIFETIME_SECONDS", isDemo ? 90 : 600, 30, 3600),
+    fundingGraceSec: int(env, "FUNDING_GRACE_SECONDS", isDemo ? 30 : 300, 0, 3600),
+    finalityWindowSec: int(env, "FINALITY_WINDOW_SECONDS", 7200, 60, 172800),
+    // Testnet evidence demo: 1 block (event guide). Mainnet values require risk review.
+    requiredConfirmations: int(env, "REQUIRED_CONFIRMATIONS", isDemo ? 3 : environment === "testnet" ? 1 : 10, 1, 1e3),
+    platformFeeBps: int(env, "PLATFORM_FEE_BPS", 50, 0, 1e3),
+    p2pSpreadReserveBps: int(env, "P2P_SPREAD_RESERVE_BPS", 100, 0, 2e3),
+    zecVolatilityPremiumBps: int(env, "ZEC_VOLATILITY_PREMIUM_BPS", 150, 0, 2e3),
+    minInrPaise: big(env, "MIN_INR_PAISE", 100n),
+    maxInrPaise: big(env, "MAX_INR_PAISE", isDemo ? 1000000n : 200000n),
+    creditCooldownSec: int(env, "CREDIT_COOLDOWN_SECONDS", 15 * 86400, 0, 365 * 86400),
+    creditPolicyVersion: env.CREDIT_POLICY_VERSION ?? "cooldown-proposal-2026-11",
+    withdrawalFeeBps: int(env, "WITHDRAWAL_FEE_BPS", 75, 0, 1e3),
+    minWithdrawalInrPaise: big(env, "MIN_WITHDRAWAL_INR_PAISE", 10000n),
+    payoutDestinationCoolingSec: int(env, "PAYOUT_DEST_COOLING_SECONDS", isDemo ? 0 : 86400, 0, 30 * 86400),
+    treasuryBufferMicros: big(env, "TREASURY_BUFFER_MICROS", 50000000n),
+    treasuryInventoryMaxAgeSec: int(env, "TREASURY_INVENTORY_MAX_AGE_SECONDS", isDemo ? 10 * 365 * 86400 : 300, 30, 10 * 365 * 86400),
+    paymentToleranceZat: big(env, "PAYMENT_TOLERANCE_ZAT", 0n),
+    stepUpValiditySec: int(env, "STEP_UP_VALIDITY_SECONDS", 300, 60, 3600),
+    sessionTtlSec: int(env, "SESSION_TTL_SECONDS", 7 * 86400, 600, 30 * 86400),
+    payoutAcceptTimeoutSec: int(env, "PAYOUT_ACCEPT_TIMEOUT_SECONDS", 900, 60, 86400),
+    payoutCompletionTimeoutSec: int(env, "PAYOUT_COMPLETION_TIMEOUT_SECONDS", 3600, 300, 7 * 86400),
+    payoutDisputeWindowSec: int(env, "PAYOUT_DISPUTE_WINDOW_SECONDS", isDemo ? 0 : 1800, 0, 7 * 86400),
+    maxPayoutAttempts: int(env, "MAX_PAYOUT_ATTEMPTS", 3, 1, 10),
+    priceMaxAgeSec: int(env, "PRICE_MAX_AGE_SECONDS", 120, 5, 3600),
+    priceMaxDeviationBps: int(env, "PRICE_MAX_DEVIATION_BPS", 150, 1, 5e3),
+    priceMinSources: int(env, "PRICE_MIN_SOURCES", 2, 1, 5),
+    scannerMaxLagBlocks: int(env, "SCANNER_MAX_LAG_BLOCKS", 3, 0, 1e3),
+    scannerMaxTipAgeSec: int(env, "SCANNER_MAX_TIP_AGE_SECONDS", 900, 60, 86400)
+  };
+  if (policy.minInrPaise <= 0n || policy.minInrPaise > policy.maxInrPaise) throw new DomainError("SYSTEM_CONFIG", "MIN_INR_PAISE must be > 0 and <= MAX_INR_PAISE");
+  return {
+    environment,
+    zcashNetwork: expectedNet,
+    databaseUrl: req(env, "DATABASE_URL"),
+    apiPort: int(env, "API_PORT", 4e3, 1, 65535),
+    apiHost: env.API_HOST ?? "127.0.0.1",
+    webOrigins: (env.WEB_ORIGINS ?? "http://localhost:3000").split(",").map((s) => s.trim()).filter(Boolean),
+    appBaseUrl: (env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
+    tokenSecret,
+    internalHmacSecret: env.INTERNAL_HMAC_SECRET && env.INTERNAL_HMAC_SECRET.length >= 32 ? env.INTERNAL_HMAC_SECRET : null,
+    kms: { provider: "local", keks: req(env, "ZEB_LOCAL_KEKS"), activeKek: req(env, "ZEB_ACTIVE_KEK") },
+    zcashGateway,
+    zkool,
+    p2p,
+    treasuryAddress: env.TREASURY_ADDRESS || null,
+    signer,
+    prices: { sources: (env.PRICE_SOURCES ?? "coingecko,kraken").split(",").map((s) => s.trim()).filter(Boolean), coingeckoApiKey: env.COINGECKO_API_KEY || void 0 },
+    email,
+    approvals: { legal: env.LEGAL_APPROVAL_REF || null, provider: env.PROVIDER_APPROVAL_REF || null },
+    payoutRail: (() => {
+      const r = env.PAYOUT_RAIL ?? (environment === "demo" ? "DEMO_SIMULATED" : "P2P_TINYFISH_WEB");
+      if (r !== "P2P_TINYFISH_WEB" && r !== "DEMO_SIMULATED") throw new DomainError("SYSTEM_CONFIG", `PAYOUT_RAIL=${r} is not valid (P2P_TINYFISH_WEB | DEMO_SIMULATED)`);
+      if (r === "DEMO_SIMULATED" && environment !== "demo") throw new DomainError("SYSTEM_CONFIG", "PAYOUT_RAIL=DEMO_SIMULATED is only permitted in DEMO");
+      return r;
+    })(),
+    // TINYFISH_API_KEY is read by the worker/API process only; it never reaches the web bundle.
+    tinyfish: { apiKey: env.TINYFISH_API_KEY || null, startUrl: env.P2P_ALLOWED_START_URL || null, profileId: env.TINYFISH_PROFILE_ID || void 0, extraOrigins: (env.P2P_ALLOWED_EXTRA_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean) },
+    pilot: {
+      livePayoutsEnabled: env.LIVE_PAYOUTS_ENABLED === "true",
+      requireOperatorApproval: true,
+      maxUnattendedPayoutInrPaise: 0n,
+      maxPayoutInrPaise: big(env, "PILOT_MAX_PAYOUT_INR_PAISE", 0n),
+      dailyMaxUsdcMicros: big(env, "PILOT_DAILY_MAX_USDC_MICROS", 0n),
+      capabilityMaxAgeSec: int(env, "P2P_CAPABILITY_MAX_AGE_SECONDS", 1800, 60, 86400),
+      approvalTtlSec: int(env, "OPERATOR_APPROVAL_TTL_SECONDS", 900, 60, 86400),
+      runMaxDurationSec: int(env, "TINYFISH_MAX_DURATION_SECONDS", 150, 30, 900),
+      runMaxSteps: int(env, "TINYFISH_MAX_STEPS", 28, 5, 100)
+    },
+    cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE === "true" : environment !== "demo",
+    policy
+  };
+}
+
+// ../../packages/db/src/index.ts
+import pg from "pg";
+
+// ../../packages/db/src/migrate.ts
+import { createHash as createHash2 } from "crypto";
+import { readdirSync, readFileSync as readFileSync4 } from "fs";
+import { dirname, join as join2 } from "path";
+import { fileURLToPath } from "url";
+var MIGRATIONS_DIR = process.env.MIGRATIONS_DIR ?? join2(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
+
+// ../../packages/db/src/index.ts
+pg.types.setTypeParser(1700, (v) => v);
+pg.types.setTypeParser(20, (v) => v);
+function createPool(connectionString, opts = {}) {
+  if (!connectionString) throw new Error("DATABASE_URL is required");
+  return new pg.Pool({
+    connectionString,
+    max: opts.max ?? 10,
+    application_name: opts.applicationName ?? "zeb-scan",
+    statement_timeout: 15e3,
+    idle_in_transaction_session_timeout: 3e4
+  });
+}
+var RETRYABLE = /* @__PURE__ */ new Set(["40001", "40P01"]);
+async function tx(db, fn, opts = {}) {
+  const retries = opts.retries ?? 5;
+  for (let attempt = 0; ; attempt++) {
+    const client = await db.connect();
+    try {
+      await client.query(`BEGIN ISOLATION LEVEL ${opts.isolation ?? "READ COMMITTED"}`);
+      const out = await fn(client);
+      await client.query("COMMIT");
+      return out;
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => void 0);
+      const code = err.code;
+      if (code && RETRYABLE.has(code) && attempt < retries) {
+        await new Promise((r) => setTimeout(r, 10 * 2 ** attempt + Math.floor(Math.random() * 20)));
+        continue;
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+}
+async function one(q, sql, params = []) {
+  const r = await q.query(sql, params);
+  if (r.rowCount !== 1) throw new Error(`expected exactly one row, got ${r.rowCount}`);
+  return r.rows[0];
+}
+async function maybeOne(q, sql, params = []) {
+  const r = await q.query(sql, params);
+  return r.rows[0] ?? null;
+}
+async function many(q, sql, params = []) {
+  const r = await q.query(sql, params);
+  return r.rows;
 }
 
 // ../../packages/security/src/passwords.ts
@@ -1725,7 +1870,7 @@ function buildContext(cfg2, opts = {}) {
   let allocator = null;
   if (env === "demo") allocator = new DemoAddressAllocator(env);
   else if (cfg2.zkool) {
-    zkool = new ZkoolWatcher({ url: cfg2.zkool.url, accountId: cfg2.zkool.accountId, jwt: cfg2.zkool.jwt, pools: cfg2.zkool.pools, network: "testnet" });
+    zkool = new ZkoolWatcher({ url: cfg2.zkool.url, accountId: cfg2.zkool.accountId, jwt: cfg2.zkool.jwt, jwtPrivateKeyPem: cfg2.zkool.jwtPrivateKeyPem, pools: cfg2.zkool.pools, network: cfg2.zkool.network, addressMode: cfg2.zkool.addressMode, birthHeight: cfg2.zkool.birthHeight });
     allocator = zkool;
   } else if (cfg2.zcashGateway && cfg2.zcashNetwork) {
     gateway = new ZcashGatewayClient({ url: cfg2.zcashGateway.url, network: cfg2.zcashNetwork, tls: cfg2.zcashGateway.tls });
@@ -3593,10 +3738,15 @@ async function expireIntents(ctx2) {
   return due.length;
 }
 var zkoolWatchOnlyProven = false;
+var zkoolSchemaChecked = false;
 async function pollZkool(ctx2) {
   const z2 = ctx2.zkool;
-  const net = "testnet";
+  const net = z2.network;
   try {
+    if (!zkoolSchemaChecked) {
+      await z2.assertSchema();
+      zkoolSchemaChecked = true;
+    }
     if (!zkoolWatchOnlyProven) {
       await z2.assertWatchOnly();
       zkoolWatchOnlyProven = true;
@@ -3610,13 +3760,21 @@ async function pollZkool(ctx2) {
          nu7_active=EXCLUDED.nu7_active, last_error=NULL, updated_at=now()`,
       [ctx2.env, net, st.tipHeight, st.scannedHeight, st.consensusBranchId, st.ironwoodSupported, st.state, st.version, st.nu7Active]
     );
-    const events = await z2.snapshot(st.tipHeight);
+    if (st.state !== "synced") return { events: 0, reorged: 0 };
+    const rows = await many(
+      ctx2.db,
+      `SELECT diversifier_index::text AS diversifier_index, address FROM zcash_addresses
+        WHERE environment=$1 AND network=$2 AND wallet_id=$3 AND memo_code IS NULL`,
+      [ctx2.env, net, `zkool:${net}:${z2.accountId}`]
+    );
+    const byIndex = new Map(rows.map((r) => [r.diversifier_index, r.address]));
+    const events = await z2.snapshot(st.tipHeight, byIndex);
     for (const ev of events) await ingestScannerEvent(ctx2, ev, "zkool");
     const minedNow = new Set(events.filter((e) => e.blockHeight !== null).map((e) => e.outputRef));
     const known = await many(
       ctx2.db,
       `SELECT d.txid, d.output_ref, d.pool, d.value_zatoshis, za.address FROM deposit_observations d JOIN zcash_addresses za ON za.id=d.zcash_address_id
-        WHERE d.environment=$1 AND d.network=$2 AND d.mined AND d.canonical AND d.scan_version=zkool_graphql`,
+        WHERE d.environment=$1 AND d.network=$2 AND d.mined AND d.canonical AND d.scan_version='zkool_graphql'`,
       [ctx2.env, net]
     );
     let reorged = 0;
@@ -3628,8 +3786,8 @@ async function pollZkool(ctx2) {
     return { events: events.length, reorged };
   } catch (e) {
     await ctx2.db.query(
-      `INSERT INTO scanner_state(environment, network, status, last_error, updated_at) VALUES ($1,$2,error,$3,now())
-       ON CONFLICT (environment, network) DO UPDATE SET status=error, last_error=EXCLUDED.last_error, updated_at=now()`,
+      `INSERT INTO scanner_state(environment, network, status, last_error, updated_at) VALUES ($1,$2,'error',$3,now())
+       ON CONFLICT (environment, network) DO UPDATE SET status='error', last_error=EXCLUDED.last_error, updated_at=now()`,
       [ctx2.env, net, e.message.slice(0, 300)]
     );
     throw e;

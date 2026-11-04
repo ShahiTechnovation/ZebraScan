@@ -12,12 +12,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: { default: "Zeb Scan — Pay in ZEC. They get INR.", template: "%s · Zeb Scan" },
   description:
-    "Zeb Scan connects Zcash payments to local INR settlement experiences: Scan & Pay any supported UPI QR, a merchant QR terminal, and shareable payment links. Demo frontend — no live funds.",
+    "Zeb Scan connects Zcash payments to local INR settlement experiences: Scan & Pay any supported UPI QR, a merchant QR terminal, and shareable payment links with shielded settlement.",
   applicationName: "Zeb Scan",
-  keywords: ["Zeb Scan", "ZEC", "Zcash", "UPI", "INR", "merchant payments", "payment links", "shielded payments"],
+  keywords: ["Zeb Scan", "ZEC", "Zcash", "UPI", "INR", "merchant payments", "payment links", "shielded payments", "Noir wallet"],
   openGraph: {
     title: "Zeb Scan — Pay in ZEC. They get INR.",
-    description: "Scan & Pay, merchant QR terminal and payment links for Zcash payments with local INR settlement. Demo frontend — no live funds.",
+    description: "Scan & Pay, merchant QR terminal and payment links for Zcash payments with local INR settlement.",
     siteName: "Zeb Scan",
     type: "website",
     locale: "en_IN",

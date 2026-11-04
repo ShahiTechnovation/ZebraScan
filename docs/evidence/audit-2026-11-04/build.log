@@ -1,0 +1,104 @@
+
+> zeb-scan-monorepo@0.2.0 build P:\Zebra Scan\zeb-scan
+> pnpm -r run build
+
+Scope: 10 of 11 workspace projects
+packages/contracts build$ tsc -p tsconfig.json
+packages/domain build$ tsc -p tsconfig.json
+packages/domain build: Done
+packages/contracts build: Done
+apps/web build$ next build
+packages/db build$ tsc -p tsconfig.json
+packages/providers build$ tsc -p tsconfig.json
+packages/security build$ tsc -p tsconfig.json
+packages/db build: Done
+packages/security build: Done
+apps/web build:    ▲ Next.js 15.2.9
+apps/web build:    Creating an optimized production build ...
+packages/providers build: Done
+apps/web build:  ✓ Compiled successfully
+apps/web build:    Skipping linting
+apps/web build:    Checking validity of types ...
+apps/web build:    Collecting page data ...
+apps/web build:    Generating static pages (0/30) ...
+apps/web build:    Generating static pages (7/30) 
+apps/web build:    Generating static pages (14/30) 
+apps/web build:    Generating static pages (22/30) 
+apps/web build:  ✓ Generating static pages (30/30)
+apps/web build:    Finalizing page optimization ...
+apps/web build:    Collecting build traces ...
+apps/web build: Route (app)                                 Size  First Load JS
+apps/web build: ┌ ○ /                                      176 B         105 kB
+apps/web build: ├ ○ /_not-found                            149 B         102 kB
+apps/web build: ├ ○ /app                                 5.98 kB         175 kB
+apps/web build: ├ ○ /app/balance                         3.65 kB         186 kB
+apps/web build: ├ ○ /app/counter-qr                      4.58 kB         190 kB
+apps/web build: ├ ○ /app/help                            3.04 kB         182 kB
+apps/web build: ├ ○ /app/links                             195 B         183 kB
+apps/web build: ├ ƒ /app/links/[id]                      6.32 kB         196 kB
+apps/web build: ├ ○ /app/links/new                       5.85 kB         185 kB
+apps/web build: ├ ○ /app/ops                             3.97 kB         183 kB
+apps/web build: ├ ○ /app/receipts                          198 B         187 kB
+apps/web build: ├ ƒ /app/receipts/[id]                     198 B         187 kB
+apps/web build: ├ ○ /app/settings                        5.94 kB         185 kB
+apps/web build: ├ ○ /app/settlements                     1.78 kB         184 kB
+apps/web build: ├ ○ /app/terminal                        5.35 kB         201 kB
+apps/web build: ├ ○ /app/transactions                    5.19 kB         184 kB
+apps/web build: ├ ƒ /app/transactions/[id]               4.32 kB         200 kB
+apps/web build: ├ ○ /app/withdrawals                     4.34 kB         183 kB
+apps/web build: ├ ƒ /app/withdrawals/[id]                 3.4 kB         187 kB
+apps/web build: ├ ○ /app/withdrawals/new                  5.8 kB         184 kB
+apps/web build: ├ ○ /apple-icon                            149 B         102 kB
+apps/web build: ├ ƒ /checkout/[id]                       5.47 kB         192 kB
+apps/web build: ├ ○ /faq                                   178 B         105 kB
+apps/web build: ├ ○ /how-it-works                          178 B         105 kB
+apps/web build: ├ ○ /icon.svg                                0 B            0 B
+apps/web build: ├ ○ /login                               3.69 kB         177 kB
+apps/web build: ├ ƒ /m/[handle]                            154 B         182 kB
+apps/web build: ├ ○ /onboarding                          10.3 kB         180 kB
+apps/web build: ├ ○ /opengraph-image                       149 B         102 kB
+apps/web build: ├ ƒ /pay/[slug]                            152 B         182 kB
+apps/web build: ├ ○ /privacy                               143 B         116 kB
+apps/web build: ├ ƒ /receipt/[id]                        2.57 kB         176 kB
+apps/web build: ├ ○ /reset-password                      1.39 kB         171 kB
+apps/web build: ├ ○ /scan                                3.73 kB         186 kB
+apps/web build: ├ ƒ /scan/[id]                           3.05 kB         203 kB
+apps/web build: ├ ○ /terms                                 143 B         116 kB
+apps/web build: └ ○ /verify-email                        1.39 kB         171 kB
+apps/web build: + First Load JS shared by all             101 kB
+apps/web build:   ├ chunks/7409-ce3d5e2fa66d736f.js      46.1 kB
+apps/web build:   ├ chunks/cc30fc87-6409a09a23dc098a.js  53.3 kB
+apps/web build:   └ other shared chunks (total)          2.05 kB
+apps/web build: ○  (Static)   prerendered as static content
+apps/web build: ƒ  (Dynamic)  server-rendered on demand
+apps/web build: Done
+packages/ledger build$ tsc -p tsconfig.json
+packages/ledger build: Done
+packages/core build$ tsc -p tsconfig.json
+packages/core build: Done
+apps/worker build$ tsup
+apps/api build$ tsup
+apps/worker build: CLI Building entry: src/main.ts
+apps/worker build: CLI Using tsconfig: tsconfig.json
+apps/worker build: CLI tsup v8.5.1
+apps/worker build: CLI Using tsup config: P:\Zebra Scan\zeb-scan\apps\worker\tsup.config.ts
+apps/api build: CLI Building entry: src/main.ts, src/migrate.ts
+apps/worker build: CLI Target: node22
+apps/api build: CLI Using tsconfig: tsconfig.json
+apps/api build: CLI tsup v8.5.1
+apps/api build: CLI Using tsup config: P:\Zebra Scan\zeb-scan\apps\api\tsup.config.ts
+apps/worker build: CLI Cleaning output folder
+apps/api build: CLI Target: node22
+apps/worker build: ESM Build start
+apps/api build: CLI Cleaning output folder
+apps/api build: ESM Build start
+apps/worker build: ESM dist\main.js     204.72 KB
+apps/worker build: ESM dist\main.js.map 514.98 KB
+apps/worker build: ESM ⚡️ Build success in 65ms
+apps/api build: ESM dist\migrate.js     2.88 KB
+apps/api build: ESM dist\main.js        351.54 KB
+apps/api build: ESM dist\migrate.js.map 8.63 KB
+apps/api build: ESM dist\main.js.map    765.71 KB
+apps/api build: ESM ⚡️ Build success in 79ms
+apps/worker build: Done
+apps/api build: Done

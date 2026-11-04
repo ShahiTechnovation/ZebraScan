@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HelpCircle } from "lucide-react";
 import { useZeb } from "@/providers/ZebProvider";
-import { modeLabel } from "@/services/demo/engine";
+import { modeLabel } from "@/services/model";
 import { COPY } from "@/config/mode";
 import { Container } from "@/components/layout/Container";
 import { PageSkeleton } from "@/components/ui/Blocks";
@@ -44,7 +44,7 @@ export function HostedCheckout({ id }: { id: string }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-label text-foreground-secondary sm:px-6">
-          <span>{isDemo ? COPY.simulation : "Payments are verified by the receiving wallet."}</span>
+          <span>Payments are verified directly on-chain by the receiving wallet.</span>
           <Link href="/faq" className="inline-flex min-h-[44px] items-center gap-1 text-accent hover:underline">
             <HelpCircle aria-hidden className="h-4 w-4" /> Need help?
           </Link>

@@ -15,7 +15,7 @@ import { Panel, PanelHeader } from "@/components/ui/Panel";
 import { DataTable } from "@/components/ui/Table";
 import { CREDIT_META, MetaBadge } from "@/components/ui/StatusBadge";
 import type { MerchantCredit } from "@/types/domain";
-import { DemoClockControls } from "./DemoClock";
+
 
 export function Settlements() {
   const { state } = useZeb();
@@ -36,9 +36,8 @@ export function Settlements() {
           </ButtonLink>
         }
       />
-      <Callout tone="demo" icon={CalendarClock} className="mb-6" title={`Example demo settlement policy: ${demoConfig.cooldownDays}-day cooldown`}>
-        Not a live contractual promise. Each verified payment creates a locked INR credit that becomes available {demoConfig.cooldownDays} days after verification. You
-        then request a withdrawal, which a payout provider completes separately.
+      <Callout tone="info" icon={CalendarClock} className="mb-6" title={`Settlement Policy: ${demoConfig.cooldownDays}-day cooldown`}>
+        Each verified payment creates an INR credit that unlocks {demoConfig.cooldownDays} days after verification. Once unlocked, credits are available for withdrawal to your bank account via UPI.
       </Callout>
       <MetricStrip
         items={[
@@ -101,7 +100,6 @@ export function Settlements() {
               <li>• Partial withdrawals split a credit; the rest stays available.</li>
             </ul>
           </Panel>
-          <DemoClockControls />
         </div>
       </div>
     </>

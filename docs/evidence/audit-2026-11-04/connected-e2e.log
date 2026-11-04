@@ -1,0 +1,104 @@
+
+> zeb-scan-monorepo@0.2.0 test:e2e:connected P:\Zebra Scan\zeb-scan
+> tsx scripts/e2e-connected.ts
+
+migrations: [
+  '0001_core.sql',
+  '0002_scanner_cursor.sql',
+  '0003_memo_matching.sql',
+  '0004_tinyfish_payouts_and_wallet_auth.sql',
+  '0005_wallet_only_users.sql'
+]
+e2e database reset: zebscan_e2e_test
+
+> @zeb/web@0.1.0 build P:\Zebra Scan\zeb-scan\apps\web
+> next build
+
+   ▲ Next.js 15.2.9
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/30) ...
+   Generating static pages (7/30) 
+   Generating static pages (14/30) 
+   Generating static pages (22/30) 
+ ✓ Generating static pages (30/30)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                      176 B         105 kB
+├ ○ /_not-found                            149 B         102 kB
+├ ○ /app                                 5.98 kB         175 kB
+├ ○ /app/balance                         3.65 kB         186 kB
+├ ○ /app/counter-qr                      4.58 kB         190 kB
+├ ○ /app/help                            3.04 kB         182 kB
+├ ○ /app/links                             195 B         183 kB
+├ ƒ /app/links/[id]                      6.32 kB         196 kB
+├ ○ /app/links/new                       5.85 kB         184 kB
+├ ○ /app/ops                             3.97 kB         183 kB
+├ ○ /app/receipts                          198 B         187 kB
+├ ƒ /app/receipts/[id]                     198 B         187 kB
+├ ○ /app/settings                        5.94 kB         185 kB
+├ ○ /app/settlements                     1.78 kB         184 kB
+├ ○ /app/terminal                        5.35 kB         201 kB
+├ ○ /app/transactions                    5.19 kB         184 kB
+├ ƒ /app/transactions/[id]               4.32 kB         200 kB
+├ ○ /app/withdrawals                     4.34 kB         183 kB
+├ ƒ /app/withdrawals/[id]                 3.4 kB         187 kB
+├ ○ /app/withdrawals/new                  5.8 kB         184 kB
+├ ○ /apple-icon                            149 B         102 kB
+├ ƒ /checkout/[id]                       5.47 kB         192 kB
+├ ○ /faq                                   178 B         105 kB
+├ ○ /how-it-works                          178 B         105 kB
+├ ○ /icon.svg                                0 B            0 B
+├ ○ /login                               3.69 kB         177 kB
+├ ƒ /m/[handle]                            154 B         182 kB
+├ ○ /onboarding                          10.3 kB         180 kB
+├ ○ /opengraph-image                       149 B         102 kB
+├ ƒ /pay/[slug]                            152 B         182 kB
+├ ○ /privacy                               143 B         116 kB
+├ ƒ /receipt/[id]                        2.57 kB         176 kB
+├ ○ /reset-password                      1.39 kB         171 kB
+├ ○ /scan                                3.73 kB         186 kB
+├ ƒ /scan/[id]                           3.05 kB         202 kB
+├ ○ /terms                                 143 B         116 kB
+└ ○ /verify-email                        1.39 kB         171 kB
++ First Load JS shared by all             101 kB
+  ├ chunks/7409-ce3d5e2fa66d736f.js      46.1 kB
+  ├ chunks/cc30fc87-6409a09a23dc098a.js  53.3 kB
+  └ other shared chunks (total)          2.05 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+[WebServer] (node:34524) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:20384) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:22228) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:22228) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+[WebServer] (node:34152) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:8532) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:31896) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:32636) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:34812) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:8764) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [connected] › tests\e2e-connected\connected.spec.ts:49:5 › Scan & Pay end-to-end against the real backend (DEMO environment) (29.5s)
+  ok 2 [connected] › tests\e2e-connected\connected.spec.ts:77:5 › merchant: register → onboard → verify email → terminal payment → credit unlock → withdrawal (17.9s)
+
+  2 passed (1.0m)

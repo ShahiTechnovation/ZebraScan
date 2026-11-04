@@ -124,7 +124,7 @@ export function Terminal() {
                   void create();
                 }}
               >
-                <FormField label="Amount (INR)" error={error} hint="Demo policy: ₹1 – ₹10,000">
+                <FormField label="Amount (INR)" error={error} hint="Allowed range: ₹1 – ₹10,000">
                   {(p) => <CurrencyInput {...p} value={amountText} onChange={setAmountText} onBlur={() => setTouched(true)} autoFocus />}
                 </FormField>
                 <AmountChips values={[10_000, 50_000, 100_000]} onPick={(v) => setAmountText(String(v / 100))} />

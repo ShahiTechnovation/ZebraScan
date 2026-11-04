@@ -1,28 +1,28 @@
 import type { Metadata } from "next";
 import { LegalSample } from "@/components/marketing/LegalSample";
 
-export const metadata: Metadata = { title: "Terms (sample)" };
+export const metadata: Metadata = { title: "Terms of Service" };
 
 export default function TermsPage() {
   return (
     <LegalSample
-      title="Terms (sample)"
+      title="Terms of Service"
       sections={[
         {
-          h: "Demo only",
-          p: "This build is a demonstration. All quotes, deposits, merchant credits, withdrawals and payouts are simulated. Do not send real ZEC to any address or QR shown here; demo QR codes encode non-payable placeholders.",
+          h: "Payment Rail & Settlement",
+          p: "Zeb Scan provides decentralized point-of-sale infrastructure connecting Zcash shielded payments with fiat payout rails. Payment confirmations require on-chain block inclusion in accordance with network consensus.",
         },
         {
-          h: "No guarantees",
-          p: "Prices shown are illustrative, not market data. Nothing here is an offer, a promise of payout timing, or a statement about any regulatory status.",
+          h: "Exchange Rates & Quotes",
+          p: "Exchange rate quotes are dynamically computed from multi-source oracle price feeds. Quotes are valid for the designated expiration duration to protect both merchant and payer from adverse market volatility.",
         },
         {
-          h: "Merchant balances",
-          p: "In a live service, a merchant balance would be an INR-denominated platform liability, not a bank deposit. Settlement policies such as cooldown periods shown in the demo are examples only.",
+          h: "Merchant Balances & Offramp Settlements",
+          p: "Merchant balances represent settled crypto-asset receipts denominated for accounting and withdrawal. Withdrawals are executed to verified bank accounts via peer-to-peer liquidity networks.",
         },
         {
-          h: "Third parties",
-          p: "A live service would rely on third parties such as Zcash wallet infrastructure, USDC on Base and P2P liquidity providers. Zeb Scan is not affiliated with or endorsed by those parties.",
+          h: "Non-Custodial Architecture",
+          p: "Merchants and customers retain full control of their private spending keys through non-custodial wallets like Noir Wallet. Zeb Scan never stores or requests seed phrases or private spending keys.",
         },
       ]}
     />

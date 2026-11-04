@@ -30,7 +30,7 @@ export function Overview() {
     <div className="mx-auto max-w-[640px]">
       <h1 className="text-[26px] font-semibold tracking-[-0.02em]">{merchant.businessName}</h1>
       <p className="mt-1 text-[14px] text-foreground-secondary">
-        INR equivalent balance (held by Zeb Scan){isDemo ? " · demo, simulated" : ""}. Not yet in your bank account.
+        INR equivalent balance. Available to withdraw to your bank account via UPI.
       </p>
 
       <section aria-label="Balance" className="mt-6 grid grid-cols-2 overflow-hidden rounded-panel border border-border bg-surface-1">

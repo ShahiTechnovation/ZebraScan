@@ -42,7 +42,10 @@ export function buildHandlers(exec: P2PExecutor | null, tf: TfDeps = { port: nul
     "tfpayout.advance": async (ctx, job) => advanceTfPayout(ctx, tf, String(job.payload.id)),
     "payout.advance": async (ctx, job) => advancePayout(ctx, exec, job.payload.kind as "scan_pay", String(job.payload.id)),
     "credit.unlock": async (ctx, job) => {
-      await unlockCredit(ctx, String(job.payload.creditId));
+      const result = await unlockCredit(ctx, String(job.payload.creditId));
+      // Return the reschedule to the lease owner; enqueueing the currently running
+      // dedupe key alone would be overwritten by runJob's completion update.
+      return { rerunInMs: result === "not_due" ? 60_000 : result === "blocked" ? 3_600_000 : null };
     },
     "intents.expire": async (ctx) => {
       await expireIntents(ctx);
@@ -137,7 +140,7 @@ export async function pollZkool(ctx: CoreContext): Promise<{ events: number; reo
     const minedNow = new Set(events.filter((e) => e.blockHeight !== null).map((e) => e.outputRef));
     const known = await many<{ txid: string; output_ref: string; pool: string; value_zatoshis: string; address: string }>(
       ctx.db,
-      `SELECT d.txid, d.output_ref, d.pool, d.value_zatoshis, za.address FROM deposit_observations d JOIN zcash_addresses za ON za.id=d.zcash_address_id
+      `SELECT d.txid, d.output_ref, d.pool, d.value_zatoshis, coalesce(za.address,d.observed_address) AS address FROM deposit_observations d LEFT JOIN zcash_addresses za ON za.id=d.zcash_address_id
         WHERE d.environment=$1 AND d.network=$2 AND d.mined AND d.canonical AND d.scan_version='zkool_graphql'`,
       [ctx.env, net],
     );

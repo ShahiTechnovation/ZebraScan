@@ -22,7 +22,7 @@ import { PrivacyChoice, QuoteCard } from "@/components/payments/Quote";
 import { useQuotePreview } from "@/components/payments/useQuotePreview";
 
 type Tab = "camera" | "upload" | "paste" | "manual";
-const SAMPLE_PAYLOAD = "upi://pay?pa=sample.store@zebdemo&pn=Sample%20Store&am=250.00&cu=INR";
+const SAMPLE_PAYLOAD = "upi://pay?pa=urbanroast@upi&pn=Urban%20Roast&am=250.00&cu=INR";
 
 export function ScanSteps({ current }: { current: 1 | 2 | 3 | 4 }) {
   const labels = ["Recipient", "Amount & quote", "Pay ZEC", "Track payout"];
@@ -185,7 +185,7 @@ export function ScanPayWizard() {
                       </Button>
                       {isDemo && (
                         <Button variant="ghost" onClick={() => setPaste(SAMPLE_PAYLOAD)}>
-                          Use sample demo QR
+                          Load test UPI QR
                         </Button>
                       )}
                     </div>
@@ -268,7 +268,7 @@ export function ScanPayWizard() {
               <FormField
                 label="Amount the receiver gets"
                 error={amountError}
-                hint={`Demo policy: ${formatInr(100, { whole: true })} – ₹10,000 per payment.`}
+                hint={`Allowed range: ${formatInr(100, { whole: true })} – ₹10,000 per payment.`}
               >
                 {(p) => <CurrencyInput {...p} value={amountText} onChange={setAmountText} onBlur={() => setAmountTouched(true)} />}
               </FormField>
@@ -309,7 +309,7 @@ export function ScanPayWizard() {
                   </Button>
                 ) : (
                   <Button onClick={submit} isLoading={busy} disabled={!canTransact || !validAmount || !quote}>
-                    {isDemo ? "Lock quote & create demo invoice" : "Lock quote & continue"} <ArrowRight aria-hidden className="h-4 w-4" />
+                    Lock quote &amp; continue <ArrowRight aria-hidden className="h-4 w-4" />
                   </Button>
                 )}
               </div>

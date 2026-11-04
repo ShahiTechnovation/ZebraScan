@@ -1,0 +1,34 @@
+
+> zeb-scan-monorepo@0.2.0 test P:\Zebra Scan\zeb-scan
+> vitest run --config vitest.unit.config.ts && pnpm --filter @zeb/web test
+
+
+ RUN  v3.2.7 P:/Zebra Scan/zeb-scan
+
+ ✓ tests/unit/domain.test.ts (21 tests) 25ms
+ ✓ tests/unit/zkool-tinyfish.test.ts (13 tests) 42ms
+ ✓ tests/unit/security-ledger-providers.test.ts (12 tests) 269ms
+ ✓ tests/contracts/contracts.test.ts (6 tests) 50ms
+
+ Test Files  4 passed (4)
+      Tests  52 passed (52)
+   Start at  21:28:58
+   Duration  3.53s (transform 1.15s, setup 0ms, collect 8.12s, tests 386ms, environment 1ms, prepare 1.08s)
+
+
+> @zeb/web@0.1.0 test P:\Zebra Scan\zeb-scan\apps\web
+> vitest run
+
+
+ RUN  v3.2.7 P:/Zebra Scan/zeb-scan/apps/web
+
+ ✓ tests/unit/money-quote-upi.test.ts (21 tests) 10ms
+ ✓ tests/unit/engine.test.ts (15 tests) 32ms
+ ✓ tests/unit/connected-mode.test.tsx (4 tests) 984ms
+   ✓ connected mode without live adapters (acceptance 10) > Scan & Pay shows not-connected state, no demo sample, no simulation  492ms
+
+ Test Files  3 passed (3)
+      Tests  40 passed (40)
+   Start at  21:29:03
+   Duration  3.47s (transform 559ms, setup 0ms, collect 935ms, tests 1.03s, environment 4.21s, prepare 618ms)
+

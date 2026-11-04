@@ -1,0 +1,503 @@
+scripts\audit-readonly.ts:20:report.uiMode = { configured: env.NEXT_PUBLIC_ZEB_MODE, resolved: env.NEXT_PUBLIC_ZEB_MODE === "connected" ? "connected" : "demo" };
+scripts\audit-readonly.ts:71:  try { const r = await fetch(url, { signal: AbortSignal.timeout(10_000) }); const body = await r.text(); return { url, status: r.status, demoText: /Demo mode|simulated transactions|Preview QR|Explore demo/i.test(body), contentType: r.headers.get("content-type") }; }
+scripts\ops-p2p-preflight.ts:14:if (cfg.environment === "demo") throw new Error("Run the real probe in MAINNET_READONLY (or HACKATHON_TESTNET for a dev check); DEMO would only exercise the simulator.");
+scripts\gen-dev-secrets.ts:1:/** Prints fresh random secrets for a LOCAL .env (demo/testnet). Never use these for mainnet KMS. */
+apps\worker\src\main.ts:6: *  - P2P_TINYFISH_WEB (all non-demo environments): TinyFish operates the authenticated P2P.me web UI
+apps\worker\src\main.ts:9: *  - DEMO_SIMULATED (demo only): simulated provider.
+apps\worker\src\main.ts:20:const exec = cfg.environment === "demo" ? new DemoP2PExecutor(ctx.db, "demo") : null;
+apps\worker\src\main.ts:51:      await new Promise((r) => setTimeout(r, 500));
+apps\worker\src\main.ts:57:    await new Promise((r) => setTimeout(r, 2_000));
+scripts\seed-test.ts:10:if (env !== "demo" && env !== "testnet") throw new Error(`refusing to seed ${env}`);
+packages\contracts\src\schemas.ts:13:export const EnvironmentZ = z.enum(["demo", "testnet", "mainnet-readonly", "mainnet-enabled"]);
+packages\contracts\src\schemas.ts:177:    network: z.enum(["mainnet", "testnet", "regtest", "demo"]),
+packages\contracts\src\schemas.ts:536:  verification: z.enum(["wallet_verified", "simulated"]),
+packages\contracts\src\openapi.ts:13:    if (def.demoOnly && !opts.includeDemo) continue;
+packages\contracts\src\routes.ts:30:  /** Only registered in the demo environment. */
+packages\contracts\src\routes.ts:31:  demoOnly?: boolean;
+packages\contracts\src\routes.ts:170:  /* demo only */
+packages\contracts\src\routes.ts:171:  demoSimulateDeposit: r({ operationId: "demoSimulateDeposit", method: "POST", path: "/api/v1/demo/checkout/:id/simulate-deposit", auth: "scoped", idempotent: true, demoOnly: true, params: idP, body: S.DemoDepositInZ, response: S.CheckoutPublicZ, summary: "DEMO ONLY: simulate a non-payable deposit", tags: ["demo"] }),
+packages\contracts\src\routes.ts:172:  demoAdvanceConfirmations: r({ operationId: "demoAdvanceConfirmations", method: "POST", path: "/api/v1/demo/checkout/:id/advance", auth: "scoped", idempotent: true, demoOnly: true, params: idP, response: S.CheckoutPublicZ, summary: "DEMO ONLY: add a simulated confirmation", tags: ["demo"] }),
+scripts\verify-external.ts:84:await check("P2P.me Diamond / subgraph / integrator permission", "https://github.com/p2pdotme/p2pdotme-sdk (example uses zero-address placeholders)", async () => ({
+scripts\verify-external.ts:87:    reason: "No provider-verified Diamond address, subgraph URL, ABI/code hash, integrator whitelist or liquidity-circle access has been supplied. The official examples intentionally use 0x000… placeholders. P2P execution stays gated closed.",
+scripts\verify-external.ts:113:  ["Email delivery (SMTP)", "No SMTP credentials supplied; dev-file provider used for demo/testnet only."],
+scripts\verify-external.ts:114:  ["Secret manager / KMS", "Only LocalKeyProvider implemented (demo/testnet). Cloud KMS adapter required for mainnet."],
+packages\core\src\gates.ts:39:  const isDemo = env === "demo";
+packages\core\src\gates.ts:98:  // HACKATHON_TESTNET: Scan & Pay accepts real TAZ; the INR payout leg is shown as disabled, not faked.
+scripts\verify-prod-config.ts:25:const live = env !== "demo";
+scripts\verify-prod-config.ts:30:add(!mainnet || cfg!.kms.provider !== "local" ? "PASS" : "FAIL", `KMS provider "${cfg!.kms.provider}" (local KEKs are demo/testnet only)`);
+packages\core\src\context.ts:66:  if (env !== "demo") {
+packages\core\src\context.ts:83:  let p2pConfigError: string | null = env === "demo" ? null : "P2P provider not configured (P2P_DIAMOND_ADDRESS / P2P_SUBGRAPH_URL / BASE_RPC_URL)";
+packages\core\src\context.ts:105:  if (env === "demo") allocator = new DemoAddressAllocator(env);
+packages\core\src\executor.ts:5: *  - DemoP2PExecutor: DEMO ONLY simulated liquidity provider; every state it reports is persisted
+packages\core\src\executor.ts:6: *    on the order row and every resulting event is labelled simulated. Refused outside `demo`.
+packages\core\src\executor.ts:37:  readonly kind: "sdk" | "demo";
+packages\core\src\executor.ts:165:/* ------------------------------------------------------------------ demo */
+packages\core\src\executor.ts:180:  readonly kind = "demo" as const;
+packages\core\src\executor.ts:181:  readonly treasuryAddress = "demo-treasury";
+packages\core\src\executor.ts:189:    if (env !== "demo") throw new DomainError("SYSTEM_CONFIG", "DemoP2PExecutor is only permitted in the demo environment");
+packages\core\src\executor.ts:192:    const row = await maybeOne<{ id: string; last_onchain: DemoOrderState }>(this.db, `SELECT id, last_onchain FROM p2p_orders WHERE environment='demo' AND onchain_order_id=$1`, [orderId.toString()]);
+packages\core\src\executor.ts:193:    if (!row?.last_onchain) throw new DomainError("P2P_ORDER_READ_FAILED", "demo order not found");
+packages\core\src\executor.ts:202:    const ids = await many<{ m: string | null }>(this.db, `SELECT max(onchain_order_id) AS m FROM p2p_orders WHERE environment='demo'`);
+packages\core\src\executor.ts:204:    const hash = `0xdemo${orderId.toString(16).padStart(60, "0")}`;
+packages\core\src\executor.ts:214:      acceptedMerchant: "demo-liquidity-provider",
+packages\core\src\executor.ts:250:  private demoAllowance = 0n;
+packages\core\src\executor.ts:254:    this.demoAllowance = amount;
+packages\core\src\executor.ts:255:    const hash = `0xdemoapprove${n.toString(16).padStart(53, "0")}`;
+packages\core\src\executor.ts:260:    return this.demoAllowance;
+packages\core\src\executor.ts:264:    if (s.status !== "accepted") throw new SubmissionError("demo order not accepted", false, "ORDER_NOT_ACCEPTED");
+packages\core\src\executor.ts:269:    const hash = `0xdemoupi${n.toString(16).padStart(57, "0")}`;
+packages\core\src\executor.ts:279:    const hash = `0xdemocancel${n.toString(16).padStart(54, "0")}`;
+scripts\testnet-pay.ts:2: * TESTNET ONLY — pay a Zeb Scan invoice from the separate demo customer wallet A (TAZ, no value),
+scripts\testnet-pay.ts:43:const a = accts.find((x) => x.name === "demo-customer-wallet-A");
+packages\core\src\deposits.ts:27:  pool: "orchard" | "sapling" | "transparent" | "ironwood" | "demo";
+packages\core\src\deposits.ts:44:  if (ctx.env !== "demo" && ev.network !== ctx.cfg.zcashNetwork) throw new DomainError("WALLET_NETWORK_MISMATCH", "event network does not match environment", undefined, { status: 400 });
+packages\core\src\deposits.ts:199:    if (!ctx.caps.canSubmitTransactions && ctx.env !== "demo") {
+packages\core\src\deposits.ts:216:      await emitResource(t, ctx.env, `checkout:${intent.id}`, "payout.payout_queued", { label: "INR payout queued", detail: "DEMO: a simulated provider processes this payout." });
+packages\core\src\deposits.ts:286:/** DEMO ONLY: synthesize scanner events for a non-payable demo checkout. */
+packages\core\src\deposits.ts:287:export async function demoSimulate(ctx: CoreContext, intentId: string, kind: "exact" | "underpaid" | "overpaid" | "advance", confirmations = 0) {
+packages\core\src\deposits.ts:288:  if (ctx.env !== "demo") throw new DomainError("FEATURE_DEMO_ONLY", "Simulation is only available in the demo environment", undefined, { status: 403 });
+packages\core\src\deposits.ts:296:    if (!existing) throw new DomainError("STATE_NO_DEPOSIT", "No simulated deposit to confirm", undefined, { status: 409 });
+packages\core\src\deposits.ts:301:    if (existing) throw new DomainError("STATE_DEPOSIT_EXISTS", "A simulated deposit already exists", undefined, { status: 409 });
+packages\core\src\deposits.ts:304:    txid = createHash("sha256").update(`demo:${intentId}`).digest("hex");
+packages\core\src\deposits.ts:310:      eventId: `demo:${txid}:${conf}`,
+packages\core\src\deposits.ts:312:      network: "demo",
+packages\core\src\deposits.ts:313:      pool: "demo",
+packages\core\src\deposits.ts:321:      scanVersion: "demo-simulator",
+packages\core\src\deposits.ts:323:    "demo-simulator",
+scripts\zkool-bootstrap.ts:52:      await new Promise((r) => setTimeout(r, 1500 * attempt));
+scripts\zkool-bootstrap.ts:157:  sender = all.find((a) => a.name === "demo-customer-wallet-A");
+scripts\zkool-bootstrap.ts:163:      n: { name: "demo-customer-wallet-A", key: restoring ? readFileSync(seedFile, "utf8").trim() : "", aindex: 0, birth: meta.birth, useInternal: false },
+scripts\zkool-bootstrap.ts:197:  receiver: { accountId: watch.id, birth: recv.birth, defaultUa: recvUa, ufvkLabel: "viewing key — reveals this demo wallet's history, cannot spend", ufvk: network === "testnet" ? recv.ufvk : "(withheld)" },
+packages\core\src\config.ts:114:    gwUrl && environment !== "demo"
+packages\core\src\config.ts:125:    // mainnet-readonly never opens payouts). Never in demo or mainnet-enabled.
+packages\core\src\config.ts:155:    env.P2P_DIAMOND_ADDRESS && environment !== "demo"
+packages\core\src\config.ts:189:  const isDemo = environment === "demo";
+packages\core\src\config.ts:194:    // Testnet evidence demo: 1 block (event guide). Mainnet values require risk review.
+packages\core\src\config.ts:243:      const r = env.PAYOUT_RAIL ?? (environment === "demo" ? "DEMO_SIMULATED" : "P2P_TINYFISH_WEB");
+packages\core\src\config.ts:245:      if (r === "DEMO_SIMULATED" && environment !== "demo") throw new DomainError("SYSTEM_CONFIG", "PAYOUT_RAIL=DEMO_SIMULATED is only permitted in DEMO");
+packages\core\src\config.ts:261:    cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE === "true" : environment !== "demo",
+scripts\zkool-verify-auth.ts:44:const fake = await q(`{ accounts { id name } }`, signZkoolJwt(forged, { sub: 0, write: true }));
+scripts\zkool-verify-auth.ts:45:check("forged-key token → accounts refused", fake, !fake.body.includes('"accounts":['));
+packages\core\src\intents.ts:114:  const network = ctx.env === "demo" ? "demo" : ctx.cfg.zcashNetwork!;
+packages\core\src\intents.ts:115:  const accountId = ctx.cfg.zcashGateway?.accountId ?? (ctx.zkool ? String(ctx.zkool.accountId) : "demo");
+packages\core\src\intents.ts:130:  if (ctx.env !== "demo" && !addressMatchesNetwork(addr.address, ctx.cfg.zcashNetwork!)) throw new DomainError("WALLET_NETWORK_MISMATCH", "gateway returned an address for the wrong network");
+packages\core\src\intents.ts:302:  const net = ctx.env === "demo" ? null : ctx.cfg.zcashNetwork;
+packages\core\src\intents.ts:378:  const payable = ctx.caps.realChainAddresses && addr.address_type !== "demo";
+packages\core\src\intents.ts:388:      network: (addr.network === "demo" ? "demo" : addr.network) as "testnet",
+packages\core\src\intents.ts:390:      zip321Uri: payable ? buildZip321(addr.address, BigInt(quote.zec_zatoshis), addr.memo_code ?? undefined) : `zebscan-demo://checkout/${i.id}?payable=false`,
+packages\core\src\payouts.ts:80:    await emitResource(t, ctx.env, s.resource, `payout.${to}`, { label, ...(detail ? { detail } : {}), simulated: ctx.env === "demo" });
+packages\core\src\payouts.ts:163:      [rowId, ctx.env, s.kind, s.kind === "scan_pay" ? s.id : null, s.kind === "withdrawal" ? s.id : null, attempt, s.kind === "scan_pay" ? 2 : 1, cfg?.chainId ?? 0, cfg?.diamondAddress ?? "demo", cfg?.usdcAddress ?? "demo", fiat6.toString(), usdc.toString(), s.vpaCiphertext],
+packages\core\src\payouts.ts:255:  if (ctx.env !== "demo") await ctx.db.query(`UPDATE p2p_orders SET last_onchain=$2, last_read_at=now() WHERE id=$1`, [row.id, JSON.stringify(snapshot(o))]);
+apps\web\next.config.ts:8:  // Separate build output for the connected-mode E2E build (keeps the demo build intact).
+packages\core\src\quotes.ts:179:    environment: r.environment as "demo",
+apps\web\package.json:5:  "description": "Zeb Scan — Pay in ZEC. They get INR. Frontend with demo adapters.",
+packages\core\src\rates.ts:3: * Demo uses fictional constants (1 ZEC = $45, 1 USDC = ₹90) that are ONLY reachable in `demo`.
+packages\core\src\rates.ts:32:  source: "demo-constants (fictional, not market data)",
+packages\core\src\rates.ts:51:  if (ctx.env === "demo") {
+packages\core\src\rates.ts:85:  if (ctx.env === "demo") return { sellPrice6: DEMO_RATES.sellPrice6, fee: { ...DEMO_RATES.fee }, source: DEMO_RATES.source, observedAt: now };
+apps\web\playwright.connected.config.ts:3: * The backend runs in the `demo` environment (no chain is touched; every record is labelled DEMO),
+apps\web\playwright.connected.config.ts:17:  ZEB_ENVIRONMENT: "demo",
+packages\security\src\envelope.ts:12: *  - LocalKeyProvider: KEKs from env (base64, 32 bytes). Acceptable for demo/testnet ONLY.
+packages\providers\src\email.ts:5: *  - DevFileEmailProvider: demo/testnet ONLY — writes messages to a local directory so verification
+packages\providers\src\http.ts:37:    const t = setTimeout(() => ac.abort(), opts.timeoutMs ?? 5_000);
+packages\providers\src\http.ts:56:      await new Promise((r) => setTimeout(r, 200 * 2 ** attempt + Math.floor(Math.random() * 150)));
+packages\providers\src\prices.ts:45:    const headers: Record<string, string> = this.opts.apiKey ? { "x-cg-demo-api-key": this.opts.apiKey } : {};
+apps\api\src\server.ts:121:  demoSimulateDeposit: checkout.demoSimulateDeposit,
+apps\api\src\server.ts:122:  demoAdvanceConfirmations: checkout.demoAdvanceConfirmations,
+apps\api\src\server.ts:245:  app.get("/api/v1/openapi.json", async () => buildOpenApi({ includeDemo: ctx.env === "demo" }));
+apps\api\src\server.ts:259:      network: ctx.cfg.zcashNetwork ?? "demo",
+apps\api\src\server.ts:285:    if (def.demoOnly && ctx.env !== "demo") continue;
+apps\api\src\server.ts:415:      await new Promise((r) => setTimeout(r, 1_000));
+packages\ledger\src\accounts.ts:5: * clearing accounts plus valuation snapshots, not via fake 1:1 postings.
+packages\providers\src\tinyfish.ts:48:  /** "tinyfish" = real SDK; "simulated" = DEMO-only stand-in (refused by core outside demo). */
+packages\providers\src\tinyfish.ts:49:  readonly kind: "tinyfish" | "simulated";
+apps\web\src\types\domain.ts:7:export type UiOperationMode = "demo" | "connected";
+apps\web\src\types\domain.ts:56:export type QuoteSource = "demo" | "live";
+apps\web\src\types\domain.ts:163:  simulated: boolean;
+apps\web\src\types\domain.ts:164:  /** Only a verified public txid may produce explorer links (never in demo). */
+apps\web\src\types\domain.ts:185:  /** Exact QR payload. Demo: zebscan-demo://checkout/<id>... */
+apps\web\src\types\domain.ts:194:  simulated: boolean;
+apps\web\src\types\domain.ts:204:  network?: "mainnet" | "testnet" | "regtest" | "demo";
+apps\web\src\types\domain.ts:257:  simulated: boolean;
+apps\web\src\types\domain.ts:277:  simulated: boolean;
+apps\web\src\types\domain.ts:293:  verification: "simulated" | "wallet_verified";
+apps\web\src\types\domain.ts:294:  simulated: boolean;
+apps\web\src\types\domain.ts:310:  providerStatus: "simulated" | "not_connected";
+packages\core\src\reconcile.ts:13:  if (ctx.env === "demo") {
+packages\core\src\reconcile.ts:14:    const has = await maybeOne(ctx.db, `SELECT 1 FROM treasury_inventory WHERE environment='demo' AND asset='USDC_BASE'`);
+packages\core\src\reconcile.ts:15:    if (!has) await treasury.recordInventory(ctx.db, "demo", "USDC_BASE", 25_000_000_000n, "demo:simulated-25000-usdc");
+packages\core\src\reconcile.ts:16:    return { skipped: "demo uses a simulated 25,000 USDC inventory" };
+packages\providers\src\zcash.ts:5: * In `demo` the DemoAddressAllocator issues clearly NON-PAYABLE placeholders; it is refused in
+packages\providers\src\zcash.ts:15:  addressType: "unified" | "sapling" | "transparent" | "demo";
+packages\providers\src\zcash.ts:59:  readonly kind: "gateway" | "demo" | "zkool";
+packages\providers\src\zcash.ts:60:  allocate(input: { invoiceId: string; network: ZcashNetwork | "demo"; privacyMode: "shielded" | "transparent"; diversifierIndex: bigint; amountZat: bigint; memoCode?: string; minDiversifierIndex?: bigint }): Promise<AllocatedAddress>;
+packages\providers\src\zcash.ts:87:  async allocate(input: { invoiceId: string; network: ZcashNetwork | "demo"; privacyMode: "shielded" | "transparent"; diversifierIndex: bigint; amountZat: bigint }): Promise<AllocatedAddress> {
+packages\providers\src\zcash.ts:117:/** Demo only: non-payable placeholder that can never be mistaken for a Zcash address. */
+packages\providers\src\zcash.ts:119:  readonly kind = "demo" as const;
+packages\providers\src\zcash.ts:121:    if (env !== "demo") throw new DomainError("SYSTEM_CONFIG", "DemoAddressAllocator is only permitted in the demo environment");
+packages\providers\src\zcash.ts:124:    const address = `zebscan-demo-address-${input.invoiceId}-not-payable`;
+packages\providers\src\zcash.ts:127:      addressType: "demo",
+packages\providers\src\zcash.ts:128:      receivers: ["demo"],
+packages\providers\src\zcash.ts:129:      accountId: "demo",
+packages\providers\src\zcash.ts:131:      walletId: "demo",
+packages\providers\src\zcash.ts:133:      zip321Uri: `zebscan-demo://checkout/${input.invoiceId}?payable=false&ref=${randomToken(4)}`,
+packages\core\src\receipts.ts:40:    verification: ctx.caps.realChainAddresses ? "wallet_verified" : "simulated",
+packages\core\src\tfdeps.ts:7:export async function buildTfDeps(ctx: CoreContext, opts: { simulated?: boolean } = {}): Promise<TfDeps> {
+packages\core\src\tfdeps.ts:9:  if (ctx.env === "demo" && (opts.simulated ?? !tf.apiKey)) {
+packages\core\src\tfpayouts.ts:178:  const mode = ctx.env === "mainnet-enabled" || ctx.env === "demo" ? "EXECUTE_AFTER_APPROVAL" : "READ_ONLY";
+packages\core\src\tfpayouts.ts:310:  if (deps.port.kind === "simulated" && ctx.env !== "demo") return "simulated TinyFish port refused outside DEMO";
+packages\core\src\tfpayouts.ts:321:    await new Promise((res) => setTimeout(res, delay + Math.floor(Math.random() * 500)));
+packages\db\src\index.ts:46:        await new Promise((r) => setTimeout(r, 10 * 2 ** attempt + Math.floor(Math.random() * 20)));
+apps\api\src\handlers\checkout.ts:3:import { cancelIntent, checkoutPublic, createIntent, demoSimulate, refreshIntent, submitRefundDetails } from "@zeb/core";
+apps\api\src\handlers\checkout.ts:89:export const demoSimulateDeposit: Handler = async (req: Req<{ id: string }, object, { kind: "exact"; confirmations: number }>) => {
+apps\api\src\handlers\checkout.ts:91:  await demoSimulate(req.ctx, req.params.id, req.body.kind, req.body.confirmations);
+apps\api\src\handlers\checkout.ts:95:export const demoAdvanceConfirmations: Handler = async (req: Req<{ id: string }>) => {
+apps\api\src\handlers\checkout.ts:97:  await demoSimulate(req.ctx, req.params.id, "advance");
+apps\web\src\services\registry.ts:2: * Service registry. Demo mode → local demo adapters.
+apps\web\src\services\registry.ts:5: * state with every money action disabled. There is deliberately NO fallback from connected to demo.
+apps\web\src\services\registry.ts:9:import { demoServices } from "./demo/services";
+apps\web\src\services\registry.ts:15:  if (getOperationMode() === "demo") return demoServices;
+packages\core\src\tfsim.ts:2: * DEMO ONLY: a simulated TinyFish port that behaves like an authenticated P2P.me account whose
+packages\core\src\tfsim.ts:4: * a simulated port anywhere else (`railReady`). It exists so the full payout state machine,
+packages\core\src\tfsim.ts:17:  readonly kind = "simulated" as const;
+packages\core\src\tfsim.ts:25:    if (env !== "demo") throw new DomainError("SYSTEM_CONFIG", "SimulatedTinyFishPort is only permitted in DEMO");
+packages\core\src\tfsim.ts:35:      result = { account_authenticated: true, login_page_shown: false, account_identifier: "demo-operator", pay_ui_available: true, sell_ui_available: true, visible_usdc_balance: "25000.00", visible_limits: "", wallet_signature_required: false, blocker: "", observed_url: `${origin}/` };
+packages\core\src\tfsim.ts:44:        result = { action: "submitted", submitted: true, final_url: `${origin}/orders`, provider_order_id: `SIM-${cmd?.id.slice(-8) ?? "x"}`, visible_recipient: vpa, visible_inr: inr, visible_usdc: usdc, provider_order_status: "PLACED", blocking_issue: "", evidence_summary: "DEMO simulated order" };
+packages\core\src\tfsim.ts:54:    if (!r) throw new DomainError("NOT_FOUND", "simulated run not found");
+packages\db\migrations\0001_core.sql:5:CREATE TYPE zeb_environment AS ENUM ('demo', 'testnet', 'mainnet-readonly', 'mainnet-enabled');
+packages\db\migrations\0001_core.sql:240:  address_type       text NOT NULL CHECK (address_type IN ('unified', 'sapling', 'transparent', 'demo')),
+packages\db\migrations\0001_core.sql:295:  pool              text NOT NULL CHECK (pool IN ('orchard', 'sapling', 'transparent', 'ironwood', 'demo')),
+packages\domain\src\environment.ts:7:export const ENVIRONMENTS = ["demo", "testnet", "mainnet-readonly", "mainnet-enabled"] as const;
+packages\domain\src\environment.ts:13: *   DEMO → demo · HACKATHON_TESTNET → testnet · MAINNET_READONLY → mainnet-readonly ·
+packages\domain\src\environment.ts:17:  DEMO: "demo",
+packages\domain\src\environment.ts:23:  demo: "DEMO",
+packages\domain\src\environment.ts:42:    case "demo":
+packages\domain\src\environment.ts:43:      return null; // demo never touches a chain
+packages\domain\src\environment.ts:55:  /** Are issued addresses real chain addresses (vs non-payable demo placeholders)? */
+packages\domain\src\environment.ts:67:    case "demo":
+packages\domain\src\environment.ts:70:      // HACKATHON_TESTNET: real shielded TAZ deposits; payouts are simulated/disabled — testnet TAZ never funds a live P2P payout.
+apps\web\src\components\payments\useQuotePreview.ts:9: * when no adapter is configured (connected mode) — never a fake quote.
+apps\web\src\components\payments\useQuotePreview.ts:23:    const t = window.setTimeout(async () => {
+apps\api\src\handlers\merchants.ts:31:    environment: m.environment as "demo",
+apps\api\src\handlers\merchants.ts:180:    // demo: auto-verified (simulated); otherwise manual/provider verification is required.
+apps\api\src\handlers\merchants.ts:181:    const status = ctx.env === "demo" ? "verified" : "pending_verification";
+apps\api\src\handlers\merchants.ts:186:      [id, ctx.env, merchantId, await ctx.envelope.seal(vpa, `payout_destinations:${id}:vpa`), maskVpa(vpa), hmacHex(ctx.cfg.tokenSecret, `vpa:${vpa.toLowerCase()}`), req.body.beneficiaryName?.trim() ?? null, status, usableAfter, status === "verified" ? ctx.now() : null, status === "verified" ? "demo:auto" : null],
+apps\api\src\handlers\merchants.ts:202:    const status = ctx.env === "demo" ? d.status : "pending_verification";
+apps\web\src\components\payments\ReceiptDocument.tsx:8:import { modeLabel } from "@/services/demo/engine";
+apps\web\src\components\payments\ReceiptDocument.tsx:16:  "Simulated receipt — not proof of a bank transfer. Demo only. These are simulated transactions, not real payments or bank transfers.";
+apps\web\src\components\payments\ReceiptDocument.tsx:36:    simulated: true,
+apps\web\src\components\payments\ReceiptDocument.tsx:50:    toast("Receipt JSON downloaded (simulated record)");
+apps\web\src\components\payments\ReceiptDocument.tsx:80:      {r.simulated && (
+apps\web\src\components\payments\ReceiptDocument.tsx:100:            { label: "Wallet verification", value: r.verification === "simulated" ? "Simulated (demo)" : "Verified by receiving wallet" },
+apps\web\src\components\payments\ReceiptDocument.tsx:102:            ...(order ? [{ label: "INR payout", value: order.status === "completed" ? "Completed (provider confirmed · simulated)" : order.status }] : []),
+apps\web\src\components\payments\ReceiptDocument.tsx:111:        Shielded transaction details are not shown on receipts. {r.simulated && "Not evidence of live funds."}
+apps\web\src\components\marketing\LegalSample.tsx:14:        <p className="eyebrow text-accent">Sample placeholder</p>
+apps\web\src\components\marketing\LegalSample.tsx:17:          This page is a placeholder for a demo build. It is not a final or enforceable policy, it was not written or reviewed by a lawyer, and it does not claim any
+apps\web\src\components\marketing\LegalSample.tsx:29:        <section className="mt-12 rounded-panel border border-border bg-surface-1 p-5" aria-labelledby="contact-demo">
+apps\web\src\components\marketing\LegalSample.tsx:30:          <h2 id="contact-demo" className="text-[16px] font-semibold">
+apps\web\src\components\marketing\LegalSample.tsx:31:            Contact form (demo — not sent anywhere)
+apps\web\src\components\marketing\LegalSample.tsx:33:          <p className="mt-1 text-[13px] text-foreground-secondary">This form is non-functional in the demo. Nothing you type leaves your browser.</p>
+apps\web\src\components\marketing\LegalSample.tsx:50:                  Submit (demo, not sent)
+apps\web\src\components\layout\AppShell.tsx:116:  const { state, merchant, demo, live } = useZeb();
+apps\web\src\components\layout\AppShell.tsx:162:                demo?.switchMerchant(m.id);
+apps\web\src\components\layout\AppShell.tsx:180:              <Plus aria-hidden className="h-4 w-4" /> Set up another demo merchant
+apps\web\src\components\layout\AppShell.tsx:188:              else demo?.signOut();
+apps\web\src\components\layout\AppShell.tsx:194:            <LogOut aria-hidden className="h-4 w-4" /> {live ? "Sign out" : "Sign out of demo"}
+apps\web\src\components\layout\AppShell.tsx:237:  const { isDemo, demo, state, live } = useZeb();
+apps\web\src\components\layout\AppShell.tsx:247:            Open the sample demo merchant or set up your own demo shop. Everything stays in this browser.
+apps\web\src\components\layout\AppShell.tsx:253:                  demo?.signInSample();
+apps\web\src\components\layout\AppShell.tsx:257:                Explore demo merchant account
+apps\web\src\components\layout\AppShell.tsx:261:              Set up a new demo merchant
+apps\web\src\components\payments\Quote.tsx:12:export function SourceBadge({ source }: { source: "demo" | "live" }) {
+apps\web\src\components\payments\Quote.tsx:13:  return source === "demo" ? (
+apps\web\src\components\payments\Quote.tsx:161:        {quote.source === "demo" && <p className="font-medium text-accent">{COPY.illustrative}</p>}
+apps\web\src\services\live\store.ts:2: * Connected-mode store. Exposes the same subscribe/getSnapshot contract as the demo store, but the
+apps\web\src\services\live\store.ts:3: * snapshot is ONLY ever filled from backend responses — nothing is simulated or seeded here.
+apps\web\src\services\live\store.ts:10:import { emptyState } from "@/services/demo/engine";
+apps\web\src\services\live\store.ts:119:      t = window.setTimeout(() => void this.refreshMerchantData().catch(() => undefined), 400);
+apps\web\src\services\live\store.ts:230:        t = window.setTimeout(() => void refresh(), 250);
+apps\web\src\components\ui\CopyShare.tsx:58:      window.setTimeout(() => setCopied(false), 1600);
+apps\web\src\services\adapters.ts:3: * - Demo implementations live in src/services/demo/ (local, simulated, localStorage).
+apps\web\src\services\adapters.ts:22:import type { CheckoutInput, LinkInput, OnboardingInput, SimulatedDeposit } from "./demo/engine";
+apps\web\src\services\adapters.ts:47:  simulateDeposit?(id: string, kind: SimulatedDeposit): Promise<void>;
+apps\web\src\services\adapters.ts:90:  kind: "demo" | "live";
+apps\web\src\components\layout\ModeBanner.tsx:32:        You&apos;re offline. {isDemo ? "The demo keeps working locally; nothing is sent anywhere." : "Payment status can't update until you reconnect."}
+apps\web\src\components\layout\ModeBanner.tsx:47:        {label === "TEST" ? "Testnet environment — test funds only. Balances are not redeemable." : "Demo backend — simulated payments only. Nothing here moves real money."}
+apps\web\src\components\layout\ModeBanner.tsx:70:/** DEMO badge in demo mode; "Not connected" in connected mode without adapters. */
+apps\web\src\services\live\services.ts:4: * when (and only when) the backend itself runs in the `demo` environment.
+apps\web\src\services\live\services.ts:27:const backendIsDemo = () => liveStore.config?.environment === "demo";
+apps\web\src\services\live\services.ts:41:        source: liveStore.config?.environment === "demo" ? "demo" : "live",
+apps\web\src\services\live\services.ts:104:    async simulateDeposit(id, kind) {
+apps\web\src\services\live\services.ts:106:      await api.call("demoSimulateDeposit", { params: { id }, body: { kind, confirmations: 0 }, idempotencyKey: newKey() });
+apps\web\src\services\live\services.ts:111:      await api.call("demoAdvanceConfirmations", { params: { id }, idempotencyKey: newKey() });
+apps\web\src\components\ui\Blocks.tsx:37:  demo: { icon: Info, cls: "border-gold/45 bg-gold/[0.08] [&_.ci]:text-accent" },
+apps\web\src\components\layout\PublicShell.tsx:88:              Open merchant demo
+apps\web\src\components\layout\PublicShell.tsx:110:        { label: "Open merchant demo", href: "/login" },
+apps\web\src\components\layout\PublicShell.tsx:111:        { label: "Set up a demo merchant", href: "/onboarding" },
+apps\web\src\components\layout\PublicShell.tsx:150:          Zeb Scan is a frontend demonstration. Demo only. These are simulated transactions, not real payments or bank transfers. Prices shown are
+apps\web\src\components\payments\CheckoutPanel.tsx:44:  /** Non-payable preview: local demo, or a DEMO-environment backend address. */
+apps\web\src\components\payments\CheckoutPanel.tsx:46:  const canSimulate = !!services?.zcash.simulateDeposit && (isDemo || c.envLabel === "DEMO");
+apps\web\src\components\payments\CheckoutPanel.tsx:82:            label={nonPayable ? "Demo preview QR. Encodes a non-payable placeholder; it cannot receive ZEC." : `Zcash payment request for ${exactZec} ZEC`}
+apps\web\src\components\payments\CheckoutPanel.tsx:103:            {c.quote.source === "demo" && <p className="mt-1 text-micro font-medium text-accent">{COPY.illustrative}</p>}
+apps\web\src\components\payments\CheckoutPanel.tsx:150:                  ? "No wallet deep link in demo — this preview cannot receive real ZEC. Do not send funds."
+apps\web\src\components\payments\CheckoutPanel.tsx:204:            <input id={`refund-${c.id}`} value={refundAddr} onChange={(e) => setRefundAddr(e.target.value)} className="input flex-1 font-mono text-label" placeholder="u1… / zs1… / t1…" autoComplete="off" spellCheck={false} />
+apps\web\src\components\payments\CheckoutPanel.tsx:254:            <Button size="sm" isLoading={busy} onClick={() => run(() => services.zcash.startRefund!(c.id), "Refund requested (simulated)")}>
+apps\web\src\components\payments\CheckoutPanel.tsx:259:            <Button size="sm" isLoading={busy} onClick={() => run(() => services.zcash.completeRefund!(c.id), "Refund marked sent (simulated)")}>
+apps\web\src\components\payments\CheckoutPanel.tsx:279:                await run(() => services!.zcash.simulateDeposit!(c.id, "exact"), "Simulated late deposit recorded");
+apps\web\src\components\payments\CheckoutPanel.tsx:291:                  await run(() => services!.zcash.simulateDeposit!(c.id, "exact"), "Simulated deposit detected");
+apps\web\src\components\payments\CheckoutPanel.tsx:301:                  await run(() => services!.zcash.simulateDeposit!(c.id, "underpaid"), "Simulated underpayment");
+apps\web\src\components\payments\CheckoutPanel.tsx:311:                  await run(() => services!.zcash.simulateDeposit!(c.id, "overpaid"), "Simulated overpayment");
+apps\web\src\components\payments\DemoControls.tsx:8:/** Visually distinct container for demo-only simulation controls. Renders only in local demo mode or against a DEMO-environment backend. */
+apps\web\src\components\payments\DemoControls.tsx:11:  if (!isDemo && live?.config?.environment !== "demo") return null;
+apps\web\src\components\payments\CurrencyInput.tsx:36:        placeholder="0"
+apps\web\src\components\payments\CurrencyInput.tsx:43:          "num w-full min-w-0 bg-transparent px-2 font-display font-semibold text-foreground placeholder:text-foreground-muted focus:outline-none",
+apps\web\src\services\live\noir.ts:22:    await new Promise((r) => setTimeout(r, 150));
+apps\web\src\components\payments\MerchantIdentity.tsx:21:              <BadgeInfo aria-hidden className="h-3.5 w-3.5" /> {merchant.category} · {merchant.isSample ? "sample demo merchant" : "demo merchant"}
+apps\web\src\content\faq.ts:36:    a: "New credits are locked for a period before they can be withdrawn. This gives time for payment exceptions, disputes and treasury rebalancing. In this demo the example policy is 15 days; a live service would publish its actual policy.",
+apps\web\src\content\faq.ts:46:    a: "Underpaid, overpaid and late payments are held for recovery rather than discarded, and can be refunded to a ZEC address you provide. Refunds for completed purchases are between you and the merchant. In this demo, refunds are simulated.",
+apps\web\src\content\faq.ts:51:    a: "A live service would have to follow the identity and payment-service rules that apply to it and to its payout providers. This demo does not collect identity documents, and it does not claim any regulatory licence or exemption.",
+apps\web\src\content\faq.ts:66:    a: "No. This build is a demonstration. Payments, quotes, deposits and payouts are simulated and labelled as such. Do not send real ZEC to anything shown here.",
+apps\web\src\providers\ZebProvider.tsx:8:import { demoStore } from "@/services/demo/store";
+apps\web\src\providers\ZebProvider.tsx:9:import { demoSession } from "@/services/demo/services";
+apps\web\src\providers\ZebProvider.tsx:10:import { emptyState } from "@/services/demo/engine";
+apps\web\src\providers\ZebProvider.tsx:17:  /** False until client storage (demo) or the backend (connected) has been read. */
+apps\web\src\providers\ZebProvider.tsx:22:  /** Money actions are possible (demo adapters, or configured live adapters). */
+apps\web\src\providers\ZebProvider.tsx:27:  demo: typeof demoSession | null;
+apps\web\src\providers\ZebProvider.tsx:40:  const isDemo = mode === "demo" && services?.kind === "demo";
+apps\web\src\providers\ZebProvider.tsx:42:  const store = isDemo ? demoStore : live;
+apps\web\src\providers\ZebProvider.tsx:43:  const snapshot = useSyncExternalStore(store?.subscribe ?? noopSubscribe, store?.getSnapshot ?? nullSnapshot, demoStore.getServerSnapshot);
+apps\web\src\providers\ZebProvider.tsx:47:    const t = window.setInterval(() => demoStore.tick(), 1000);
+apps\web\src\providers\ZebProvider.tsx:62:      demo: isDemo ? demoSession : null,
+apps\web\src\providers\ZebProvider.tsx:81:/** Ticking "now" including the demo clock offset. Null until mounted (hydration-safe). */
+apps\web\src\providers\ZebProvider.tsx:96: * In demo mode this is a no-op and reports `loading: false`.
+apps\web\src\services\live\map.ts:43:    source: q.environment === "demo" ? "demo" : "live",
+apps\web\src\services\live\map.ts:140:  const simulated = !c.zcash.payable;
+apps\web\src\services\live\map.ts:164:          simulated,
+apps\web\src\services\live\map.ts:173:    simulated,
+apps\web\src\services\live\map.ts:198:          simulated,
+apps\web\src\services\live\map.ts:344:    simulated: w.label === "DEMO",
+apps\web\src\services\live\map.ts:349:  r: { id: string; issuedAt: string; inrPaise: string; totalInrPaise: string | null; zecZatoshis: string | null; privacyMode: "shielded" | "transparent" | null; merchantName: string | null; recipientVpaMasked: string | null; title: string; verification: "wallet_verified" | "simulated" },
+apps\web\src\services\live\map.ts:366:    simulated: r.verification === "simulated",
+apps\web\src\providers\ToastProvider.tsx:25:      window.setTimeout(() => dismiss(id), 3200);
+apps\web\src\services\live\api.ts:23:    const raw = JSON.parse(window.localStorage.getItem(TOKENS_KEY) ?? "{}") as TokenMap;
+apps\web\src\services\live\api.ts:38:    window.localStorage.setItem(TOKENS_KEY, JSON.stringify(all));
+apps\web\src\services\live\api.ts:44:    window.localStorage.setItem(TOKENS_KEY, JSON.stringify(all));
+apps\web\src\components\screens\ConnectWallet.tsx:17: *  - Passkey: not available in this build (shown, not faked).
+apps\web\src\components\screens\ConnectWallet.tsx:83:                  ? "Sign-in needs the connected app (not the local demo)"
+apps\api\src\handlers\public.ts:34:    disclaimers: ctx.env === "testnet" ? ["HACKATHON_TESTNET: real shielded TAZ (worthless test coins). No INR is ever paid out and balances are not redeemable.", ...DISCLAIMERS] : ctx.env === "demo" ? ["DEMO: simulated payments only. Nothing here moves real money.", ...DISCLAIMERS] : DISCLAIMERS,
+apps\api\src\handlers\public.ts:63:      disclaimer: ctx.env === "demo" ? "Fictional demo constant — not market data." : "Reference market rate (median of independent sources). Not an executable price.",
+apps\api\src\handlers\public.ts:81:      disclaimer: ctx.env === "demo" ? "Fictional demo constant." : "P2P protocol configured price. A matching liquidity provider is not guaranteed.",
+apps\web\src\config\mode.ts:4:  return process.env.NEXT_PUBLIC_ZEB_MODE === "connected" ? "connected" : "demo";
+apps\web\src\config\mode.ts:14:  simulation: "Demo only. These are simulated transactions, not real payments or bank transfers.",
+apps\web\src\components\screens\HostedCheckout.tsx:8:import { modeLabel } from "@/services/demo/engine";
+apps\web\src\app\globals.css:87:      placeholder:text-foreground-muted transition-colors duration-150
+apps\web\src\config\demo.ts:2: * Single source of demo policy. Every number here is an EXAMPLE DEMO POLICY,
+apps\web\src\config\demo.ts:5:export const demoConfig = {
+apps\web\src\config\demo.ts:7:  storageKey: "zebscan.demo.v3",
+apps\web\src\config\demo.ts:21:  /** Example demo settlement policy: merchant credits unlock after 15 days. */
+apps\web\src\config\demo.ts:29:    usdcTotalMicro: "25000000000", // 25,000 USDC (simulated)
+apps\web\src\config\demo.ts:35:export const cooldownMs = () => demoConfig.cooldownDays * DAY_MS;
+apps\web\src\services\demo\seed.ts:2: * Deterministic demo seed. Built by replaying engine actions at fixed offsets
+apps\web\src\services\demo\seed.ts:4: * These are sample records for the demo — not historical Zeb Scan activity.
+apps\web\src\services\demo\seed.ts:6:import { DAY_MS } from "@/config/demo";
+apps\web\src\services\demo\seed.ts:14:  payoutUpi: "monsoon.chai@zebdemo",
+apps\web\src\services\demo\seed.ts:92:    s = E.simulateDeposit(s, r.checkout.id, "exact", t + 40_000);
+apps\web\src\services\demo\seed.ts:109:    s = E.simulateDeposit(s, r.checkout.id, "underpaid", t + 50_000);
+apps\web\src\components\merchant\Help.tsx:7:import { demoConfig } from "@/config/demo";
+apps\web\src\components\merchant\Help.tsx:24:    a: `Quotes last ${demoConfig.quote.lifetimeMs / 1000} seconds. Use “Refresh quote” — it creates a new checkout with a new quote and a new unique address. Never send ZEC to an expired checkout.`,
+apps\web\src\components\merchant\Help.tsx:32:    a: `New credits are locked during cooldown (example demo policy: ${demoConfig.cooldownDays} days). Check the unlock dates on the Settlements page. Only one withdrawal can be in progress at a time.`,
+apps\web\src\components\merchant\Help.tsx:90:              This demo build has no support desk, email or chat. For product questions see the <Link href="/faq" className="link">FAQ</Link> and{" "}
+apps\web\src\services\demo\services.ts:1:/** Demo implementations of the adapter contracts, backed by the local demo store. */
+apps\web\src\services\demo\services.ts:2:import { demoConfig } from "@/config/demo";
+apps\web\src\services\demo\services.ts:7:import { demoNow, demoStore } from "./store";
+apps\web\src\services\demo\services.ts:11:  demoStore.update((s, now) => {
+apps\web\src\services\demo\services.ts:19:const snap = () => demoStore.getSnapshot()!;
+apps\web\src\services\demo\services.ts:20:const apply = (fn: (s: DemoState, now: number) => DemoState) => demoStore.update(fn);
+apps\web\src\services\demo\services.ts:22:export const demoServices: ZebServices = {
+apps\web\src\services\demo\services.ts:23:  kind: "demo",
+apps\web\src\services\demo\services.ts:26:      const now = demoNow(demoStore.getSnapshot());
+apps\web\src\services\demo\services.ts:28:        usdMicroPerZec: demoConfig.quote.usdMicroPerZec,
+apps\web\src\services\demo\services.ts:29:        inrPerUsdcMinor: demoConfig.quote.inrPerUsdcMinor,
+apps\web\src\services\demo\services.ts:30:        source: "demo",
+apps\web\src\services\demo\services.ts:31:        provider: demoConfig.quote.provider,
+apps\web\src\services\demo\services.ts:33:        expiresAt: now + demoConfig.quote.lifetimeMs,
+apps\web\src\services\demo\services.ts:37:      return buildDemoQuote({ id: "preview", inrMinor, privacy, now: demoNow(demoStore.getSnapshot()) });
+apps\web\src\services\demo\services.ts:51:      return demoStore.subscribe(() => {
+apps\web\src\services\demo\services.ts:56:    async simulateDeposit(id, kind) {
+apps\web\src\services\demo\services.ts:57:      apply((s, now) => E.simulateDeposit(s, id, kind, now));
+apps\web\src\services\demo\services.ts:148:      return E.treasurySnapshot(s, demoNow(s));
+apps\web\src\services\demo\services.ts:154:export const demoSession = {
+apps\web\src\services\demo\services.ts:181:    demoStore.reset();
+apps\web\src\services\demo\store.ts:2: * Client-side demo store: in-memory snapshot persisted to localStorage.
+apps\web\src\services\demo\store.ts:6:import { demoConfig } from "@/config/demo";
+apps\web\src\services\demo\store.ts:17:export function demoNow(s: DemoState | null = state): number {
+apps\web\src\services\demo\store.ts:23:    const raw = window.localStorage.getItem(demoConfig.storageKey);
+apps\web\src\services\demo\store.ts:26:      if (parsed && parsed.version === demoConfig.seedVersion && Array.isArray(parsed.checkouts)) return parsed;
+apps\web\src\services\demo\store.ts:36:    window.localStorage.setItem(demoConfig.storageKey, JSON.stringify(s));
+apps\web\src\services\demo\store.ts:49:  state = reconcile(loaded, demoNow(loaded));
+apps\web\src\services\demo\store.ts:54:      if (e.key !== demoConfig.storageKey) return;
+apps\web\src\services\demo\store.ts:63:export const demoStore = {
+apps\web\src\services\demo\store.ts:78:    const next = fn(cur, demoNow(cur));
+apps\web\src\services\demo\store.ts:86:    const next = reconcile(state, demoNow(state));
+apps\web\src\components\merchant\LinkNew.tsx:9:import { validateLink, type LinkErrors, type LinkInput } from "@/services/demo/engine";
+apps\web\src\components\merchant\LinkNew.tsx:83:                {(p) => <Input {...p} value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Masala chai tasting box" />}
+apps\web\src\components\merchant\DemoClock.tsx:6:import { demoConfig } from "@/config/demo";
+apps\web\src\components\merchant\DemoClock.tsx:13:  const { demo, state } = useZeb();
+apps\web\src\components\merchant\DemoClock.tsx:16:  if (!demo) return null;
+apps\web\src\components\merchant\DemoClock.tsx:23:          demo.advanceClock(demoConfig.cooldownDays);
+apps\web\src\components\merchant\DemoClock.tsx:24:          toast(`Demo clock advanced ${demoConfig.cooldownDays} days`);
+apps\web\src\components\merchant\DemoClock.tsx:27:        <FastForward aria-hidden className="h-4 w-4" /> Advance cooldown ({demoConfig.cooldownDays} days)
+apps\web\src\components\merchant\DemoClock.tsx:33:          demo.advanceClock(1);
+apps\web\src\components\merchant\LinkDetail.tsx:90:          { label: "Views (demo counter)", value: link.views, sub: "Demo-only, this browser" },
+apps\web\src\components\screens\StartCheckout.tsx:12:import { linkStatus } from "@/services/demo/engine";
+apps\web\src\components\screens\StartCheckout.tsx:155:                  {(p) => <Input {...p} value={note} onChange={(e) => setNote(e.target.value)} maxLength={140} placeholder="e.g. order number or name" />}
+apps\web\src\components\merchant\Overview.tsx:33:        INR equivalent balance (held by Zeb Scan){isDemo ? " · demo, simulated" : ""}. Not yet in your bank account.
+apps\web\src\app\(marketing)\how-it-works\page.tsx:7:import { demoConfig } from "@/config/demo";
+apps\web\src\app\(marketing)\how-it-works\page.tsx:41:    cta: { href: "/login?next=/app/terminal", label: "Open the terminal demo" },
+apps\web\src\app\(marketing)\how-it-works\page.tsx:55:    cta: { href: "/login?next=/app/links/new", label: "Create a demo link" },
+apps\web\src\app\(marketing)\how-it-works\page.tsx:151:              `New merchant credits are locked before they can be withdrawn. This demo uses an example ${demoConfig.cooldownDays}-day policy — not a live contractual promise.`,
+apps\web\src\components\merchant\Balance.tsx:9:import { demoConfig } from "@/config/demo";
+apps\web\src\components\merchant\Balance.tsx:28:  const backing = inrToUsdcMicro(balance.liability, demoConfig.quote.inrPerUsdcMinor);
+apps\web\src\components\merchant\Balance.tsx:43:        reach your bank only through a completed withdrawal.{isDemo && " In this demo, balances and backing are simulated."}
+apps\web\src\components\merchant\Balance.tsx:109:                A live service must back every merchant credit with reserved liquidity and never count the same USDC twice. {isDemo && "Here it is simulated — no real reserves exist."}
+apps\web\src\components\screens\ScanPayWizard.tsx:25:const SAMPLE_PAYLOAD = "upi://pay?pa=sample.store@zebdemo&pn=Sample%20Store&am=250.00&cu=INR";
+apps\web\src\components\screens\ScanPayWizard.tsx:180:                      {(p) => <Textarea {...p} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder="upi://pay?pa=…&pn=…&am=…&cu=INR" className="font-mono text-[13px]" maxLength={2000} />}
+apps\web\src\components\screens\ScanPayWizard.tsx:188:                          Use sample demo QR
+apps\web\src\components\screens\ScanPayWizard.tsx:205:                      {(p) => <Input {...p} value={manualVpa} onChange={(e) => setManualVpa(e.target.value)} placeholder="name@handle" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="font-mono" />}
+apps\web\src\components\screens\ScanPayWizard.tsx:312:                    {isDemo ? "Lock quote & create demo invoice" : "Lock quote & continue"} <ArrowRight aria-hidden className="h-4 w-4" />
+apps\web\src\app\(marketing)\page.tsx:41:              <p className="font-mono text-micro text-foreground-muted">sample.store@zebdemo</p>
+apps\web\src\app\(marketing)\page.tsx:86:      <p className="mt-3 text-center text-micro text-foreground-muted">Example amounts use illustrative demo prices, not market data.</p>
+apps\web\src\app\(marketing)\page.tsx:102:    cta: { label: "Open the terminal demo", href: "/login?next=/app/terminal" },
+apps\web\src\app\(marketing)\page.tsx:108:    cta: { label: "Create a demo link", href: "/login?next=/app/links/new" },
+apps\web\src\app\(marketing)\page.tsx:145:            <p className="mt-5 text-label text-foreground-muted">Demo build · simulated payments only · no live funds</p>
+apps\web\src\app\(marketing)\page.tsx:253:              Open merchant demo
+apps\web\src\app\(marketing)\page.tsx:273:              Create a demo link
+apps\web\src\app\(marketing)\page.tsx:312:          Merchant balances are INR-denominated liabilities that a live service must back with reserved liquidity. This demo simulates both pools and does not claim any real
+apps\web\src\app\(marketing)\page.tsx:337:              <p className="mt-1 text-[14px] text-foreground-secondary">Try the full flow in demo mode — nothing real moves.</p>
+apps\web\src\app\(marketing)\page.tsx:345:              Open merchant demo
+apps\web\src\app\(marketing)\terms\page.tsx:13:          p: "This build is a demonstration. All quotes, deposits, merchant credits, withdrawals and payouts are simulated. Do not send real ZEC to any address or QR shown here; demo QR codes encode non-payable placeholders.",
+apps\web\src\app\(marketing)\terms\page.tsx:21:          p: "In a live service, a merchant balance would be an INR-denominated platform liability, not a bank deposit. Settlement policies such as cooldown periods shown in the demo are examples only.",
+apps\web\src\components\screens\Onboarding.tsx:8:import { validateOnboarding, type OnboardingInput } from "@/services/demo/engine";
+apps\web\src\components\screens\Onboarding.tsx:34:      const raw = localStorage.getItem(DRAFT_KEY);
+apps\web\src\components\screens\Onboarding.tsx:44:      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+apps\web\src\components\screens\Onboarding.tsx:78:      localStorage.removeItem(DRAFT_KEY);
+apps\web\src\components\screens\Onboarding.tsx:88:      <h1 className="mt-2 font-display text-[28px] font-semibold tracking-[-0.03em] sm:text-[32px]">{live ? "Set up your business" : "Set up your demo shop"}</h1>
+apps\web\src\components\screens\Onboarding.tsx:89:      <p className="mt-1.5 text-[15px] text-foreground-secondary">{live ? "Three short steps. Business verification (KYB) may be required before you can accept live payments." : "Three short steps. Your demo merchant is saved in this browser only."}</p>
+apps\web\src\components\screens\Onboarding.tsx:184:              <FormField label="Payout UPI ID" error={err("payoutUpi")} hint="The UPI ID linked to the bank account you withdraw to. Use a demo value — no bank validation happens here.">
+apps\web\src\components\screens\Onboarding.tsx:186:                  <Input {...p} value={data.payoutUpi} onChange={(e) => set({ payoutUpi: e.target.value.trim() })} placeholder="yourshop@handle" autoCapitalize="none" spellCheck={false} className="font-mono" />
+apps\web\src\components\screens\Onboarding.tsx:252:                  {isDemo ? "Create demo merchant" : "Create merchant"}
+apps\web\src\components\merchant\Links.tsx:71:            <SearchInput label="Search links" placeholder="Search title, slug or reference" value={q} onChange={(e) => setQ(e.target.value)} wrapperClassName="sm:w-72" />
+apps\web\src\components\merchant\Ops.tsx:6:import { treasurySnapshot } from "@/services/demo/engine";
+apps\web\src\components\merchant\Ops.tsx:20:  const { state, demo, isDemo } = useZeb();
+apps\web\src\components\merchant\Ops.tsx:24:  if (!isDemo || !demo)
+apps\web\src\components\merchant\Ops.tsx:39:          This treasury view is for platform operators. In a live build it would require an admin role; merchants can&apos;t see it. In the demo you can open a simulated
+apps\web\src\components\merchant\Ops.tsx:43:          Enter demo ops view
+apps\web\src\components\merchant\Ops.tsx:48:          onConfirm={() => demo.unlockOps(true)}
+apps\web\src\components\merchant\Ops.tsx:49:          title="Open simulated ops view?"
+apps\web\src\components\merchant\Ops.tsx:50:          description="Shows simulated, aggregated treasury figures across all demo merchants on this device. No secrets, keys or transfer controls exist in the frontend."
+apps\web\src\components\merchant\Ops.tsx:51:          confirmLabel="Open demo ops view"
+apps\web\src\components\merchant\Ops.tsx:64:        badge={<StatusBadge tone="accent">Demo only · simulated</StatusBadge>}
+apps\web\src\components\merchant\Ops.tsx:67:          <Button variant="ghost" onClick={() => demo.unlockOps(false)}>
+apps\web\src\components\merchant\Ops.tsx:74:          Free USDC is under {formatUsdc(t.refillThresholdMicro)} USDC. A rebalance from the ZEC vault would be scheduled (simulated).
+apps\web\src\components\merchant\Ops.tsx:111:                  { label: "Merchant liabilities (all demo shops)", value: formatInr(t.merchantLiabilityInrMinor) },
+apps\web\src\components\merchant\Ops.tsx:112:                  { label: "Rebalancing", value: t.rebalancing === "scheduled" ? "Scheduled (simulated)" : "Idle" },
+apps\web\src\app\(marketing)\privacy\page.tsx:12:          h: "What this demo stores",
+apps\web\src\app\(marketing)\privacy\page.tsx:13:          p: "The demo keeps its sample merchants, links, checkouts and balances in your browser's local storage. Nothing is sent to a Zeb Scan server, because this build has none. Clearing site data or using “Reset demo data” in Settings removes it.",
+apps\web\src\lib\selectors.ts:5:import { balances, linkStatus, linkSuccessfulUses } from "@/services/demo/engine";
+apps\web\src\components\screens\Login.tsx:23:  const { ready, isDemo, demo, merchant, state, live } = useZeb();
+apps\web\src\components\screens\Login.tsx:64:                  demo?.signInSample();
+apps\web\src\components\screens\Login.tsx:68:                Explore demo merchant account
+apps\web\src\components\screens\Login.tsx:73:                Set up a new demo merchant
+apps\web\src\lib\quote.ts:1:import { demoConfig } from "@/config/demo";
+apps\web\src\lib\quote.ts:12:/** Deterministic demo quote. Fees reconcile exactly: total = inr + protocol + platform. */
+apps\web\src\lib\quote.ts:14:  const q = demoConfig.quote;
+apps\web\src\lib\quote.ts:24:    source: "demo",
+apps\web\src\lib\quote.ts:47:  if (minor < demoConfig.limits.minInrMinor) return "Minimum is ₹1 (demo policy).";
+apps\web\src\lib\quote.ts:48:  if (minor > demoConfig.limits.maxInrMinor) return "Maximum is ₹10,000 per payment (demo policy).";
+apps\web\src\lib\upi.ts:83:/** Mask a VPA for public receipts: "monsoon.chai@zebdemo" → "mo•••••i@zebdemo". */
+apps\web\src\services\demo\engine.ts:2: * Demo engine — pure, deterministic state transitions for the local demo.
+apps\web\src\services\demo\engine.ts:6:import { cooldownMs, demoConfig } from "@/config/demo";
+apps\web\src\services\demo\engine.ts:39:    version: demoConfig.seedVersion,
+apps\web\src\services\demo\engine.ts:51:    treasuryUsdcTotalMicro: demoConfig.treasury.usdcTotalMicro,
+apps\web\src\services\demo\engine.ts:73:/** Clearly non-payable placeholder. Never resembles a real Zcash address prefix. */
+apps\web\src\services\demo\engine.ts:74:export function demoReceivingAddress(checkoutId: string): string {
+apps\web\src\services\demo\engine.ts:75:  return `zebscan-demo-address-${checkoutId}-not-payable`;
+apps\web\src\services\demo\engine.ts:78:export function demoQrPayload(checkoutId: string, zecZat: string): string {
+apps\web\src\services\demo\engine.ts:79:  return `zebscan-demo://checkout/${checkoutId}?amount=${formatZec(zecZat, { fixed: true })}&payable=false`;
+apps\web\src\services\demo\engine.ts:156:    e.handle = "That handle is already used in this demo.";
+apps\web\src\services\demo\engine.ts:244:  const { minInrMinor: min, maxInrMinor: max } = demoConfig.limits;
+apps\web\src\services\demo\engine.ts:248:    else if (!inRange(l.fixedInrMinor)) e.fixedInrMinor = "Amount must be between ₹1 and ₹10,000 (demo policy).";
+apps\web\src\services\demo\engine.ts:372:  const { minInrMinor, maxInrMinor } = demoConfig.limits;
+apps\web\src\services\demo\engine.ts:374:    throw new DemoError("Amount must be between ₹1 and ₹10,000 (demo policy).", "validation");
+apps\web\src\services\demo\engine.ts:407:    receivingAddress: demoReceivingAddress(id),
+apps\web\src\services\demo\engine.ts:408:    qrPayload: demoQrPayload(id, quote.zecZat),
+apps\web\src\services\demo\engine.ts:416:      { at: now, kind: "created", label: "Checkout created", detail: `Quote locked for ${demoConfig.quote.lifetimeMs / 1000}s · unique receiving address issued` },
+apps\web\src\services\demo\engine.ts:418:    simulated: true,
+apps\web\src\services\demo\engine.ts:433:/** Demo: a deposit to this checkout's unique address was seen by the (simulated) wallet scanner. */
+apps\web\src\services\demo\engine.ts:434:export function simulateDeposit(input: DemoState, checkoutId: string, kind: SimulatedDeposit, now: number): DemoState {
+apps\web\src\services\demo\engine.ts:442:  const outputRef = `demo-output:${c.id}:0`;
+apps\web\src\services\demo\engine.ts:453:    requiredConfirmations: demoConfig.requiredConfirmations,
+apps\web\src\services\demo\engine.ts:455:    simulated: true,
+apps\web\src\services\demo\engine.ts:558:      simulated: true,
+apps\web\src\services\demo\engine.ts:583:    verification: "simulated",
+apps\web\src\services\demo\engine.ts:584:    simulated: true,
+apps\web\src\services\demo\engine.ts:594:  c.events.push({ at: now, kind: "refund_pending", label: "Refund requested", detail: "Refund to a payer-provided ZEC address (demo)" });
+apps\web\src\services\demo\engine.ts:603:  c.events.push({ at: now, kind: "refunded", label: "Refund sent (simulated)", detail: "Demo only — no ZEC moved" });
+apps\web\src\services\demo\engine.ts:614:  { status: "completed", matching: false, label: "Payout completed", detail: "Provider confirmed the INR transfer (simulated)" },
+apps\web\src\services\demo\engine.ts:682:  const feeInrMinor = bpsOf(inrMinor, demoConfig.withdrawal.spreadBps);
+apps\web\src\services\demo\engine.ts:686:    usdcMicro: inrToUsdcMicro(inrMinor, demoConfig.quote.inrPerUsdcMinor).toString(),
+apps\web\src\services\demo\engine.ts:725:  if (inrMinor < demoConfig.withdrawal.minInrMinor) return `Minimum withdrawal is ${formatInr(demoConfig.withdrawal.minInrMinor)} (demo policy).`;
+apps\web\src\services\demo\engine.ts:775:    simulated: true,
+apps\web\src\services\demo\engine.ts:794:    simulated: true,
+apps\web\src\services\demo\engine.ts:806:  { status: "completed", order: "completed", matching: false, label: "Payout completed", detail: "Provider confirmed the INR transfer (simulated)" },
+apps\web\src\services\demo\engine.ts:835:  ledger(s, w.merchantId, now, "withdrawal_completed", "memo", w.inrMinor, w.id, `Payout completed · ${formatInr(w.payoutInrMinor)} sent by provider (simulated)`);
+apps\web\src\services\demo\engine.ts:925:  const liabilityReserve = inrToUsdcMicro(Math.max(0, liability - sellInFlightInr), demoConfig.quote.inrPerUsdcMinor);
+apps\web\src\services\demo\engine.ts:931:    source: "demo" as const,
+apps\web\src\services\demo\engine.ts:938:    refillThresholdMicro: demoConfig.treasury.refillThresholdMicro,
+apps\web\src\services\demo\engine.ts:941:    rebalancing: available < BigInt(demoConfig.treasury.refillThresholdMicro) ? ("scheduled" as const) : ("idle" as const),
+apps\web\src\services\demo\engine.ts:942:    providerStatus: "simulated" as const,
+apps\web\src\components\merchant\shared.tsx:6:import { modeLabel } from "@/services/demo/engine";
+apps\web\src\components\merchant\Settlements.tsx:10:import { demoConfig } from "@/config/demo";
+apps\web\src\components\merchant\Settlements.tsx:39:      <Callout tone="demo" icon={CalendarClock} className="mb-6" title={`Example demo settlement policy: ${demoConfig.cooldownDays}-day cooldown`}>
+apps\web\src\components\merchant\Settlements.tsx:40:        Not a live contractual promise. Each verified payment creates a locked INR credit that becomes available {demoConfig.cooldownDays} days after verification. You
+apps\web\src\app\app\ops\page.tsx:4:export const metadata: Metadata = { title: "Treasury ops (demo)" };
+apps\web\src\components\merchant\Settings.tsx:20:type Tab = "business" | "payout" | "privacy" | "preferences" | "demo";
+apps\web\src\components\merchant\Settings.tsx:21:const TABS: Tab[] = ["business", "payout", "privacy", "preferences", "demo"];
+apps\web\src\components\merchant\Settings.tsx:33:      <MerchantPageHeader title="Settings" description="Your shop profile, payout destination, privacy defaults and demo data." />
+apps\web\src\components\merchant\Settings.tsx:48:          { value: "demo", label: "Demo & data" },
+apps\web\src\components\merchant\Settings.tsx:56:        {tab === "demo" && <DemoTab />}
+apps\web\src\components\merchant\Settings.tsx:77:        <FormField label="Merchant handle" hint="Handles can't be changed in the demo. Your counter link can be regenerated from Counter QR.">
+apps\web\src\components\merchant\Settings.tsx:215:  const { demo, isDemo } = useZeb();
+apps\web\src\components\merchant\Settings.tsx:221:  if (!isDemo || !demo)
+apps\web\src\components\merchant\Settings.tsx:237:              <RotateCcw aria-hidden className="h-4 w-4" /> Reset demo data
+apps\web\src\components\merchant\Settings.tsx:242:                demo.signOut();
+apps\web\src\components\merchant\Settings.tsx:246:              <LogOut aria-hidden className="h-4 w-4" /> Sign out of demo
+apps\web\src\components\merchant\Settings.tsx:252:        <PanelHeader title="Treasury ops view" description="A demo-only admin overview. It isn't part of merchant navigation and has no transfer controls." />
+apps\web\src\components\merchant\Settings.tsx:255:            Open demo ops view
+apps\web\src\components\merchant\Settings.tsx:263:          demo.reset();
+apps\web\src\components\merchant\Settings.tsx:267:        title="Reset all demo data?"
+apps\web\src\components\merchant\Settings.tsx:268:        description="This deletes every demo merchant, link, checkout, credit and withdrawal in this browser and restores the sample seed. It can't be undone."
+apps\web\src\components\merchant\Settings.tsx:269:        confirmLabel="Reset demo data"
+apps\web\src\components\merchant\Transactions.tsx:66:            <SearchInput label="Search transactions" placeholder="Search id, title or amount" value={q} onChange={(e) => setQ(e.target.value)} wrapperClassName="lg:w-72" />
+apps\web\src\components\merchant\Receipts.tsx:9:import { modeLabel } from "@/services/demo/engine";
+apps\web\src\components\merchant\Receipts.tsx:29:      <MerchantPageHeader title="Receipts" description="Issued for every verified payment. Demo receipts are simulated records, not evidence of live funds." />
+apps\web\src\components\merchant\Receipts.tsx:32:          <SearchInput label="Search receipts" placeholder="Search receipt id, payment reference, title or amount" value={q} onChange={(e) => setQ(e.target.value)} wrapperClassName="sm:max-w-md" />
+apps\web\src\components\merchant\Receipts.tsx:46:            { key: "ver", header: "Verification", cell: (r) => <StatusBadge tone={r.simulated ? "accent" : "success"}>{r.simulated ? "Simulated" : "Wallet verified"}</StatusBadge> },
+apps\web\src\components\merchant\TransactionDetail.tsx:11:import { modeLabel } from "@/services/demo/engine";
+apps\web\src\components\merchant\TransactionDetail.tsx:78:              {c.exceptionReason} Refunds and recovery are handled from the payment request above{isDemo ? " (simulated)" : ""}.
+apps\web\src\components\merchant\TransactionDetail.tsx:104:                  { label: "Quote source", value: c.quote.source === "demo" ? "Demo constants · illustrative" : c.quote.provider },
+apps\web\src\components\merchant\WithdrawalDetail.tsx:55:          Payout completed only when provider confirmed. {isDemo && "This is a simulated confirmation — no INR moved."}
+apps\web\src\components\merchant\WithdrawalNew.tsx:11:import { withdrawalBlockReason, withdrawalQuote } from "@/services/demo/engine";
+apps\web\src\components\merchant\WithdrawalNew.tsx:12:import { demoConfig } from "@/config/demo";
+apps\web\src\components\merchant\WithdrawalNew.tsx:71:                <FormField label="Withdrawal amount (INR)" error={amountError} hint={`Minimum ${formatInr(demoConfig.withdrawal.minInrMinor, { whole: true })} (demo policy). Locked credits can't be withdrawn.`}>
+apps\web\src\components\merchant\WithdrawalNew.tsx:83:                        { label: `Payout fee & spread (${demoConfig.withdrawal.spreadBps / 100}%)`, value: `−${formatInr(q.feeInrMinor)}` },
+apps\web\src\components\merchant\WithdrawalNew.tsx:127:                    {isDemo ? "Request demo withdrawal" : "Request withdrawal"}
+
+591 matches
+494 matched lines
+105 files contained matches
+260 files searched
+63650 bytes printed
+2329912 bytes searched
+0.019477 seconds spent searching
+0.020489 seconds total

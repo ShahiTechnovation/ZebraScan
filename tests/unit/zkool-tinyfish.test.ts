@@ -49,7 +49,7 @@ describe("zkool_graphql watcher (schema from pinned zkool2 6.36.0 source, fake s
       url: "https://z.example/graphql",
       accountId: 7,
       network: "testnet",
-      jwtPrivateKeyPem: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+      jwt: signZkoolJwt(privateKey, { sub: 7, write: false }),
       fetchImpl: (async (_u: string, init: RequestInit) => {
         seen.push(String((init.headers as Record<string, string>).authorization));
         return new Response(JSON.stringify({ data: { currentHeight: 5 } }));

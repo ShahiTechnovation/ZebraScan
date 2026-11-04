@@ -5,9 +5,8 @@ import { getOperationMode } from "@/config/mode";
 import type { DemoState, Merchant, UiOperationMode } from "@/types/domain";
 import type { ZebServices } from "@/services/adapters";
 import { getServices } from "@/services/registry";
-import { demoStore } from "@/services/demo/store";
-import { demoSession } from "@/services/demo/services";
-import { emptyState } from "@/services/demo/engine";
+import type { demoSession } from "@/services/demo/services";
+import { emptyState } from "@/services/model";
 import { liveStore, type LiveStore } from "@/services/live/store";
 import { errorMessage, registerStepUpPrompt } from "@/services/live/api";
 import { Modal } from "@/components/ui/Modal";
@@ -37,16 +36,10 @@ const nullSnapshot = () => null;
 export function ZebProvider({ children }: { children: React.ReactNode }) {
   const mode = getOperationMode();
   const services = getServices();
-  const isDemo = mode === "demo" && services?.kind === "demo";
+  const isDemo = false;
   const live = mode === "connected" && services?.kind === "live" ? liveStore : null;
-  const store = isDemo ? demoStore : live;
-  const snapshot = useSyncExternalStore(store?.subscribe ?? noopSubscribe, store?.getSnapshot ?? nullSnapshot, demoStore.getServerSnapshot);
-
-  useEffect(() => {
-    if (!isDemo) return;
-    const t = window.setInterval(() => demoStore.tick(), 1000);
-    return () => window.clearInterval(t);
-  }, [isDemo]);
+  const store = live;
+  const snapshot = useSyncExternalStore(store?.subscribe ?? noopSubscribe, store?.getSnapshot ?? nullSnapshot, nullSnapshot);
 
   const value = useMemo<ZebContextValue>(() => {
     const state = store ? snapshot ?? CONNECTED_EMPTY : CONNECTED_EMPTY;
@@ -55,11 +48,11 @@ export function ZebProvider({ children }: { children: React.ReactNode }) {
       ready: store ? snapshot !== null : true,
       mode,
       services,
-      canTransact: services !== null && (!live || !live.error),
+      canTransact: services !== null && !!live?.ready && !live.error,
       isDemo,
       state,
       merchant,
-      demo: isDemo ? demoSession : null,
+      demo: null,
       live,
     };
   }, [snapshot, isDemo, mode, services, store, live]);

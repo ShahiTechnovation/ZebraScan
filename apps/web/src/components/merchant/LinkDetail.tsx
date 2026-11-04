@@ -87,7 +87,7 @@ export function LinkDetail({ id }: { id: string }) {
           { label: "Successful payments", value: uses, sub: link.reusable ? (link.useLimit ? `of ${link.useLimit} allowed` : "Unlimited") : "One-time link" },
           { label: "Received", value: formatInr(received), sub: "INR credits from this link" },
           { label: "Checkouts started", value: payments.length, sub: "Unconfirmed ones don't count as uses" },
-          { label: "Views (demo counter)", value: link.views, sub: "Demo-only, this browser" },
+          { label: "Views", value: link.views, sub: "Total customer visits" },
         ]}
       />
 

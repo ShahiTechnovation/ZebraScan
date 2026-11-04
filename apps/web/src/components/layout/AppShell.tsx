@@ -107,7 +107,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="my-3 border-t border-border" />
         <NavList items={SECONDARY_NAV} onNavigate={onNavigate} />
       </nav>
-      <div className="border-t border-border p-4 text-micro leading-relaxed text-foreground-muted">{COPY.simulation}</div>
+      <div className="border-t border-border p-4 text-micro leading-relaxed text-foreground-muted">{COPY.tagline}</div>
     </div>
   );
 }
@@ -151,7 +151,7 @@ function ShopMenu() {
       </button>
       {open && (
         <div role="menu" className="absolute right-0 top-12 z-50 w-72 rounded-overlay border border-border bg-surface-1 p-1.5 shadow-overlay animate-scale-in">
-          <p className="px-2.5 pb-1 pt-1.5 text-micro text-foreground-muted">{live ? "Your business" : "Demo merchants on this device"}</p>
+          <p className="px-2.5 pb-1 pt-1.5 text-micro text-foreground-muted">{live ? "Your business" : "Active merchant accounts"}</p>
           {state.merchants.map((m) => (
             <button
               key={m.id}
@@ -177,7 +177,7 @@ function ShopMenu() {
           <div className="my-1 border-t border-border" />
           {!live && (
             <Link role="menuitem" href="/onboarding" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-input px-2.5 py-2 text-[13px] hover:bg-surface-2">
-              <Plus aria-hidden className="h-4 w-4" /> Set up another demo merchant
+              <Plus aria-hidden className="h-4 w-4" /> Add another merchant
             </Link>
           )}
           <button
@@ -191,7 +191,7 @@ function ShopMenu() {
             }}
             className="flex w-full items-center gap-2 rounded-input px-2.5 py-2 text-left text-[13px] text-foreground-secondary hover:bg-surface-2"
           >
-            <LogOut aria-hidden className="h-4 w-4" /> {live ? "Sign out" : "Sign out of demo"}
+            <LogOut aria-hidden className="h-4 w-4" /> Sign out
           </button>
         </div>
       )}

@@ -5,7 +5,7 @@ import { Download, Printer } from "lucide-react";
 import type { DemoState, Receipt } from "@/types/domain";
 import { formatInr, formatZec } from "@/lib/money";
 import { formatDateTime } from "@/lib/format";
-import { modeLabel } from "@/services/demo/engine";
+import { modeLabel } from "@/services/model";
 import { ZebLogo } from "@/components/brand/ZebLogo";
 import { Button } from "@/components/ui/Button";
 import { CopyButton, ShareButton } from "@/components/ui/CopyShare";

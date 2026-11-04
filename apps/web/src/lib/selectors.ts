@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useZeb } from "@/providers/ZebProvider";
-import { balances, linkStatus, linkSuccessfulUses } from "@/services/demo/engine";
+import { balances, linkStatus, linkSuccessfulUses } from "@/services/model";
 import type { CheckoutIntent, DemoState, PaymentLink } from "@/types/domain";
 
 /** Only data owned by the signed-in merchant — never other merchants' balances. */

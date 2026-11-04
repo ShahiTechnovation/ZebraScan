@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-11-04T16:29:08.604Z",
+  "sha": "a04671090717e933783f1ae204a6738923f643b1",
+  "documents": 9,
+  "findings": 24,
+  "eChecks": 36,
+  "checklistItems": 126,
+  "missingLinks": [],
+  "hashes": {
+    "docs/PRODUCTION_AUDIT_REPORT.md": "925a683b4ef0ff238a98ce4a5ee7b5ece97141674302382a1e1942b702387d4d",
+    "docs/ISSUE_REGISTER.md": "5d5d922904f14307dd9efc87fb23c8d7aab774ff0131c6c81ee4ddef8878d9e7",
+    "docs/PAYMENT_FLOW_TRACE.md": "b2859e39bd2957f6067a2ca0f196ed60ac15880587891b6a5f5b3fb86376b936",
+    "docs/EXTERNAL_DEPENDENCIES.md": "6af950f829bf74b6cf0a34f18c0719e1bd4494b9f1c4fcc689226fa8d02c6cd6",
+    "docs/FINANCIAL_INVARIANTS.md": "f9cbaf0a89cf667bd90056900cf866bc291a2cfefc5b9c1fe409fb86f050320e",
+    "docs/PRODUCTION_READINESS_MATRIX.md": "38e9b18f4c3c1e4b5cc1765f5e4558367def72a3825051803b45b323762e3531",
+    "docs/REMEDIATION_PLAN.md": "a38a77003a2143c7ccb1c7cb481a71700c1d48a73bdeb871b076d8a173dad4ca",
+    "docs/OPERATOR_RUNBOOK.md": "adccf4c993847aacb27376b1f385aac55db50bbeed8d143a75ba00d1ad5cdc8f",
+    "docs/SUBMISSION_EVIDENCE.md": "f629a041761619a89ccc46495f9123af8af6b33d8ea46d49bd0a2fd9e452c6ca"
+  }
+}

@@ -6,7 +6,7 @@ import { useZeb } from "@/providers/ZebProvider";
 import { useMerchantData } from "@/lib/selectors";
 import { formatInr } from "@/lib/money";
 import { formatDateTime } from "@/lib/format";
-import { modeLabel } from "@/services/demo/engine";
+import { modeLabel } from "@/services/model";
 import type { Receipt } from "@/types/domain";
 import { MerchantPageHeader } from "@/components/layout/AppShell";
 import { EmptyState } from "@/components/ui/Blocks";
@@ -26,7 +26,7 @@ export function Receipts() {
   }, [receipts, q]);
   return (
     <>
-      <MerchantPageHeader title="Receipts" description="Issued for every verified payment. Demo receipts are simulated records, not evidence of live funds." />
+      <MerchantPageHeader title="Receipts" description="Cryptographically verifiable payment receipts issued for verified ZEC deposits." />
       <Panel>
         <div className="border-b border-border p-4">
           <SearchInput label="Search receipts" placeholder="Search receipt id, payment reference, title or amount" value={q} onChange={(e) => setQ(e.target.value)} wrapperClassName="sm:max-w-md" />

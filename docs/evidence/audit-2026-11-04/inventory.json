@@ -1,0 +1,805 @@
+{
+  "capturedAt": "2026-11-04T16:28:31.942Z",
+  "routes": [
+    {
+      "operation": "getPublicConfig",
+      "method": "GET",
+      "path": "/api/v1/public/config",
+      "auth": "public"
+    },
+    {
+      "operation": "getPublicHealth",
+      "method": "GET",
+      "path": "/api/v1/public/health",
+      "auth": "public"
+    },
+    {
+      "operation": "getZecUsdRate",
+      "method": "GET",
+      "path": "/api/v1/rates/zec-usd",
+      "auth": "public"
+    },
+    {
+      "operation": "getInrUsdcRate",
+      "method": "GET",
+      "path": "/api/v1/rates/inr-usdc",
+      "auth": "public"
+    },
+    {
+      "operation": "parseUpi",
+      "method": "POST",
+      "path": "/api/v1/upi/parse",
+      "auth": "public"
+    },
+    {
+      "operation": "createQuote",
+      "method": "POST",
+      "path": "/api/v1/quotes",
+      "auth": "public"
+    },
+    {
+      "operation": "getQuote",
+      "method": "GET",
+      "path": "/api/v1/quotes/:id",
+      "auth": "public"
+    },
+    {
+      "operation": "createScanPayIntent",
+      "method": "POST",
+      "path": "/api/v1/scan-pay/intents",
+      "auth": "public"
+    },
+    {
+      "operation": "getScanPayIntent",
+      "method": "GET",
+      "path": "/api/v1/scan-pay/intents/:id",
+      "auth": "scoped"
+    },
+    {
+      "operation": "cancelScanPayIntent",
+      "method": "POST",
+      "path": "/api/v1/scan-pay/intents/:id/cancel",
+      "auth": "scoped"
+    },
+    {
+      "operation": "register",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "auth": "public"
+    },
+    {
+      "operation": "login",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "auth": "public"
+    },
+    {
+      "operation": "logout",
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "auth": "user"
+    },
+    {
+      "operation": "verifyEmail",
+      "method": "POST",
+      "path": "/api/v1/auth/verify-email",
+      "auth": "public"
+    },
+    {
+      "operation": "resendVerification",
+      "method": "POST",
+      "path": "/api/v1/auth/verify-email/resend",
+      "auth": "user"
+    },
+    {
+      "operation": "forgotPassword",
+      "method": "POST",
+      "path": "/api/v1/auth/forgot-password",
+      "auth": "public"
+    },
+    {
+      "operation": "resetPassword",
+      "method": "POST",
+      "path": "/api/v1/auth/reset-password",
+      "auth": "public"
+    },
+    {
+      "operation": "listSessions",
+      "method": "GET",
+      "path": "/api/v1/auth/sessions",
+      "auth": "user"
+    },
+    {
+      "operation": "revokeSession",
+      "method": "DELETE",
+      "path": "/api/v1/auth/sessions/:id",
+      "auth": "user"
+    },
+    {
+      "operation": "stepUp",
+      "method": "POST",
+      "path": "/api/v1/auth/step-up",
+      "auth": "user"
+    },
+    {
+      "operation": "walletChallenge",
+      "method": "POST",
+      "path": "/api/v1/auth/challenge",
+      "auth": "public"
+    },
+    {
+      "operation": "walletVerify",
+      "method": "POST",
+      "path": "/api/v1/auth/wallet/verify",
+      "auth": "public"
+    },
+    {
+      "operation": "emailOtpRequest",
+      "method": "POST",
+      "path": "/api/v1/auth/email/otp",
+      "auth": "public"
+    },
+    {
+      "operation": "emailOtpVerify",
+      "method": "POST",
+      "path": "/api/v1/auth/email/otp/verify",
+      "auth": "public"
+    },
+    {
+      "operation": "getAuthSession",
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "auth": "public"
+    },
+    {
+      "operation": "getPublicConfigV2",
+      "method": "GET",
+      "path": "/api/v1/config/public",
+      "auth": "public"
+    },
+    {
+      "operation": "scanParse",
+      "method": "POST",
+      "path": "/api/v1/scan/parse",
+      "auth": "public"
+    },
+    {
+      "operation": "getP2PReadiness",
+      "method": "GET",
+      "path": "/api/v1/providers/p2p/readiness",
+      "auth": "public"
+    },
+    {
+      "operation": "getMerchantSession",
+      "method": "GET",
+      "path": "/api/v1/merchants/session",
+      "auth": "public"
+    },
+    {
+      "operation": "createMerchant",
+      "method": "POST",
+      "path": "/api/v1/merchants",
+      "auth": "user"
+    },
+    {
+      "operation": "getMyMerchant",
+      "method": "GET",
+      "path": "/api/v1/merchants/me",
+      "auth": "merchant"
+    },
+    {
+      "operation": "updateMyMerchant",
+      "method": "PATCH",
+      "path": "/api/v1/merchants/me",
+      "auth": "merchant"
+    },
+    {
+      "operation": "submitKyb",
+      "method": "POST",
+      "path": "/api/v1/merchants/me/kyb/submit",
+      "auth": "merchant"
+    },
+    {
+      "operation": "listPayoutDestinations",
+      "method": "GET",
+      "path": "/api/v1/merchants/me/payout-destinations",
+      "auth": "merchant"
+    },
+    {
+      "operation": "createPayoutDestination",
+      "method": "POST",
+      "path": "/api/v1/merchants/me/payout-destinations",
+      "auth": "merchant"
+    },
+    {
+      "operation": "updatePayoutDestination",
+      "method": "PATCH",
+      "path": "/api/v1/merchants/me/payout-destinations/:id",
+      "auth": "merchant"
+    },
+    {
+      "operation": "deletePayoutDestination",
+      "method": "DELETE",
+      "path": "/api/v1/merchants/me/payout-destinations/:id",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getPreferences",
+      "method": "GET",
+      "path": "/api/v1/merchants/me/preferences",
+      "auth": "merchant"
+    },
+    {
+      "operation": "updatePreferences",
+      "method": "PATCH",
+      "path": "/api/v1/merchants/me/preferences",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getMetrics",
+      "method": "GET",
+      "path": "/api/v1/merchants/me/metrics",
+      "auth": "merchant"
+    },
+    {
+      "operation": "createTerminalIntent",
+      "method": "POST",
+      "path": "/api/v1/merchant-terminal/intents",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getTerminalIntent",
+      "method": "GET",
+      "path": "/api/v1/merchant-terminal/intents/:id",
+      "auth": "scoped"
+    },
+    {
+      "operation": "getCounterQr",
+      "method": "GET",
+      "path": "/api/v1/merchants/me/counter-qr",
+      "auth": "merchant"
+    },
+    {
+      "operation": "regenerateCounterQr",
+      "method": "POST",
+      "path": "/api/v1/merchants/me/counter-qr",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getPublicMerchant",
+      "method": "GET",
+      "path": "/api/v1/m/:handle",
+      "auth": "public"
+    },
+    {
+      "operation": "createCounterCheckout",
+      "method": "POST",
+      "path": "/api/v1/m/:handle/checkouts",
+      "auth": "public"
+    },
+    {
+      "operation": "createLink",
+      "method": "POST",
+      "path": "/api/v1/links",
+      "auth": "merchant"
+    },
+    {
+      "operation": "listLinks",
+      "method": "GET",
+      "path": "/api/v1/links",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getLink",
+      "method": "GET",
+      "path": "/api/v1/links/:id",
+      "auth": "merchant"
+    },
+    {
+      "operation": "updateLink",
+      "method": "PATCH",
+      "path": "/api/v1/links/:id",
+      "auth": "merchant"
+    },
+    {
+      "operation": "revokeLink",
+      "method": "POST",
+      "path": "/api/v1/links/:id/revoke",
+      "auth": "merchant"
+    },
+    {
+      "operation": "duplicateLink",
+      "method": "POST",
+      "path": "/api/v1/links/:id/duplicate",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getPublicLink",
+      "method": "GET",
+      "path": "/api/v1/pay/:slug",
+      "auth": "public"
+    },
+    {
+      "operation": "createLinkCheckout",
+      "method": "POST",
+      "path": "/api/v1/pay/:slug/checkouts",
+      "auth": "public"
+    },
+    {
+      "operation": "getCheckout",
+      "method": "GET",
+      "path": "/api/v1/checkout/:id",
+      "auth": "scoped"
+    },
+    {
+      "operation": "refreshCheckout",
+      "method": "POST",
+      "path": "/api/v1/checkout/:id/refresh",
+      "auth": "scoped"
+    },
+    {
+      "operation": "submitRefundDetails",
+      "method": "POST",
+      "path": "/api/v1/checkout/:id/refund-details",
+      "auth": "scoped"
+    },
+    {
+      "operation": "listTransactions",
+      "method": "GET",
+      "path": "/api/v1/transactions",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getTransaction",
+      "method": "GET",
+      "path": "/api/v1/transactions/:id",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getBalance",
+      "method": "GET",
+      "path": "/api/v1/balance",
+      "auth": "merchant"
+    },
+    {
+      "operation": "listBalanceEntries",
+      "method": "GET",
+      "path": "/api/v1/balance/entries",
+      "auth": "merchant"
+    },
+    {
+      "operation": "listSettlements",
+      "method": "GET",
+      "path": "/api/v1/settlements",
+      "auth": "merchant"
+    },
+    {
+      "operation": "quoteWithdrawal",
+      "method": "POST",
+      "path": "/api/v1/withdrawals/quote",
+      "auth": "merchant"
+    },
+    {
+      "operation": "createWithdrawal",
+      "method": "POST",
+      "path": "/api/v1/withdrawals",
+      "auth": "merchant"
+    },
+    {
+      "operation": "listWithdrawals",
+      "method": "GET",
+      "path": "/api/v1/withdrawals",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getWithdrawal",
+      "method": "GET",
+      "path": "/api/v1/withdrawals/:id",
+      "auth": "merchant"
+    },
+    {
+      "operation": "cancelWithdrawal",
+      "method": "POST",
+      "path": "/api/v1/withdrawals/:id/cancel",
+      "auth": "merchant"
+    },
+    {
+      "operation": "getReceipt",
+      "method": "GET",
+      "path": "/api/v1/receipts/:id",
+      "auth": "scoped"
+    },
+    {
+      "operation": "downloadReceipt",
+      "method": "GET",
+      "path": "/api/v1/receipts/:id/download",
+      "auth": "scoped"
+    },
+    {
+      "operation": "createSupportCase",
+      "method": "POST",
+      "path": "/api/v1/support/cases",
+      "auth": "scoped"
+    },
+    {
+      "operation": "listSupportCases",
+      "method": "GET",
+      "path": "/api/v1/support/cases",
+      "auth": "merchant"
+    },
+    {
+      "operation": "opsLogin",
+      "method": "POST",
+      "path": "/api/v1/ops/login",
+      "auth": "public"
+    },
+    {
+      "operation": "opsHealth",
+      "method": "GET",
+      "path": "/api/v1/ops/health",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsTreasury",
+      "method": "GET",
+      "path": "/api/v1/ops/treasury",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsReconciliation",
+      "method": "GET",
+      "path": "/api/v1/ops/reconciliation",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsJobs",
+      "method": "GET",
+      "path": "/api/v1/ops/jobs",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsExceptions",
+      "method": "GET",
+      "path": "/api/v1/ops/exceptions",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsAudit",
+      "method": "GET",
+      "path": "/api/v1/ops/audit",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsPause",
+      "method": "POST",
+      "path": "/api/v1/ops/pause",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsResume",
+      "method": "POST",
+      "path": "/api/v1/ops/resume",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsRetryJob",
+      "method": "POST",
+      "path": "/api/v1/ops/job/:id/retry",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsDecideException",
+      "method": "POST",
+      "path": "/api/v1/ops/exception/:id/decide",
+      "auth": "operator"
+    },
+    {
+      "operation": "opsApprove",
+      "method": "POST",
+      "path": "/api/v1/ops/approvals/:id/approve",
+      "auth": "operator"
+    },
+    {
+      "operation": "adminP2PPreflight",
+      "method": "POST",
+      "path": "/api/v1/admin/p2p/preflight",
+      "auth": "operator"
+    },
+    {
+      "operation": "adminP2PCapabilities",
+      "method": "GET",
+      "path": "/api/v1/admin/p2p/capabilities",
+      "auth": "operator"
+    },
+    {
+      "operation": "adminListPayouts",
+      "method": "GET",
+      "path": "/api/v1/admin/payouts",
+      "auth": "operator"
+    },
+    {
+      "operation": "adminGetPayout",
+      "method": "GET",
+      "path": "/api/v1/admin/payouts/:id",
+      "auth": "operator"
+    },
+    {
+      "operation": "adminApprovePayout",
+      "method": "POST",
+      "path": "/api/v1/admin/payouts/:id/approve",
+      "auth": "operator"
+    },
+    {
+      "operation": "adminReconcilePayout",
+      "method": "POST",
+      "path": "/api/v1/admin/payouts/:id/reconcile",
+      "auth": "operator"
+    },
+    {
+      "operation": "adminHoldPayout",
+      "method": "POST",
+      "path": "/api/v1/admin/payouts/:id/hold",
+      "auth": "operator"
+    },
+    {
+      "operation": "adminPayoutNotSubmitted",
+      "method": "POST",
+      "path": "/api/v1/admin/payouts/:id/verified-not-submitted",
+      "auth": "operator"
+    },
+    {
+      "operation": "internalZcashEvents",
+      "method": "POST",
+      "path": "/api/v1/internal/zcash/events",
+      "auth": "internal"
+    },
+    {
+      "operation": "internalP2PEvents",
+      "method": "POST",
+      "path": "/api/v1/internal/p2p/events",
+      "auth": "internal"
+    },
+    {
+      "operation": "internalWebhook",
+      "method": "POST",
+      "path": "/api/v1/internal/webhooks/:provider",
+      "auth": "internal"
+    },
+    {
+      "operation": "demoSimulateDeposit",
+      "method": "POST",
+      "path": "/api/v1/demo/checkout/:id/simulate-deposit",
+      "auth": "scoped"
+    },
+    {
+      "operation": "demoAdvanceConfirmations",
+      "method": "POST",
+      "path": "/api/v1/demo/checkout/:id/advance",
+      "auth": "scoped"
+    }
+  ],
+  "migrations": [
+    "0001_core.sql",
+    "0002_scanner_cursor.sql",
+    "0003_memo_matching.sql",
+    "0004_tinyfish_payouts_and_wallet_auth.sql",
+    "0005_wallet_only_users.sql"
+  ],
+  "tables": [
+    {
+      "table": "users",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "sessions",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "auth_tokens",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "operator_roles",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "email_outbox",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "merchants",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "merchant_members",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "payout_destinations",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "payment_links",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "rate_snapshots",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "quotes",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "address_allocation_cursor",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "zcash_addresses",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "payment_intents",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "deposit_observations",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "scanner_state",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "inbound_event_receipts",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "p",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "withdrawals",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "merchant_credits",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "ledger_accounts",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "ledger_journals",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "ledger_postings",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "treasury_allocations",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "treasury_inventory",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "receipts",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "support_cases",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "exceptions",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "feature_gates",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "ops_approvals",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "audit_log",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "idempotency_keys",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "outbox_events",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "resource_events",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "jobs",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "reconciliation_runs",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "p",
+      "migration": "0001_core.sql"
+    },
+    {
+      "table": "p",
+      "migration": "0004_tinyfish_payouts_and_wallet_auth.sql"
+    },
+    {
+      "table": "payout_authorizations",
+      "migration": "0004_tinyfish_payouts_and_wallet_auth.sql"
+    },
+    {
+      "table": "payout_commands",
+      "migration": "0004_tinyfish_payouts_and_wallet_auth.sql"
+    },
+    {
+      "table": "payout_attempts",
+      "migration": "0004_tinyfish_payouts_and_wallet_auth.sql"
+    },
+    {
+      "table": "provider_orders",
+      "migration": "0004_tinyfish_payouts_and_wallet_auth.sql"
+    },
+    {
+      "table": "p",
+      "migration": "0004_tinyfish_payouts_and_wallet_auth.sql"
+    },
+    {
+      "table": "login_challenges",
+      "migration": "0004_tinyfish_payouts_and_wallet_auth.sql"
+    },
+    {
+      "table": "wallet_identities",
+      "migration": "0004_tinyfish_payouts_and_wallet_auth.sql"
+    }
+  ],
+  "liveOperations": [
+    "getZecUsdRate",
+    "getInrUsdcRate",
+    "createQuote",
+    "createScanPayIntent",
+    "createTerminalIntent",
+    "createLinkCheckout",
+    "createCounterCheckout",
+    "refreshCheckout",
+    "submitRefundDetails",
+    "demoSimulateDeposit",
+    "demoAdvanceConfirmations",
+    "createMerchant",
+    "createPayoutDestination",
+    "updatePreferences",
+    "updateMyMerchant",
+    "regenerateCounterQr",
+    "createLink",
+    "getLink",
+    "updateLink",
+    "revokeLink",
+    "duplicateLink",
+    "listPayoutDestinations",
+    "createWithdrawal",
+    "cancelWithdrawal"
+  ],
+  "periodicJobs": [
+    "intents.expire",
+    "treasury.inventory",
+    "reconcile",
+    "scanner.poll",
+    "email.deliver",
+    "outbox.dispatch"
+  ],
+  "notes": "ROUTES excludes healthz/readyz/SSE and handwritten network status routes in server.ts. Operations may also be loaded in live/store.ts and live/noir.ts; this inventory is source discovery, not interactive certification."
+}

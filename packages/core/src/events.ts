@@ -55,18 +55,18 @@ export async function audit(
 export async function raiseException(
   q: Queryable,
   env: Environment,
-  e: { kind: string; severity: "info" | "warning" | "urgent"; intentId?: string | null; withdrawalId?: string | null; orderId?: string | null; details?: Record<string, unknown> },
+  e: { kind: string; severity: "info" | "warning" | "urgent"; intentId?: string | null; withdrawalId?: string | null; orderId?: string | null; depositId?: string | null; details?: Record<string, unknown> },
 ): Promise<string> {
   const existing = await maybeOne<{ id: string }>(
     q,
-    `SELECT id FROM exceptions WHERE environment=$1 AND kind=$2 AND coalesce(intent_id,'')=coalesce($3,'') AND coalesce(withdrawal_id,'')=coalesce($4,'') AND coalesce(order_id,'')=coalesce($5,'') AND status='open'`,
-    [env, e.kind, e.intentId ?? null, e.withdrawalId ?? null, e.orderId ?? null],
+    `SELECT id FROM exceptions WHERE environment=$1 AND kind=$2 AND coalesce(intent_id,'')=coalesce($3,'') AND coalesce(withdrawal_id,'')=coalesce($4,'') AND coalesce(order_id,'')=coalesce($5,'') AND coalesce(deposit_id,'')=coalesce($6,'') AND status='open'`,
+    [env, e.kind, e.intentId ?? null, e.withdrawalId ?? null, e.orderId ?? null, e.depositId ?? null],
   );
   if (existing) return existing.id;
   const id = newId("event").replace(/^evt_/, "exc_");
   await q.query(
-    `INSERT INTO exceptions(id, environment, kind, severity, intent_id, withdrawal_id, order_id, details) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-    [id, env, e.kind, e.severity, e.intentId ?? null, e.withdrawalId ?? null, e.orderId ?? null, JSON.stringify(redact(e.details ?? {}))],
+    `INSERT INTO exceptions(id, environment, kind, severity, intent_id, withdrawal_id, order_id, deposit_id, details) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [id, env, e.kind, e.severity, e.intentId ?? null, e.withdrawalId ?? null, e.orderId ?? null, e.depositId ?? null, JSON.stringify(redact(e.details ?? {}))],
   );
   return id;
 }

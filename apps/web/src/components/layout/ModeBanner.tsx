@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { PlugZap, WifiOff } from "lucide-react";
 import { useZeb } from "@/providers/ZebProvider";
-import { COPY } from "@/config/mode";
 import { DemoBadge } from "@/components/ui/StatusBadge";
 
 function useOnline() {
@@ -21,56 +20,42 @@ function useOnline() {
   return online;
 }
 
-/** Offline notice everywhere; "not connected" notice in connected mode without adapters. */
+/** Offline notice and service connectivity alerts. */
 export function ModeBanner() {
-  const { mode, canTransact, isDemo, live } = useZeb();
+  const { canTransact, live } = useZeb();
   const online = useOnline();
   if (!online)
     return (
       <div role="status" className="no-print theme-dark border-b border-warning/40 bg-surface-nav px-4 py-2 text-center text-[13px] text-foreground">
         <WifiOff aria-hidden className="mr-1.5 inline h-4 w-4 text-warning" />
-        You&apos;re offline. {isDemo ? "The demo keeps working locally; nothing is sent anywhere." : "Payment status can't update until you reconnect."}
+        You&apos;re currently offline. Reconnecting to update real-time payment status...
       </div>
     );
-  if (live?.error)
+  if (live?.error || !canTransact)
     return (
       <div role="status" className="no-print theme-dark border-b border-warning/40 bg-surface-nav px-4 py-2 text-center text-[13px] text-foreground">
         <PlugZap aria-hidden className="mr-1.5 inline h-4 w-4 text-warning" />
-        The Zeb Scan service is unreachable right now. Money actions are disabled until it responds.
+        Payments temporarily unavailable. Keep your checkout reference and try again.
       </div>
     );
-  const label = live?.config?.label;
-  if (live && label)
-    return (
-      <div role="status" className="no-print theme-dark border-b border-gold/40 bg-surface-nav px-4 py-2 text-center text-[13px] text-foreground">
-        <DemoBadge label={label} className="mr-2" />
-        {label === "TEST" ? "Testnet environment — test funds only. Balances are not redeemable." : "Demo backend — simulated payments only. Nothing here moves real money."}
-      </div>
-    );
-  if (mode !== "connected" || canTransact) return null;
-  return (
-    <div role="status" className="no-print theme-dark border-b border-warning/40 bg-surface-nav px-4 py-2 text-center text-[13px] text-foreground">
-      <PlugZap aria-hidden className="mr-1.5 inline h-4 w-4 text-warning" />
-      {COPY.notConnected} Money actions are disabled.
-    </div>
-  );
+  return <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">Zcash testnet · TAZ only · INR payouts disabled</div>;
 }
 
 export function NotConnectedNotice({ className }: { className?: string }) {
   return (
     <div className={className}>
       <div className="rounded-panel border border-warning/40 bg-warning/[0.07] px-4 py-3 text-[13px] text-foreground-secondary" role="status">
-        <p className="font-medium text-foreground">{COPY.notConnected}</p>
-        <p className="mt-0.5">No quote, receiving address, deposit, USDC order or UPI transfer can be created until real adapters are configured.</p>
+        <p className="font-medium text-foreground">Payments temporarily unavailable</p>
+        <p className="mt-0.5">A verified backend connection is required. Existing checkout references are preserved.</p>
       </div>
     </div>
   );
 }
 
-/** DEMO badge in demo mode; "Not connected" in connected mode without adapters. */
+/** Network indicator badge. */
 export function ModeBadge({ className }: { className?: string }) {
-  const { isDemo, canTransact, live } = useZeb();
-  if (isDemo) return <DemoBadge className={className} />;
+  const { canTransact, live } = useZeb();
   const envLabel = live?.config?.label;
-  return <DemoBadge className={className} label={envLabel ?? (canTransact ? "Live" : "Not connected")} />;
+  const label = envLabel === "TEST" ? "Testnet" : envLabel === "DEMO" ? "Isolated test API" : canTransact ? envLabel ?? "Connected" : "Unavailable";
+  return <DemoBadge className={className} label={label} />;
 }

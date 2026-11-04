@@ -104,7 +104,7 @@ export function buildContext(cfg: Config, opts: { db?: Db; log?: Logger; now?: (
   let allocator: AddressAllocator | null = null;
   if (env === "demo") allocator = new DemoAddressAllocator(env);
   else if (cfg.zkool) {
-    zkool = new ZkoolWatcher({ url: cfg.zkool.url, accountId: cfg.zkool.accountId, jwt: cfg.zkool.jwt, jwtPrivateKeyPem: cfg.zkool.jwtPrivateKeyPem, pools: cfg.zkool.pools, network: cfg.zkool.network, addressMode: cfg.zkool.addressMode, birthHeight: cfg.zkool.birthHeight });
+    zkool = new ZkoolWatcher({ url: cfg.zkool.url, accountId: cfg.zkool.accountId, jwt: cfg.zkool.jwt, jwtFile: cfg.zkool.jwtFile, pools: cfg.zkool.pools, network: cfg.zkool.network, addressMode: cfg.zkool.addressMode, birthHeight: cfg.zkool.birthHeight });
     allocator = zkool;
   }
   else if (cfg.zcashGateway && cfg.zcashNetwork) {

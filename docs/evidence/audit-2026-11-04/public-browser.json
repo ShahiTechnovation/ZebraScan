@@ -1,0 +1,165 @@
+{
+  "checkedAt": "2026-11-04T16:06:27.210Z",
+  "results": [
+    {
+      "route": "/",
+      "width": 360,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/",
+      "headings": [
+        "Pay in ZEC.They get INR."
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 360,
+        "body": 360
+      },
+      "errors": [],
+      "screenshot": "public---360.png"
+    },
+    {
+      "route": "/scan",
+      "width": 360,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/scan",
+      "headings": [
+        "Pay a UPI QR with ZEC"
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 360,
+        "body": 360
+      },
+      "errors": [],
+      "screenshot": "public--scan-360.png"
+    },
+    {
+      "route": "/login",
+      "width": 360,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/login",
+      "headings": [
+        "Merchant sign in"
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 360,
+        "body": 360
+      },
+      "errors": [],
+      "screenshot": "public--login-360.png"
+    },
+    {
+      "route": "/app/terminal",
+      "width": 360,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/app/terminal",
+      "headings": [
+        "Merchant console"
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 360,
+        "body": 360
+      },
+      "errors": [],
+      "screenshot": "public--app-terminal-360.png"
+    },
+    {
+      "route": "/app/links",
+      "width": 360,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/app/links",
+      "headings": [
+        "Merchant console"
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 360,
+        "body": 360
+      },
+      "errors": [],
+      "screenshot": "public--app-links-360.png"
+    },
+    {
+      "route": "/",
+      "width": 1440,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/",
+      "headings": [
+        "Pay in ZEC.They get INR."
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 1440,
+        "body": 1440
+      },
+      "errors": [],
+      "screenshot": "public---1440.png"
+    },
+    {
+      "route": "/scan",
+      "width": 1440,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/scan",
+      "headings": [
+        "Pay a UPI QR with ZEC"
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 1440,
+        "body": 1440
+      },
+      "errors": [],
+      "screenshot": "public--scan-1440.png"
+    },
+    {
+      "route": "/login",
+      "width": 1440,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/login",
+      "headings": [
+        "Merchant sign in"
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 1440,
+        "body": 1440
+      },
+      "errors": [],
+      "screenshot": "public--login-1440.png"
+    },
+    {
+      "route": "/app/terminal",
+      "width": 1440,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/app/terminal",
+      "headings": [
+        "Merchant console"
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 1440,
+        "body": 1440
+      },
+      "errors": [],
+      "screenshot": "public--app-terminal-1440.png"
+    },
+    {
+      "route": "/app/links",
+      "width": 1440,
+      "status": 200,
+      "finalUrl": "https://zebrascan.vercel.app/app/links",
+      "headings": [
+        "Merchant console"
+      ],
+      "demo": true,
+      "dimensions": {
+        "viewport": 1440,
+        "body": 1440
+      },
+      "errors": [],
+      "screenshot": "public--app-links-1440.png"
+    }
+  ]
+}

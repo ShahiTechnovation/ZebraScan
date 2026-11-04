@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-11-04T16:26:15.271Z",
+  "scope": "isolated _test database; synthetic events only",
+  "unmatched": {
+    "inputs": 2,
+    "deposits": 0,
+    "exceptions": 1,
+    "retainedDetails": [
+      {
+        "details": {
+          "txid": "93c60198403c92bbbfc1031722c204736f7988aac33a24056b27fae997cdc42f",
+          "value": "10",
+          "outputRef": "unknown-1",
+          "memoPresent": "[redacted]"
+        }
+      }
+    ]
+  },
+  "memoReorg": [
+    {
+      "status": "deposit_accepted",
+      "canonical": true,
+      "accepted": true
+    }
+  ],
+  "lateMempool": [
+    {
+      "status": "late_deposit",
+      "mined": false,
+      "confirmations": 0,
+      "refund_journals": 1
+    }
+  ],
+  "reschedule": [
+    {
+      "state": "done"
+    }
+  ],
+  "agentOnlyCompletion": {
+    "kind": "status",
+    "status": "COMPLETED",
+    "orderId": "audit-fixture-order",
+    "usdc": null,
+    "reference": ""
+  }
+}

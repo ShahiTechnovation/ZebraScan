@@ -28,7 +28,7 @@ export interface PriceSource {
 
 /** Normalise a provider decimal (strings or JSON numbers) into an exact decimal string. */
 export function decimalText(v: unknown, field: string): string {
-  if (typeof v === "string" && /^\d+(\.\d+)?$/.test(v)) return v;
+  if (typeof v === "string" && /^\d+(\.\d+)?$/.test(v) && /[1-9]/.test(v)) return v;
   if (typeof v === "number" && Number.isFinite(v) && v > 0) {
     // JSON numbers from the provider: take the shortest round-trip repr, reject exponents.
     const s = String(v);
@@ -126,6 +126,7 @@ export class ZecUsdOracle {
       const name = this.sources[i]!.name;
       if (r.status === "rejected") return failures.push({ source: name, error: String((r.reason as Error)?.message ?? r.reason).slice(0, 200) });
       const o = r.value;
+      if (!Number.isFinite(o.observedAt.getTime()) || o.observedAt.getTime() > now.getTime()+30_000 || o.rate.n <= 0n || o.rate.d <= 0n) return failures.push({ source: name, error: "invalid or future price observation" });
       if (now.getTime() - o.observedAt.getTime() > this.policy.maxAgeMs) return failures.push({ source: name, error: "stale" });
       if (o.bid && o.ask) {
         const spread = deviationBps(parseRational(o.bid), parseRational(o.ask));

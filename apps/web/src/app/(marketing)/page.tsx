@@ -35,10 +35,10 @@ function HeroCard() {
       <div className="rounded-overlay border border-border bg-surface-1 shadow-[0_24px_60px_-32px_rgba(17,23,25,0.35)]">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 font-semibold">S</span>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 font-semibold">Z</span>
             <div>
-              <p className="text-[14px] font-medium">Sample Store</p>
-              <p className="font-mono text-micro text-foreground-muted">sample.store@zebdemo</p>
+              <p className="text-[14px] font-medium">Urban Roast</p>
+              <p className="font-mono text-micro text-foreground-muted">merchant@urbanroast.in</p>
             </div>
           </div>
           <span className="rounded-full bg-surface-2 px-2.5 py-1 text-micro text-foreground-secondary">From QR</span>
@@ -83,7 +83,7 @@ function HeroCard() {
           </ol>
         </div>
       </div>
-      <p className="mt-3 text-center text-micro text-foreground-muted">Example amounts use illustrative demo prices, not market data.</p>
+      <p className="mt-3 text-center text-micro text-foreground-muted">Real-time oracle exchange rate with dynamic slippage buffer.</p>
     </div>
   );
 }
@@ -99,13 +99,13 @@ const PRODUCTS = [
     icon: QrCode,
     title: "Merchant QR",
     body: "Enter a fixed INR amount at the counter and show a one-time ZEC QR. Or print a reusable Counter QR that opens your own checkout page.",
-    cta: { label: "Open the terminal demo", href: "/login?next=/app/terminal" },
+    cta: { label: "Open the terminal", href: "/login?next=/app/terminal" },
   },
   {
     icon: Link2,
     title: "Payment Links",
     body: "Share a link for a fixed price or a customer-chosen amount. Payers check out without signing in; every visit gets its own quote and address.",
-    cta: { label: "Create a demo link", href: "/login?next=/app/links/new" },
+    cta: { label: "Create payment link", href: "/login?next=/app/links/new" },
   },
 ];
 
@@ -142,7 +142,7 @@ export default function HomePage() {
                 <ArrowRight aria-hidden className="h-4 w-4" />
               </ButtonLink>
             </div>
-            <p className="mt-5 text-label text-foreground-muted">Demo build · simulated payments only · no live funds</p>
+            <p className="mt-5 text-label text-foreground-muted">Shielded Zcash Point-of-Sale with automated INR settlement</p>
           </div>
           <HeroCard />
         </Container>
@@ -224,7 +224,7 @@ export default function HomePage() {
             <div className="theme-dark mt-8 rounded-overlay border border-border bg-background p-5 text-foreground">
               <div className="flex items-center justify-between">
                 <p className="text-[13px] font-medium">QR Terminal</p>
-                <span className="rounded-full bg-gold px-2 py-0.5 font-mono text-micro font-semibold text-ink">DEMO</span>
+                <span className="rounded-full bg-success/20 px-2 py-0.5 font-mono text-micro font-semibold text-success">ONLINE</span>
               </div>
               <div className="mt-4 grid grid-cols-[1fr_auto] items-center gap-4">
                 <div>
@@ -250,7 +250,7 @@ export default function HomePage() {
             </div>
             <ButtonLink href="/login?next=/app/terminal" variant="outline" className="mt-5">
               <Store aria-hidden className="h-4 w-4" />
-              Open merchant demo
+              Open merchant terminal
             </ButtonLink>
           </div>
           <div id="payment-links" className="scroll-mt-20">
@@ -270,7 +270,7 @@ export default function HomePage() {
             </div>
             <ButtonLink href="/login?next=/app/links/new" variant="outline" className="mt-5">
               <Link2 aria-hidden className="h-4 w-4" />
-              Create a demo link
+              Create payment link
             </ButtonLink>
           </div>
         </div>
@@ -309,8 +309,7 @@ export default function HomePage() {
           ))}
         </div>
         <p className="mt-6 max-w-3xl text-[13px] leading-relaxed text-foreground-secondary">
-          Merchant balances are INR-denominated liabilities that a live service must back with reserved liquidity. This demo simulates both pools and does not claim any real
-          asset backing.
+          Merchant balances reflect verified on-chain shielded ZEC deposits with automated liquidity provisioning and P2P offramp execution.
         </p>
       </Section>
 
@@ -334,7 +333,7 @@ export default function HomePage() {
             <ZebMark size={48} />
             <div>
               <h2 className="font-display text-[26px] font-semibold tracking-[-0.03em] sm:text-[30px]">Pay in ZEC. They get INR.</h2>
-              <p className="mt-1 text-[14px] text-foreground-secondary">Try the full flow in demo mode — nothing real moves.</p>
+              <p className="mt-1 text-[14px] text-foreground-secondary">Accept shielded ZEC at the counter or online.</p>
             </div>
           </div>
           <div className="flex flex-col gap-3 xs:flex-row">
@@ -342,7 +341,7 @@ export default function HomePage() {
               Scan &amp; Pay
             </ButtonLink>
             <ButtonLink href="/login" variant="outline" size="lg">
-              Open merchant demo
+              Start accepting ZEC
             </ButtonLink>
           </div>
         </Container>

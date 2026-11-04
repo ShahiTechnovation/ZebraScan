@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-11-04T16:26:09.200Z",
+  "url": "http://127.0.0.1:4100/api/v1/zcash/networks",
+  "status": 200,
+  "environment": "mainnet-readonly",
+  "network": "mainnet",
+  "receivingOpen": false,
+  "realMoney": false,
+  "networks": [
+    {
+      "network": "mainnet",
+      "status": "SYNCED",
+      "chainTipHeight": 3541772,
+      "walletSyncedHeight": 3541772,
+      "lagBlocks": 0,
+      "ironwood": true,
+      "nu7Active": false,
+      "watcherVersion": "zkool_graphql",
+      "lastUpdatedAt": "2026-11-04T16:26:08.184Z",
+      "stale": false,
+      "lastError": null
+    }
+  ]
+}

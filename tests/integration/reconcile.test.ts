@@ -16,8 +16,8 @@ describe("reconciliation gates", () => {
   it("does not freeze when inventory was never observed", async () => {
     await h.db.query(`DELETE FROM treasury_inventory`);
     const r = await reconcile(h.ctx, "fresh");
-    expect(r.ok).toBe(true);
-    expect(r.checks.find((c) => c.name === "allocations_within_inventory")?.detail).toMatch(/skipped/);
+    expect(r.ok).toBe(false);
+    expect(r.checks.find((c) => c.name === "allocations_within_inventory")?.status).toBe("BLOCKED");
     expect((await h.db.query(`SELECT 1 FROM feature_gates WHERE enabled = false`)).rowCount).toBe(0);
   });
 

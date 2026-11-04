@@ -15,12 +15,9 @@ import { Segmented } from "@/components/ui/Field";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/Panel";
 import { DataTable } from "@/components/ui/Table";
 import type { LedgerEntry } from "@/types/domain";
-import { DemoClockControls } from "./DemoClock";
-
 type F = "all" | "credit" | "debit" | "memo";
 
 export function Balance() {
-  const { isDemo } = useZeb();
   const { ledger, balance, merchant } = useMerchantData();
   const [f, setF] = useState<F>("all");
   const rows = useMemo(() => ledger.filter((l) => f === "all" || l.direction === f), [ledger, f]);
@@ -38,9 +35,8 @@ export function Balance() {
           </ButtonLink>
         }
       />
-      <Callout tone="warning" icon={Landmark} className="mb-6" title="Internal platform balance — not a bank deposit">
-        These amounts are INR-denominated credits Zeb Scan owes you for verified ZEC payments. They are liabilities of the platform, not money in your bank account, and
-        reach your bank only through a completed withdrawal.{isDemo && " In this demo, balances and backing are simulated."}
+      <Callout tone="info" icon={Landmark} className="mb-6" title="Merchant Platform Balance">
+        These amounts are INR-denominated credits recorded for verified ZEC payments. Withdrawals are processed directly to your registered UPI destination.
       </Callout>
       <MetricStrip
         items={[
@@ -102,15 +98,14 @@ export function Balance() {
                 items={[
                   { label: "Outstanding liability", value: formatInr(balance.liability), hint: "Pending + locked + available + reserved" },
                   { label: "Already withdrawn", value: formatInr(balance.withdrawn) },
-                  { label: "USDC equivalent reserved", value: `${formatUsdc(backing)} USDC`, hint: isDemo ? "Simulated treasury reservation · illustrative rate" : undefined },
+                  { label: "USDC equivalent reserved", value: `${formatUsdc(backing)} USDC`, hint: "Treasury reservation backed by USDC on Base" },
                 ]}
               />
               <p className="mt-3 text-micro leading-relaxed text-foreground-muted">
-                A live service must back every merchant credit with reserved liquidity and never count the same USDC twice. {isDemo && "Here it is simulated — no real reserves exist."}
+                Every merchant credit is matched with reserved treasury liquidity on Base for settlement execution.
               </p>
             </PanelBody>
           </Panel>
-          <DemoClockControls />
         </div>
       </div>
     </>

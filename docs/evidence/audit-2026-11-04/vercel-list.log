@@ -1,0 +1,19 @@
+Fetching deployments in builder3base-8480s-projects
+> Deployments for builder3base-8480s-projects/zebrascan [326ms]
+
+  Age     Project                                   Deployment                                                             Status      Environment     Duration     Username              
+  24m     builder3base-8480s-projects/zebrascan     https://zebrascan-n1i4p76at-builder3base-8480s-projects.vercel.app     ● Ready     Production      1m           builder3base-8480     
+  27m     builder3base-8480s-projects/zebrascan     https://zebrascan-klhgr4hkx-builder3base-8480s-projects.vercel.app     ● Ready     Production      59s          builder3base-8480     
+  36m     builder3base-8480s-projects/zebrascan     https://zebrascan-n3hol2x1y-builder3base-8480s-projects.vercel.app     ● Ready     Production      59s          builder3base-8480     
+https://zebrascan-n1i4p76at-builder3base-8480s-projects.vercel.app
+https://zebrascan-klhgr4hkx-builder3base-8480s-projects.vercel.app
+https://zebrascan-n3hol2x1y-builder3base-8480s-projects.vercel.app
+  37m     builder3base-8480s-projects/zebrascan     https://zebrascan-2bwrgu6qa-builder3base-8480s-projects.vercel.app     ● Ready     Production      1m           builder3base-8480     
+https://zebrascan-2bwrgu6qa-builder3base-8480s-projects.vercel.app
+https://zebrascan-261b62ife-builder3base-8480s-projects.vercel.app
+https://zebrascan-o1se140zi-builder3base-8480s-projects.vercel.app
+https://zebrascan-p5vy7i7cq-builder3base-8480s-projects.vercel.app
+  37m     builder3base-8480s-projects/zebrascan     https://zebrascan-261b62ife-builder3base-8480s-projects.vercel.app     ● Ready     Production      2m           builder3base-8480     
+  40m     builder3base-8480s-projects/zebrascan     https://zebrascan-o1se140zi-builder3base-8480s-projects.vercel.app     ● Ready     Production      1m           builder3base-8480     
+  46m     builder3base-8480s-projects/zebrascan     https://zebrascan-p5vy7i7cq-builder3base-8480s-projects.vercel.app     ● Error     Production      ?            builder3base-8480     
+

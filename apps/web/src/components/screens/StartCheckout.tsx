@@ -9,7 +9,7 @@ import { useAction } from "@/lib/useAction";
 import { formatInr, parseInrToMinor } from "@/lib/money";
 import { formatDate } from "@/lib/format";
 import { isQuoteExpired, validateInrAmount } from "@/lib/quote";
-import { linkStatus } from "@/services/demo/engine";
+import { linkStatus } from "@/services/model";
 import { COPY } from "@/config/mode";
 import type { PaymentPrivacy } from "@/types/domain";
 import { Container } from "@/components/layout/Container";

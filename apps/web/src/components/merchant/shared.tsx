@@ -3,7 +3,7 @@
 import React from "react";
 import type { CheckoutIntent, DemoState, MerchantCredit } from "@/types/domain";
 import { CREDIT_META, DEPOSIT_META, MetaBadge } from "@/components/ui/StatusBadge";
-import { modeLabel } from "@/services/demo/engine";
+import { modeLabel } from "@/services/model";
 import { Inr, Zec } from "@/components/ui/Money";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Column } from "@/components/ui/Table";

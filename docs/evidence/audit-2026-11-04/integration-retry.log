@@ -1,0 +1,60 @@
+
+> zeb-scan-monorepo@0.2.0 test:integration P:\Zebra Scan\zeb-scan
+> vitest run --config vitest.integration.config.ts
+
+
+ RUN  v3.2.7 P:/Zebra Scan/zeb-scan
+
+(node:26708) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:26708) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:26708) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:26708) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:26708) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:26708) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:26708) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:26708) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:26708) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+ ✓ tests/chaos/tinyfish-rail.test.ts (9 tests) 6681ms
+   ✓ TinyFish payout rail > happy path: preflight → operator approval → order observed → separate reconciliation → RECONCILED  1344ms
+   ✓ TinyFish payout rail > authorized terms are immutable at the database level  562ms
+   ✓ TinyFish payout rail > preflight on a login page blocks the payout (a COMPLETED run is not readiness)  728ms
+   ✓ TinyFish payout rail > execute run FAILED after possible click → OUTCOME_UNKNOWN_REVIEW, no retry, account lease held  656ms
+   ✓ TinyFish payout rail > ambiguous queue error → OUTCOME_UNKNOWN_REVIEW; never re-queued  698ms
+   ✓ TinyFish payout rail > explicit API rejection (never started) → AGENT_FAILED_BEFORE_COMMIT and frees the lease  568ms
+   ✓ TinyFish payout rail > recipient mismatch after submission → urgent review, never completed  594ms
+   ✓ TinyFish payout rail > verified-not-submitted needs a read-only reconciliation that finds no order, plus dual control  573ms
+   ✓ TinyFish payout rail > merchant withdrawal via SELL: provider cancels → credits restored exactly once  957ms
+(node:30764) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:30764) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:30764) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:30764) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:30764) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(node:30764) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+ ✓ tests/chaos/payout-faults.test.ts (6 tests) 4539ms
+   ✓ payout fault injection > ambiguous placement broadcast → manual_review, never resubmitted  982ms
+   ✓ payout fault injection > LP cancels before escrow → new attempt → completes  760ms
+   ✓ payout fault injection > cancellation after escrow posts an escrow-return journal and keeps the ledger balanced  778ms
+   ✓ payout fault injection > open dispute → disputed + urgent exception  710ms
+   ✓ payout fault injection > a crashed worker's lease expires and another worker resumes  714ms
+   ✓ payout fault injection > definite (pre-broadcast) placement failure retries, then exhausts to refund_queued  595ms
+(node:13768) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ tests/integration/auth-wallet.test.ts (7 tests) 1309ms
+(node:29976) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ tests/integration/flows.test.ts (18 tests) 3231ms
+   ✓ merchant terminal, credits and withdrawal (SELL orderType 1) > credits locked → available → withdraw → completed; ledger reconciles  417ms
+(node:17452) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ tests/integration/reconcile.test.ts (2 tests) 888ms
+(node:12648) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ tests/integration/memo-matching.test.ts (1 test) 910ms
+
+ Test Files  6 passed (6)
+      Tests  43 passed (43)
+   Start at  21:31:28
+   Duration  32.12s (transform 630ms, setup 0ms, collect 12.14s, tests 17.56s, environment 1ms, prepare 959ms)
+

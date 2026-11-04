@@ -1,0 +1,28 @@
+[
+  {
+    "url": "https://zebrascan.vercel.app/",
+    "status": 200,
+    "finalOrigin": "https://zebrascan.vercel.app",
+    "markers": [
+      "DEMO",
+      "simulated",
+      "Pay in ZEC"
+    ]
+  },
+  {
+    "url": "https://zebrascan.vercel.app/scan",
+    "status": 200,
+    "finalOrigin": "https://zebrascan.vercel.app",
+    "markers": [
+      "simulated",
+      "Pay in ZEC",
+      "No sign-in needed"
+    ]
+  },
+  {
+    "url": "https://zebscan-zcash-main.onrender.com/graphql",
+    "status": 405,
+    "finalOrigin": "https://zebscan-zcash-main.onrender.com",
+    "markers": []
+  }
+]

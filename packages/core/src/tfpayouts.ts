@@ -5,8 +5,8 @@
  *    once created (DB trigger). Any change needs a new command + new authorization.
  *  - Every TinyFish observation is UNTRUSTED: validated with Zod, origin-allowlisted, and compared
  *    field-by-field against the command. A run finishing (`COMPLETED`) is never payment success.
- *  - PROVIDER_COMPLETED_VERIFIED requires a SEPARATE read-only reconciliation run that finds the
- *    stable provider order id with matching recipient and amount; then the ledger is reconciled.
+ *  - Browser runs can report progress only. Final settlement requires independent
+ *    provider/debit/bank evidence, bound to immutable terms and reviewed outside TinyFish.
  *  - No blind retry: anything ambiguous after a possible final click → OUTCOME_UNKNOWN_REVIEW, lease
  *    kept, payout locked. Only reconciliation (order found) or an operator-verified "never
  *    submitted" decision (dual control) leaves that state.
@@ -137,11 +137,13 @@ export function evaluateReconcile(raw: unknown, cmd: { vpa: string; inrPaise: bi
   if (!o.order_found) return { kind: "not_found" };
   const reasons: string[] = [];
   if (knownOrderId && o.provider_order_id.trim() !== knownOrderId) reasons.push("order id differs from the recorded order");
+  if (!o.provider_order_id.trim()) reasons.push("missing provider order id");
   if (!sameVpa(o.visible_recipient, cmd.vpa)) reasons.push("recipient differs");
   const inr = parseVisibleInr(o.visible_inr);
   if (inr === null || (inr > cmd.inrPaise ? inr - cmd.inrPaise : cmd.inrPaise - inr) > cmd.variance) reasons.push("INR amount differs");
   const usdc = parseVisibleUsdc(o.visible_usdc);
   if (usdc !== null && usdc > cmd.maxUsdc) reasons.push("USDC debit exceeds the authorized maximum");
+  if (o.provider_order_status === "COMPLETED" && (usdc === null || usdc <= 0n)) reasons.push("completed observation lacks exact positive USDC debit");
   if (reasons.length) return { kind: "invalid", reasons, urgent: true };
   return { kind: "status", status: o.provider_order_status, orderId: o.provider_order_id.trim(), usdc, reference: o.provider_reference ?? "" };
 }
@@ -389,6 +391,7 @@ export async function payoutReadiness(ctx: CoreContext, deps: TfDeps) {
   const cap = await latestCapability(ctx);
   const reasons: string[] = [];
   const rail = railReady(ctx, deps);
+  if (ctx.env !== "demo") reasons.push("independent spendable-capacity and settlement verification are not provisioned");
   if (ctx.env === "testnet") reasons.push("HACKATHON_TESTNET never executes INR payouts");
   if (ctx.env === "mainnet-readonly") reasons.push("MAINNET_READONLY: no fund movement");
   if (rail) reasons.push(rail);
@@ -415,7 +418,24 @@ function cmdTerms(_ctx: CoreContext, cmd: PayoutCommandRow, vpa: string) {
 async function startRun(ctx: CoreContext, deps: TfDeps, cmd: PayoutCommandRow, kind: "preflight" | "execute" | "reconcile", goal: string, schema: Record<string, unknown>, fencing?: bigint): Promise<{ runId: string | null; outcome: "queued" | "rejected" | "error"; message?: string }> {
   // Persist the attempt BEFORE queueing so a crash between queue and persist is detectable.
   const attemptId = newId("job").replace(/^job_/, "att_");
-  await ctx.db.query(`INSERT INTO payout_attempts(id, payout_id, kind, command_hash, fencing_token) VALUES ($1,$2,$3,$4,$5)`, [attemptId, cmd.id, kind, cmd.command_hash, fencing?.toString() ?? null]);
+  const blocked = await tx(ctx.db, async (t) => {
+    if (kind === "execute") {
+      const c = await load(t, cmd.id);
+      const reasons = await executionBlockers(t, ctx, deps, c, fencing);
+      if (reasons.length) {
+        await t.query(`UPDATE payout_commands SET held=true, hold_reason=$2, state_reason=$2, updated_at=now() WHERE id=$1`, [c.id, reasons.join("; ")]);
+        await releaseLease(t, ctx, c.account_fingerprint, c.id);
+        await audit(t, ctx.env, { actorType: "system", action: "payout.execution_blocked", target: c.id, details: { reasons } });
+        return reasons.join("; ");
+      }
+      // Claim the exact command and persist the attempt before releasing DB locks.
+      // No external call runs inside this transaction. A crash is ambiguous, never retried.
+      await setState(t, ctx, c, "AGENT_RUNNING");
+    }
+    await t.query(`INSERT INTO payout_attempts(id, payout_id, kind, command_hash, fencing_token) VALUES ($1,$2,$3,$4,$5)`, [attemptId, cmd.id, kind, cmd.command_hash, fencing?.toString() ?? null]);
+    return null;
+  });
+  if (blocked) return { runId: null, outcome: "rejected", message: blocked };
   try {
     const q = await deps.port!.queue({
       url: deps.web!.startUrl,
@@ -437,6 +457,48 @@ async function startRun(ctx: CoreContext, deps: TfDeps, cmd: PayoutCommandRow, k
     await ctx.db.query(`UPDATE payout_attempts SET status='queue_error', updated_at=now() WHERE id=$1`, [attemptId]);
     return { runId: null, outcome: "error", message: (e as Error).message };
   }
+}
+
+async function executionBlockers(t: Tx, ctx: CoreContext, deps: TfDeps, c: PayoutCommandRow, fencing?: bigint): Promise<string[]> {
+  const reasons: string[] = [];
+  const now = ctx.now();
+  if (c.environment !== ctx.env || c.mode !== "EXECUTE_AFTER_APPROVAL" || c.state !== "QUEUED" || c.held) reasons.push("command is not executable");
+  if (ctx.env !== "demo") {
+    // A browser balance is not authenticated spendable reserves. No production
+    // capacity authority is provisioned yet, regardless of configured credentials.
+    reasons.push("independent spendable-capacity verification is not provisioned");
+    if (ctx.env !== "mainnet-enabled" || !ctx.caps.canSubmitTransactions || !ctx.cfg.pilot.livePayoutsEnabled) reasons.push("live money movement disabled");
+    if (!ctx.cfg.approvals.legal || !ctx.cfg.approvals.provider) reasons.push("legal/provider approval missing");
+    if (BigInt(c.requested_inr_paise) > ctx.cfg.pilot.maxPayoutInrPaise) reasons.push("per-order cap exceeded");
+    const daily = await one<{ total: string }>(t, `SELECT coalesce(sum(max_usdc_debit_micros),0) AS total FROM payout_commands WHERE environment=$1 AND created_at > now()-interval '1 day' AND state NOT IN ('PREFLIGHT_BLOCKED','EXPIRED','USER_ABORTED','REFUNDED')`, [ctx.env]);
+    if (BigInt(daily.total) > ctx.cfg.pilot.dailyMaxUsdcMicros) reasons.push("daily exposure cap exceeded");
+  } else if (deps.port?.kind !== "simulated") reasons.push("demo may only use an isolated simulated port");
+  if (!c.approved_by || !c.approval_expires_at || new Date(c.approval_expires_at) <= now) reasons.push("operator approval missing or expired");
+  const gates = await many<{ feature: string }>(t, `SELECT feature FROM feature_gates WHERE environment=$1 AND NOT enabled AND feature = ANY($2) FOR SHARE`, [ctx.env, ["all", "payouts", c.flow === "SCAN_PAY" ? "scanPay" : "withdrawals"]]);
+  if (gates.length) reasons.push("global or product pause enabled");
+  const vpa = await ctx.envelope.open(c.recipient_vpa_ct, `payout_commands:${c.id}:vpa`);
+  if (commandHash({ flow: c.flow, vpa, inrPaise: BigInt(c.requested_inr_paise), maxUsdc: BigInt(c.max_usdc_debit_micros), variance: BigInt(c.max_fiat_variance_paise), authorizationId: c.authorization_id, quoteId: c.quote_id, environment: ctx.env }) !== c.command_hash) reasons.push("immutable terms hash mismatch");
+  const auth = await maybeOne(t, `SELECT 1 FROM payout_authorizations WHERE id=$1 AND environment=$2 AND intent_id IS NOT DISTINCT FROM $3 AND withdrawal_id IS NOT DISTINCT FROM $4`, [c.authorization_id, ctx.env, c.source_intent_id, c.withdrawal_id]);
+  if (!auth) reasons.push("payer authorization does not bind this obligation");
+  const obligation = c.source_intent_id ?? c.withdrawal_id!;
+  const alloc = await treasury.activeAllocation(t, ctx.env, obligation, false);
+  if (!alloc || alloc.id !== c.reserved_treasury_id || BigInt(alloc.amount_micros) < BigInt(c.max_usdc_debit_micros)) reasons.push("exact reserve unavailable");
+  const capacity = await treasury.treasuryCapacity(t, ctx.env, { inventoryMaxAgeMs: ctx.cfg.policy.treasuryInventoryMaxAgeSec * 1000, bufferMicros: 0n }, now);
+  if (capacity.stale || capacity.activeMicros > capacity.inventoryMicros) reasons.push("capacity stale or below obligations");
+  const sources = c.source_intent_id ? [c.source_intent_id] : (await many<{ intent_id: string }>(t, `SELECT DISTINCT coalesce(c.intent_id,p.intent_id) AS intent_id FROM merchant_credits c LEFT JOIN merchant_credits p ON p.id=c.parent_credit_id WHERE c.withdrawal_id=$1`, [c.withdrawal_id])).map((r) => r.intent_id);
+  if (!sources.length) reasons.push("source deposits unavailable");
+  for (const id of sources) {
+    const source = await maybeOne(t, `SELECT 1 FROM payment_intents WHERE id=$1 AND environment=$2 AND status='deposit_accepted' FOR SHARE`, [id, ctx.env]);
+    const bad = await maybeOne(t, `SELECT 1 FROM deposit_observations WHERE intent_id=$1 AND accepted AND (NOT canonical OR NOT mined OR confirmations<$2)`, [id, ctx.cfg.policy.requiredConfirmations]);
+    const accepted = await maybeOne(t, `SELECT 1 FROM deposit_observations WHERE intent_id=$1 AND accepted`, [id]);
+    if (!source || bad || !accepted) reasons.push("source deposit is not canonical and final");
+    if (await maybeOne(t, `SELECT 1 FROM exceptions WHERE intent_id=$1 AND status='open' AND severity <> 'info'`, [id])) reasons.push("source under exception review");
+  }
+  const preflight = await maybeOne<{ created_at: Date }>(t, `SELECT created_at FROM payout_attempts WHERE payout_id=$1 AND kind='preflight' AND outcome='pass' ORDER BY created_at DESC LIMIT 1`, [c.id]);
+  if (!c.account_fingerprint || !preflight || now.getTime()-new Date(preflight.created_at).getTime() > ctx.cfg.pilot.capabilityMaxAgeSec*1000) reasons.push("account/session preflight stale");
+  const lease = await maybeOne<{ fencing_token: string }>(t, `SELECT fencing_token FROM p2p_account_leases WHERE environment=$1 AND account_fingerprint=$2 AND payout_id=$3 FOR UPDATE`, [ctx.env, c.account_fingerprint, c.id]);
+  if (!lease || fencing === undefined || BigInt(lease.fencing_token) !== fencing) reasons.push("account lease lost");
+  return reasons;
 }
 
 async function latestAttempt(ctx: CoreContext, payoutId: string, kind: string) {
@@ -536,7 +598,7 @@ export async function advanceTfPayout(ctx: CoreContext, deps: TfDeps, payoutId: 
       const r = await startRun(ctx, deps, cmd0, "execute", goal, EXECUTE_SCHEMA as unknown as Record<string, unknown>, fencing);
       await tx(ctx.db, async (t) => {
         const c = await load(t, payoutId);
-        if (r.outcome === "queued") await setState(t, ctx, c, "AGENT_RUNNING");
+        if (r.outcome === "queued") { if (c.state !== "AGENT_RUNNING") await setState(t, ctx, c, "AGENT_RUNNING"); }
         else if (r.outcome === "rejected") {
           // The API explicitly refused to start the run: nothing was submitted.
           await releaseLease(t, ctx, c.account_fingerprint, c.id);
@@ -578,11 +640,9 @@ export async function advanceTfPayout(ctx: CoreContext, deps: TfDeps, payoutId: 
     case "PROVIDER_DISPUTED":
       return reconcileStep(ctx, deps, cmd0, terms);
     case "PROVIDER_COMPLETED_VERIFIED":
-      await tx(ctx.db, async (t) => settle(t, ctx, await load(t, payoutId)));
-      return { rerunInMs: null };
+      return { rerunInMs: await tx(ctx.db, async (t) => await independentlyVerified(t, ctx, cmd0, "delivered") ? (await settle(t, ctx, await load(t, payoutId)), null) : 300_000) };
     case "PROVIDER_CANCELLED":
-      await tx(ctx.db, async (t) => recover(t, ctx, await load(t, payoutId), "provider cancelled the order"));
-      return { rerunInMs: null };
+      return { rerunInMs: await tx(ctx.db, async (t) => await independentlyVerified(t, ctx, cmd0, "cancelled_no_debit") ? (await recover(t, ctx, await load(t, payoutId), "independently verified cancellation without debit"), null) : 300_000) };
     default:
       return { rerunInMs: null }; // terminal / waiting for an operator
   }
@@ -623,18 +683,27 @@ async function reconcileStep(ctx: CoreContext, deps: TfDeps, cmd: PayoutCommandR
       await t.query(`INSERT INTO provider_orders(payout_id, provider_order_id, provider_status, visible_inr_paise, visible_usdc_micros) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (payout_id) DO NOTHING`, [c.id, v.orderId, v.status, terms.inrPaise.toString(), v.usdc?.toString() ?? null]);
       await releaseLease(t, ctx, c.account_fingerprint, c.id);
     }
-    await t.query(`UPDATE provider_orders SET provider_status=$2, visible_usdc_micros=coalesce($3, visible_usdc_micros), provider_reference=nullif($4,''), updated_at=now(), verified_at=CASE WHEN $2='COMPLETED' THEN now() ELSE verified_at END WHERE payout_id=$1`, [c.id, v.status, v.usdc?.toString() ?? null, v.reference]);
+    await t.query(`UPDATE provider_orders SET provider_status=$2, visible_usdc_micros=coalesce($3, visible_usdc_micros), provider_reference=nullif($4,''), updated_at=now() WHERE payout_id=$1`, [c.id, v.status, v.usdc?.toString() ?? null, v.reference]);
+    const delivered = v.status === "COMPLETED" && await independentlyVerified(t, ctx, c, "delivered");
+    const cancelled = v.status === "CANCELLED" && await independentlyVerified(t, ctx, c, "cancelled_no_debit");
     const target: TfPayoutState | null =
-      v.status === "ACCEPTED" ? "PROVIDER_ACCEPTED" : v.status === "PAID" ? "FIAT_TRANSFER_REPORTED" : v.status === "COMPLETED" ? "PROVIDER_COMPLETED_VERIFIED" : v.status === "CANCELLED" ? "PROVIDER_CANCELLED" : v.status === "DISPUTED" ? "PROVIDER_DISPUTED" : v.status === "PLACED" && c.state === "OUTCOME_UNKNOWN_REVIEW" ? "ORDER_SUBMISSION_OBSERVED" : null;
+      v.status === "ACCEPTED" ? "PROVIDER_ACCEPTED" : v.status === "PAID" || (v.status === "COMPLETED" && !delivered) ? "FIAT_TRANSFER_REPORTED" : delivered ? "PROVIDER_COMPLETED_VERIFIED" : cancelled ? "PROVIDER_CANCELLED" : v.status === "CANCELLED" ? "OUTCOME_UNKNOWN_REVIEW" : v.status === "DISPUTED" ? "PROVIDER_DISPUTED" : v.status === "PLACED" && c.state === "OUTCOME_UNKNOWN_REVIEW" ? "ORDER_SUBMISSION_OBSERVED" : null;
     if (target && target !== c.state && tfPayoutMachine.can(c.state, target)) await setState(t, ctx, c, target, `reconciled via run ${run.run_id}`);
   });
   return { rerunInMs: 30_000 };
 }
 
 /** PROVIDER_COMPLETED_VERIFIED → RECONCILED: ledger reflects USDC leaving and the INR obligation settled. */
+async function independentlyVerified(t: Tx, ctx: CoreContext, cmd: PayoutCommandRow, outcome: string): Promise<boolean> {
+  const vpa = await ctx.envelope.open(cmd.recipient_vpa_ct, `payout_commands:${cmd.id}:vpa`);
+  const e = await maybeOne(t, `SELECT 1 FROM payout_settlement_evidence e JOIN provider_orders o ON o.payout_id=e.payout_id AND o.provider_order_id=e.provider_order_id WHERE e.payout_id=$1 AND e.command_hash=$2 AND e.account_fingerprint=$3 AND e.recipient_hash=$4 AND e.inr_paise=$5 AND e.actual_usdc_micros<=$6 AND e.outcome=$7 AND e.verified_at<=now()`, [cmd.id, cmd.command_hash, cmd.account_fingerprint, createHash("sha256").update(vpa.toLowerCase()).digest("hex"), cmd.requested_inr_paise, cmd.max_usdc_debit_micros, outcome]);
+  return !!e;
+}
+
 async function settle(t: Tx, ctx: CoreContext, cmd: PayoutCommandRow) {
-  const order = await one<{ visible_usdc_micros: string | null; provider_order_id: string }>(t, `SELECT visible_usdc_micros, provider_order_id FROM provider_orders WHERE payout_id=$1`, [cmd.id]);
-  const usdc = order.visible_usdc_micros ? BigInt(order.visible_usdc_micros) : BigInt(cmd.max_usdc_debit_micros);
+  if (!await independentlyVerified(t, ctx, cmd, "delivered")) throw new DomainError("PAYOUT_EVIDENCE_REQUIRED", "Independent provider, exact debit and bank evidence required");
+  const order = await one<{ actual_usdc_micros: string; provider_order_id: string }>(t, `SELECT actual_usdc_micros, provider_order_id FROM payout_settlement_evidence WHERE payout_id=$1`, [cmd.id]);
+  const usdc = BigInt(order.actual_usdc_micros);
   await postJournal(t, ctx.env, {
     eventId: `tf_settle:${cmd.id}`,
     kind: "usdc_settled",

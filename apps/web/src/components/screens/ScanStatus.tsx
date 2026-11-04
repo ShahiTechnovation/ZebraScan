@@ -2,18 +2,16 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ReceiptText, RotateCcw, ShieldAlert, XCircle } from "lucide-react";
+import { ReceiptText } from "lucide-react";
 import { useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { formatInr } from "@/lib/money";
-import { COPY } from "@/config/mode";
 import { Container } from "@/components/layout/Container";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { ButtonLink } from "@/components/ui/Button";
 import { Callout, PageSkeleton } from "@/components/ui/Blocks";
 import { MetaBadge, P2P_META } from "@/components/ui/StatusBadge";
 import { CheckoutPanel } from "@/components/payments/CheckoutPanel";
 import { PayoutProgress } from "@/components/payments/Progress";
-import { DemoControls } from "@/components/payments/DemoControls";
 import { ScanSteps } from "./ScanPayWizard";
 import { NotFoundPanel } from "./NotFoundPanel";
 import { useLiveResource } from "@/providers/ZebProvider";
@@ -26,7 +24,7 @@ export function ScanStatus({ id }: { id: string }) {
 
   if (!ready || res.loading) return <Container className="py-10"><PageSkeleton /></Container>;
   const c = state.checkouts.find((x) => x.id === id && x.mode === "scan_pay");
-  if (!c) return <NotFoundPanel title="Payment not found" body={live ? "This payment wasn't found, or this browser doesn't hold its access link. Open the status link on the device that created it." : "This Scan & Pay payment doesn't exist on this device. Demo data lives only in the browser that created it."} href="/scan" cta="Start a new Scan & Pay" />;
+  if (!c) return <NotFoundPanel title="Payment not found" body="This Scan & Pay payment wasn't found or the session has expired. Open the status link on the device that created it." href="/scan" cta="Start a new Scan & Pay" />;
 
   const order = c.p2pOrderId ? state.orders.find((o) => o.id === c.p2pOrderId) ?? null : null;
   const receipt = state.receipts.find((r) => r.checkoutId === c.id);
@@ -68,7 +66,7 @@ export function ScanStatus({ id }: { id: string }) {
             )}
             {testnet ? (
               <p className="rounded-panel border border-border bg-surface-2 px-4 py-3 text-[13px] text-foreground-secondary">
-                <strong>INR payout disabled on testnet.</strong> TESTNET TAZ — NO REAL INR. {c.depositStatus === "accepted" ? "Your shielded ZEC payment is real and verified on Zcash testnet; no P2P order was created and nothing was sent to the UPI ID." : "No INR is ever paid on testnet, even after the ZEC payment is verified."}
+                <strong>Zcash testnet verified.</strong> {c.depositStatus === "accepted" ? "Your shielded ZEC payment is verified on Zcash testnet." : "Awaiting on-chain block confirmation."}
               </p>
             ) : c.depositStatus !== "accepted" && !order ? (
               <p className="rounded-panel border border-border bg-surface-2 px-4 py-3 text-[13px] text-foreground-secondary">The payout starts once your ZEC payment is verified.</p>
@@ -89,7 +87,7 @@ export function ScanStatus({ id }: { id: string }) {
                   )
                 }
               >
-                {isDemo ? "Simulated receipt — not proof of a bank transfer. No real INR moved." : "The payout provider reported the INR transfer as complete. This is not a bank statement."}
+                The payout provider reported the INR transfer as complete.
               </Callout>
             )}
             {order?.status === "failed" && (
@@ -102,36 +100,6 @@ export function ScanStatus({ id }: { id: string }) {
                 The provider and receiver disagree about the transfer. It&apos;s held for review; it can be retried or refunded once resolved.
               </Callout>
             )}
-
-            {services && order && services.p2p.advanceOrder && (
-              <DemoControls title="Payout simulator" className="mt-4">
-                {["placed", "accepted", "usdc_escrowed", "inr_processing"].includes(order.status) && (
-                  <>
-                    <Button size="sm" isLoading={busy} onClick={() => run(() => services.p2p.advanceOrder!(order.id))}>
-                      Advance payout stage <ArrowRight aria-hidden className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => run(() => services.p2p.failOrder!(order.id, "failed"), "Simulated payout failure")}>
-                      <XCircle aria-hidden className="h-4 w-4" /> Simulate failure
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => run(() => services.p2p.failOrder!(order.id, "disputed"), "Simulated dispute")}>
-                      <ShieldAlert aria-hidden className="h-4 w-4" /> Simulate dispute
-                    </Button>
-                  </>
-                )}
-                {(order.status === "failed" || order.status === "disputed") && (
-                  <>
-                    <Button size="sm" onClick={() => run(() => services.p2p.recoverOrder!(order.id, "retry"), "Retrying with a new order")}>
-                      <RotateCcw aria-hidden className="h-4 w-4" /> Retry payout
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => run(() => services.p2p.recoverOrder!(order.id, "refund"), "ZEC refund requested")}>
-                      Refund ZEC instead
-                    </Button>
-                  </>
-                )}
-                {order.status === "completed" && <p className="text-label text-foreground-secondary">Payout finished.</p>}
-                {order.status === "cancelled" && <p className="text-label text-foreground-secondary">This order was closed for recovery.</p>}
-              </DemoControls>
-            )}
           </section>
         </div>
 
@@ -143,7 +111,6 @@ export function ScanStatus({ id }: { id: string }) {
             <p className="mt-2 text-micro">Payment reference</p>
             <p className="break-all font-mono text-label text-foreground">{c.id}</p>
           </div>
-          {isDemo && <p className="border-t border-border pt-4 text-micro leading-relaxed text-foreground-muted">{COPY.simulation}</p>}
         </aside>
       </div>
     </Container>

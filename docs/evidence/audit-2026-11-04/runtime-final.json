@@ -1,0 +1,341 @@
+{
+  "checkedAt": "2026-11-04T16:20:15.789Z",
+  "sha": "7335aa7cec3cdaee5128d4e612acbab24c96393a",
+  "configuration": {
+    "ZEB_TOKEN_SECRET": true,
+    "ZEB_LOCAL_KEKS": true,
+    "ZEB_ACTIVE_KEK": true,
+    "DATABASE_URL": true,
+    "ZKOOL_GRAPHQL_URL": true,
+    "ZKOOL_JWT_PRIVATE_KEY_FILE": true,
+    "TINYFISH_API_KEY": true,
+    "P2P_ALLOWED_START_URL": false,
+    "TINYFISH_PROFILE_ID": false,
+    "SMTP_URL": false,
+    "LEGAL_APPROVAL_REF": false,
+    "PROVIDER_APPROVAL_REF": false
+  },
+  "uiMode": {
+    "configured": "connected",
+    "resolved": "connected"
+  },
+  "configLoad": {
+    "status": "PASS",
+    "environment": "testnet"
+  },
+  "database": {
+    "connected": true,
+    "migrations": [
+      {
+        "name": "0001_core.sql"
+      },
+      {
+        "name": "0002_scanner_cursor.sql"
+      },
+      {
+        "name": "0003_memo_matching.sql"
+      },
+      {
+        "name": "0004_tinyfish_payouts_and_wallet_auth.sql"
+      },
+      {
+        "name": "0005_wallet_only_users.sql"
+      }
+    ]
+  },
+  "payment_intents": [
+    {
+      "environment": "testnet",
+      "count": "1"
+    }
+  ],
+  "deposit_observations": [
+    {
+      "environment": "testnet",
+      "count": "1"
+    }
+  ],
+  "merchant_credits": [],
+  "payout_commands": [],
+  "jobs": [
+    {
+      "environment": "testnet",
+      "count": "6"
+    }
+  ],
+  "scanner": [
+    {
+      "environment": "testnet",
+      "network": "testnet",
+      "status": "synced",
+      "tip_height": "4582607",
+      "scanned_height": "4582607",
+      "updated_at": "2026-11-04T16:20:04.484Z"
+    }
+  ],
+  "jobStates": [
+    {
+      "environment": "testnet",
+      "kind": "intents.expire",
+      "state": "queued",
+      "count": "1"
+    },
+    {
+      "environment": "testnet",
+      "kind": "scanner.poll",
+      "state": "running",
+      "count": "1"
+    },
+    {
+      "environment": "testnet",
+      "kind": "outbox.dispatch",
+      "state": "queued",
+      "count": "1"
+    },
+    {
+      "environment": "testnet",
+      "kind": "treasury.inventory",
+      "state": "queued",
+      "count": "1"
+    },
+    {
+      "environment": "testnet",
+      "kind": "email.deliver",
+      "state": "queued",
+      "count": "1"
+    },
+    {
+      "environment": "testnet",
+      "kind": "reconcile",
+      "state": "queued",
+      "count": "1"
+    }
+  ],
+  "acceptedReceipts": [
+    {
+      "id": "pi_kddd0fe7xccewd6x2csrhykxdr",
+      "environment": "testnet",
+      "mode": "scan_pay",
+      "status": "deposit_accepted",
+      "payout_status": "not_started",
+      "received_zatoshis": "836471",
+      "quoted_zatoshis": "836471",
+      "network": "testnet",
+      "pool": "ironwood",
+      "txid": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7",
+      "output_ref": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7:p3:d1:836471:0",
+      "value_zatoshis": "836471",
+      "block_height": "4582568",
+      "confirmations": 40,
+      "canonical": true,
+      "accepted": true,
+      "zec_journals": 1,
+      "inr_journals": 1
+    }
+  ],
+  "testDatabases": [
+    {
+      "datname": "hashx_test"
+    },
+    {
+      "datname": "zebscan_test"
+    },
+    {
+      "datname": "zebscan_e2e_test"
+    }
+  ],
+  "walletTip": {
+    "url": "https://zebscan-zcash-test.onrender.com",
+    "status": 200,
+    "data": {
+      "currentHeight": 4582608
+    },
+    "errorCount": 0
+  },
+  "receiverNotes": {
+    "url": "https://zebscan-zcash-test.onrender.com",
+    "status": 200,
+    "data": {
+      "transactionsByAccount": [
+        {
+          "txid": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7",
+          "height": 4582568,
+          "notes": [
+            {
+              "pool": 3,
+              "scope": 0,
+              "value": "0.00836471",
+              "diversifierIndex": "1"
+            }
+          ]
+        }
+      ]
+    },
+    "errorCount": 0
+  },
+  "walletSchema": {
+    "url": "https://zebscan-zcash-test.onrender.com",
+    "status": 200,
+    "data": {
+      "__type": {
+        "fields": [
+          {
+            "name": "nearIntentsListSwaps"
+          },
+          {
+            "name": "nearIntentsAssets"
+          },
+          {
+            "name": "nearIntentsStatus"
+          },
+          {
+            "name": "apiVersion"
+          },
+          {
+            "name": "votingRounds"
+          },
+          {
+            "name": "votingRound"
+          },
+          {
+            "name": "votingSubmissionStatus"
+          },
+          {
+            "name": "accounts"
+          },
+          {
+            "name": "transactionsByAccount"
+          },
+          {
+            "name": "transactionById"
+          },
+          {
+            "name": "memosByTransaction"
+          },
+          {
+            "name": "balanceByAccount"
+          },
+          {
+            "name": "frostParams"
+          },
+          {
+            "name": "unifiedFullViewingKey"
+          },
+          {
+            "name": "addressByAccount"
+          },
+          {
+            "name": "unconfirmedByAccount"
+          },
+          {
+            "name": "notesByAccount"
+          },
+          {
+            "name": "assets"
+          },
+          {
+            "name": "currentHeight"
+          },
+          {
+            "name": "prepareSend"
+          },
+          {
+            "name": "decodePczt"
+          },
+          {
+            "name": "signTx"
+          },
+          {
+            "name": "broadcastTx"
+          }
+        ]
+      }
+    },
+    "errorCount": 0
+  },
+  "unauthenticatedWallet": {
+    "status": 500,
+    "bodyWithheld": true
+  },
+  "http": [
+    {
+      "url": "http://127.0.0.1:3000/",
+      "status": 200,
+      "demoText": true,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://127.0.0.1:4000/healthz",
+      "status": 200,
+      "demoText": false,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "url": "http://127.0.0.1:4000/readyz",
+      "status": 200,
+      "demoText": false,
+      "contentType": "application/json; charset=utf-8",
+      "readiness": {
+        "ready": true,
+        "environment": "testnet",
+        "db": true,
+        "priceFeed": {
+          "available": true,
+          "reason": null
+        },
+        "p2p": {
+          "available": true,
+          "reason": null
+        },
+        "scanner": {
+          "available": true,
+          "reason": null
+        },
+        "treasury": {
+          "available": false,
+          "reason": "USDC treasury balance has never been verified"
+        },
+        "signer": {
+          "available": false,
+          "reason": "No Base treasury signer configured"
+        },
+        "approvals": {
+          "available": true,
+          "reason": null
+        },
+        "features": {
+          "scanPay": {
+            "available": true,
+            "reason": null
+          },
+          "terminal": {
+            "available": true,
+            "reason": null
+          },
+          "paymentLinks": {
+            "available": true,
+            "reason": null
+          },
+          "withdrawals": {
+            "available": false,
+            "reason": "Credits are not redeemable in testnet"
+          }
+        },
+        "paused": [],
+        "checkedAt": "2026-11-04T16:20:17.464Z"
+      }
+    },
+    {
+      "url": "http://127.0.0.1:4000/api/v1/config",
+      "status": 404,
+      "demoText": false,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4000/healthz",
+      "status": 200,
+      "demoText": false,
+      "contentType": "application/json; charset=utf-8"
+    }
+  ]
+}

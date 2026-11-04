@@ -108,16 +108,18 @@ export async function readP2P(ctx: CoreContext): Promise<P2PRead> {
  * HACKATHON_TESTNET only: a real USDC/INR market reference (CoinGecko usd-coin/inr) so quotes show
  * honest INR values. No P2P fee applies because no payout is ever executed on testnet.
  */
-async function testnetReference(_ctx: CoreContext, now: Date): Promise<P2PRead> {
+async function testnetReference(ctx: CoreContext, now: Date): Promise<P2PRead> {
   if (p2pCache && now.getTime() - p2pCache.at < 60_000) return p2pCache.v;
   try {
     const r = await fetchJson<{ "usd-coin"?: { inr?: unknown; last_updated_at?: number } }>("https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=inr&include_last_updated_at=true", { timeoutMs: 5_000 });
     const text = decimalText(r["usd-coin"]?.inr, "coingecko usd-coin.inr");
     const [w = "0", f = ""] = text.split(".");
     const sellPrice6 = BigInt(w) * 1_000_000n + BigInt((f + "000000").slice(0, 6));
-    const v: P2PRead = { sellPrice6, fee: { smallOrderThreshold: 0n, smallOrderFixedFeePay: 0n, smallOrderFixedFeeSell: 0n }, source: "coingecko:usd-coin/inr (HACKATHON_TESTNET reference — no payout)", observedAt: new Date((r["usd-coin"]?.last_updated_at ?? now.getTime() / 1000) * 1000) };
+    const timestamp = r["usd-coin"]?.last_updated_at;
+    if (!Number.isSafeInteger(timestamp) || timestamp! <= 0 || timestamp!*1000 > now.getTime()+30_000 || now.getTime()-timestamp!*1000 > ctx.cfg.policy.priceMaxAgeSec*1000 || sellPrice6 <= 0n) throw new DomainError("RATE_UNAVAILABLE", "INR reference timestamp or value is invalid/stale");
+    const v: P2PRead = { sellPrice6, fee: { smallOrderThreshold: 0n, smallOrderFixedFeePay: 0n, smallOrderFixedFeeSell: 0n }, source: "coingecko:usd-coin/inr (HACKATHON_TESTNET reference — no payout)", observedAt: new Date(timestamp!*1000) };
     p2pCache = { at: now.getTime(), v };
-    health.lastP2POk = now.getTime();
+    health.lastP2POk = v.observedAt.getTime();
     health.lastP2PError = null;
     return v;
   } catch (e) {
