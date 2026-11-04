@@ -8,7 +8,7 @@ import { ROUTES, type RouteDef } from "@zeb/contracts";
 import { buildOpenApi } from "@zeb/contracts/openapi";
 import { many, maybeOne } from "@zeb/db";
 import { DomainError, randomToken } from "@zeb/domain";
-import { readiness, type CoreContext } from "@zeb/core";
+import { pollScanner, readiness, type CoreContext } from "@zeb/core";
 import { redact } from "@zeb/security";
 import {
   ANON_COOKIE,
@@ -243,6 +243,58 @@ export async function buildServer(ctx: CoreContext, opts: { logger?: boolean; ra
     reply.code(r.db ? 200 : 503).header("cache-control", "no-store").send(body);
   });
   app.get("/api/v1/openapi.json", async () => buildOpenApi({ includeDemo: ctx.env === "demo" }));
+
+  /* ---------------------------------------------------------------- manual "check payment now" (payer) */
+  // Same access rule as checkout reads: a bearer token scoped to this checkout (subject + generation).
+  // Triggers one immediate watch-only scan (idempotent ingestion; throttled globally) and returns the
+  // checkout's real state. It never moves money: payouts stay in the separate, gated settlement path.
+  let lastManualScanAt = 0;
+  app.post("/api/v1/checkout/:id/check-payment", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (raw, reply) => {
+    const id = String((raw.params as { id?: string }).id ?? "");
+    const origin = raw.headers.origin;
+    if (origin && !ctx.cfg.webOrigins.includes(origin)) return reply.code(403).send({ code: "AUTH_ORIGIN", message: "Origin not allowed" });
+    const bearer = typeof raw.headers.authorization === "string" && raw.headers.authorization.startsWith("Bearer ") ? raw.headers.authorization.slice(7).trim() : null;
+    const row = await ctx.db.query<{ access_subject: string; access_generation: number }>(
+      `SELECT access_subject, access_generation FROM payment_intents WHERE id=$1 AND environment=$2`,
+      [id, ctx.env],
+    );
+    const i = row.rows[0];
+    const c = i && bearer ? ctx.tokens.verify(bearer) : null;
+    if (!i || !c || c.scope !== `checkout:${id}` || c.sub !== i.access_subject || (c.gen ?? 1) !== i.access_generation) {
+      return reply.code(404).send({ code: "NOT_FOUND", message: "checkout not found" });
+    }
+    let scanned = false;
+    let scanError: string | null = null;
+    if (ctx.env !== "demo" && Date.now() - lastManualScanAt > 3_000) {
+      lastManualScanAt = Date.now();
+      try {
+        await pollScanner(ctx);
+        scanned = true;
+      } catch (e) {
+        scanError = (e as Error).message.replace(/Bearer\s+\S+/g, "Bearer ***").slice(0, 160);
+      }
+    }
+    const s = await ctx.db.query<{ status: string; received_zatoshis: string | null; confirmations: number | null; mined: boolean | null }>(
+      `SELECT pi.status, pi.received_zatoshis::text AS received_zatoshis, d.confirmations, d.mined
+         FROM payment_intents pi LEFT JOIN LATERAL (
+           SELECT confirmations, mined FROM deposit_observations WHERE intent_id=pi.id AND canonical ORDER BY first_seen_at DESC LIMIT 1
+         ) d ON true WHERE pi.id=$1`,
+      [id],
+    );
+    const st = s.rows[0]!;
+    reply.header("cache-control", "no-store").send({
+      checkoutId: id,
+      scanned,
+      scanError,
+      status: st.status,
+      zecReceived: ["deposit_seen", "confirming", "deposit_accepted"].includes(st.status) || (st.received_zatoshis ?? "0") !== "0",
+      zecConfirmed: st.status === "deposit_accepted",
+      receivedZatoshis: st.received_zatoshis ?? "0",
+      confirmations: st.confirmations ?? 0,
+      confirmationsRequired: ctx.cfg.policy.requiredConfirmations,
+      checkedAt: new Date().toISOString(),
+    });
+  });
 
   /* ---------------------------------------------------------------- Zcash network status (public, no secrets) */
   app.get("/api/v1/zcash/networks", async (_req, reply) => {

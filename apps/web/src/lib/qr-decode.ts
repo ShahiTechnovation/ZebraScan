@@ -158,10 +158,16 @@ function context2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
  * inverted pass so it turns white after inversion), and returns ITU-R luminance (zxing-browser's
  * formula). Transparent pixels composite onto the pad colour.
  */
-function renderStep(source: CanvasImageSource, w: number, h: number, step: Pick<Step, "size" | "invert" | "rotate">, canvas: HTMLCanvasElement, pad = true) {
-  const s = step.size / Math.max(w, h);
-  const dw = Math.max(1, Math.round(w * s));
-  const dh = Math.max(1, Math.round(h * s));
+function renderStep(source: CanvasImageSource, w: number, h: number, step: Pick<Step, "size" | "invert" | "rotate"> & { crop?: number }, canvas: HTMLCanvasElement, pad = true) {
+  // Optional centred crop (camera "zoom"): a small, dense QR gets more pixels per module.
+  const crop = step.crop ?? 1;
+  const sw = w * crop;
+  const sh = h * crop;
+  const sx = (w - sw) / 2;
+  const sy = (h - sh) / 2;
+  const s = step.size / Math.max(sw, sh);
+  const dw = Math.max(1, Math.round(sw * s));
+  const dh = Math.max(1, Math.round(sh * s));
   const p = pad ? Math.max(8, Math.round(Math.max(dw, dh) * 0.04)) : 0;
   const rot = step.rotate ?? 0;
   const turned = rot === 90 || rot === 270;
@@ -182,10 +188,10 @@ function renderStep(source: CanvasImageSource, w: number, h: number, step: Pick<
   if (rot) {
     ctx.translate(W / 2, H / 2);
     ctx.rotate((rot * Math.PI) / 180);
-    ctx.drawImage(source, 0, 0, w, h, -dw / 2, -dh / 2, dw, dh);
+    ctx.drawImage(source, sx, sy, sw, sh, -dw / 2, -dh / 2, dw, dh);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   } else {
-    ctx.drawImage(source, 0, 0, w, h, p, p, dw, dh);
+    ctx.drawImage(source, sx, sy, sw, sh, p, p, dw, dh);
   }
   return { lum: luminance(ctx.getImageData(0, 0, W, H).data, !!step.invert), w: W, h: H };
 }
@@ -365,13 +371,16 @@ export function classifyCameraError(e: unknown, secureContext = true): CameraPro
 }
 
 /** Per-frame strategies; frames differ slightly, so cycling covers more cases cheaply. */
-const CAMERA_CYCLE: Array<{ a: Attempt; invert?: boolean; rotate?: Step["rotate"] }> = [
+const CAMERA_CYCLE: Array<{ a: Attempt; invert?: boolean; rotate?: Step["rotate"]; crop?: number }> = [
   { a: DIAG },
   { a: STOCK },
   { a: DIAG, rotate: 90 },
+  { a: DIAG, crop: 0.5 },
   { a: GLOBAL },
   { a: DIAG, invert: true },
+  { a: DIAG, crop: 0.5, rotate: 90 },
   { a: DIAG, rotate: 180 },
+  { a: DIAG, invert: true, rotate: 90 },
 ];
 const MAX_FRAME_SIDE = 1280;
 
@@ -401,7 +410,7 @@ export async function createFrameDecoder(): Promise<FrameDecoder> {
       const vw = video.videoWidth;
       const vh = video.videoHeight;
       const c = CAMERA_CYCLE[zxingTick++ % CAMERA_CYCLE.length]!;
-      const r = renderStep(video, vw, vh, { size: Math.min(Math.max(vw, vh), MAX_FRAME_SIDE), invert: c.invert, rotate: c.rotate }, canvas, false);
+      const r = renderStep(video, vw, vh, { size: Math.min(Math.max(vw, vh), MAX_FRAME_SIDE), invert: c.invert, rotate: c.rotate, crop: c.crop }, canvas, false);
       return tryDecode(engine, r.lum, r.w, r.h, c.a);
     },
     dispose() {

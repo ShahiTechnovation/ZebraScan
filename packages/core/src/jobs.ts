@@ -33,7 +33,7 @@ export const PERIODIC: Array<{ kind: string; everyMs: number }> = [
   { kind: "intents.expire", everyMs: 15_000 },
   { kind: "treasury.inventory", everyMs: 60_000 },
   { kind: "reconcile", everyMs: 10 * 60_000 },
-  { kind: "scanner.poll", everyMs: 10_000 },
+  { kind: "scanner.poll", everyMs: 4_000 } /* near-realtime: mempool sighting within seconds */,
   { kind: "email.deliver", everyMs: 10_000 },
   { kind: "outbox.dispatch", everyMs: 5_000 },
 ];

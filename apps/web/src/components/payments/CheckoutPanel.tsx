@@ -17,6 +17,7 @@ import { addressNetwork, payWithNoir } from "@/services/live/noir";
 import { QRRenderer } from "./QR";
 import { PrivacyBadge, RateExpiry } from "./Quote";
 import { DepositProgress } from "./Progress";
+import { CheckPaymentButton } from "./CheckPaymentButton";
 
 export const WALLET_SHIELDED_ADDRESS =
   "u1uvjhhx67pmgcqth9xzgzw2x0vhn8ktvpsh6l6cuyezq5emrqyz48u5fl4du3rlazs9gg4262pr8xjxnwav3vz8z8tj8vyye0h4anyua70uf48wcy6dysqpx22duw32jkr3cntqahjn09p3cm23c50hd3egnxhwmpgyze6q277qhppdk5";
@@ -282,6 +283,9 @@ export function CheckoutPanel({
       <div className="rounded-panel border border-border p-4">
         <p className="mb-3 text-[13px] font-semibold text-foreground">Payment progress</p>
         <DepositProgress checkout={c} credit={credit} />
+        <div className="mt-4">
+          <CheckPaymentButton checkout={c} />
+        </div>
       </div>
     </div>
   );

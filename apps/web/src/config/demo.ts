@@ -11,7 +11,7 @@ export const demoConfig = {
     inrPerUsdcMinor: 9_000, // 1 USDC = 90 INR
     protocolFeeBps: 100,
     platformFeeBps: 50,
-    lifetimeMs: 90_000,
+    lifetimeMs: 900_000, // 15 min: shielded sends + 1 block can take a few minutes
     provider: "Demo constants",
   },
   limits: {
