@@ -244,6 +244,42 @@ export async function buildServer(ctx: CoreContext, opts: { logger?: boolean; ra
   });
   app.get("/api/v1/openapi.json", async () => buildOpenApi({ includeDemo: ctx.env === "demo" }));
 
+  /* ---------------------------------------------------------------- Zcash network status (public, no secrets) */
+  app.get("/api/v1/zcash/networks", async (_req, reply) => {
+    const r = await readiness(ctx);
+    const rows = r.db
+      ? await ctx.db.query<{ network: string; status: string; tip_height: string | null; scanned_height: string | null; ironwood_supported: boolean; nu7_active: boolean; gateway_version: string | null; updated_at: Date; last_error: string | null }>(
+          `SELECT network, status, tip_height, scanned_height, ironwood_supported, nu7_active, gateway_version, updated_at, last_error FROM scanner_state WHERE environment=$1`,
+          [ctx.env],
+        )
+      : { rows: [] };
+    const watcher = ctx.zkool ? { kind: "zkool_graphql", addressMode: ctx.zkool.addressMode, viewing: "watch-only UFVK (cannot spend)" } : ctx.cfg.zcashGateway ? { kind: "zcash-gateway" } : null;
+    reply.header("cache-control", "no-store").send({
+      environment: ctx.env,
+      network: ctx.cfg.zcashNetwork ?? "demo",
+      watcher,
+      confirmationsRequired: ctx.cfg.policy.requiredConfirmations,
+      receivingOpen: r.features.paymentLinks.available,
+      receivingReason: r.features.paymentLinks.reason,
+      explorerTxBase: ctx.cfg.zcashNetwork === "testnet" ? "https://zexplorer.app/testnet/tx/" : ctx.cfg.zcashNetwork === "mainnet" ? "https://zexplorer.app/tx/" : null,
+      realMoney: ctx.caps.creditsRedeemable,
+      networks: rows.rows.map((s) => ({
+        network: s.network,
+        status: s.status === "syncing" ? "WATCHER_CATCHING_UP" : s.status === "synced" ? "SYNCED" : s.status.toUpperCase(),
+        chainTipHeight: s.tip_height ? Number(s.tip_height) : null,
+        walletSyncedHeight: s.scanned_height ? Number(s.scanned_height) : null,
+        lagBlocks: s.tip_height && s.scanned_height ? Number(s.tip_height) - Number(s.scanned_height) : null,
+        ironwood: s.ironwood_supported,
+        nu7Active: s.nu7_active,
+        watcherVersion: s.gateway_version,
+        lastUpdatedAt: new Date(s.updated_at).toISOString(),
+        stale: Date.now() - new Date(s.updated_at).getTime() > 120_000,
+        lastError: s.last_error ? s.last_error.replace(/Bearer\s+\S+/g, "Bearer ***").slice(0, 160) : null,
+      })),
+      privacy: "The light-wallet server sees the watcher's IP and sync timing. The watch-only key sees incoming amounts and memos. Explorers prove a txid exists but cannot show shielded amounts.",
+    });
+  });
+
   /* ---------------------------------------------------------------- contract routes */
   for (const def of Object.values(ROUTES) as RouteDef[]) {
     if (def.demoOnly && ctx.env !== "demo") continue;

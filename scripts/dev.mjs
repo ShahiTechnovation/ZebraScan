@@ -13,11 +13,27 @@ if (existsSync(".env")) {
   console.error("No .env found. Copy .env.example to .env and fill the secrets (pnpm exec tsx scripts/gen-dev-secrets.ts).");
   process.exit(1);
 }
+// Overlays (later wins), e.g. HACKATHON_TESTNET: node scripts/dev.mjs --overlay config/zcash.testnet.local.env --overlay var/secrets/testnet-worker.env
+const argv = process.argv.slice(2);
+for (let i = 0; i < argv.length; i++) {
+  if (argv[i] !== "--overlay") continue;
+  const f = argv[++i];
+  if (!f || !existsSync(f)) {
+    console.error(`overlay env file not found: ${f}`);
+    process.exit(1);
+  }
+  for (const line of readFileSync(f, "utf8").split(/?
+/)) {
+    const m = /^s*([A-Z0-9_]+)s*=s*(.*)s*$/.exec(line);
+    if (m && !line.trim().startsWith("#")) env[m[1]] = m[2].replace(/^"(.*)"$/, "$1");
+  }
+}
+const only = argv.includes("--no-web") ? new Set(["api", "worker"]) : null;
 const procs = [
   ["api", ["exec", "tsx", "watch", "apps/api/src/main.ts"]],
   ["worker", ["exec", "tsx", "watch", "apps/worker/src/main.ts"]],
   ["web", ["--filter", "@zeb/web", "dev"]],
-].map(([name, args]) => {
+].filter(([name]) => !only || only.has(name)).map(([name, args]) => {
   const p = spawn("pnpm", args, { env, shell: process.platform === "win32", stdio: ["ignore", "pipe", "pipe"] });
   const tag = `[${name}]`.padEnd(9);
   p.stdout.on("data", (d) => process.stdout.write(String(d).replace(/^/gm, tag)));

@@ -27,7 +27,8 @@
     "ops:p2p-preflight": "tsx scripts/ops-p2p-preflight.ts",
     "zkool:bootstrap": "tsx scripts/zkool-bootstrap.ts",
     "testnet:pay": "tsx scripts/testnet-pay.ts",
-    "test:zip321": "vitest run --config vitest.unit.config.ts tests/unit/domain.test.ts -t zip"
+    "test:zip321": "vitest run --config vitest.unit.config.ts tests/unit/domain.test.ts -t zip",
+    "dev:testnet": "node scripts/dev.mjs --overlay var/secrets/testnet.env --overlay var/secrets/testnet-worker.env"
   },
   "devDependencies": {
     "@types/node": "^22.13.9",
