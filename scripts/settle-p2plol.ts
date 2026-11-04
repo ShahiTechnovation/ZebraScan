@@ -136,6 +136,12 @@ async function preview(id: string) {
 async function execute(id: string, confirm: string | "auto") {
   const t = await loadTerms(id);
   if (confirm !== "auto" && confirm !== t.code) throw new Error("confirm code does not match these exact terms (checkout, UPI, USDC, txid); run --preview again");
+  // Never pay a checkout the integrated payout rail (packages/core tfpayouts) is also handling.
+  const rail = await ctx.db.query<{ id: string; state: string }>(
+    `SELECT id, state FROM payout_commands WHERE environment=$1 AND source_intent_id=$2 AND state NOT IN ('PREFLIGHT_BLOCKED','EXPIRED','USER_ABORTED','REFUNDED') LIMIT 1`,
+    [ctx.env, t.id],
+  );
+  if (rail.rows[0]) throw new Error(`checkout ${t.id} already has payout command ${rail.rows[0].id} (${rail.rows[0].state}) on the integrated rail; refusing a second payout`);
   // Daily cap across ALL payouts (public site: any visitor can trigger one). Counts every lock written
   // today (attempted orders count, whatever their outcome). Default 1.15 USDC/day, hard max 1.2.
   const dailyCap = BigInt(process.env.PILOT_DAILY_MAX_USDC_MICROS ?? "1150000");
