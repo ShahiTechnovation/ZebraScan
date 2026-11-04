@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-11-04T15:51:28.521Z",
+  "capturedAt": "2026-11-04T16:09:39.509Z",
   "network": "testnet",
   "zkool": "6.36.0 (docker hhanh00/zkool-graphql@sha256:222039f6…)",
-  "tip": 4582542,
+  "tip": 4582581,
   "schema": {
     "q": {
       "fields": [

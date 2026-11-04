@@ -1,0 +1,82 @@
+{
+  "capturedAt": "2026-11-04T16:12:38.581Z",
+  "networks": {
+    "environment": "testnet",
+    "network": "testnet",
+    "watcher": {
+      "kind": "zkool_graphql",
+      "addressMode": "rotate",
+      "viewing": "watch-only UFVK (cannot spend)"
+    },
+    "confirmationsRequired": 1,
+    "receivingOpen": true,
+    "receivingReason": null,
+    "explorerTxBase": "https://zexplorer.app/testnet/tx/",
+    "realMoney": false,
+    "networks": [
+      {
+        "network": "testnet",
+        "status": "SYNCED",
+        "chainTipHeight": 4582587,
+        "walletSyncedHeight": 4582587,
+        "lagBlocks": 0,
+        "ironwood": true,
+        "nu7Active": true,
+        "watcherVersion": "zkool_graphql",
+        "lastUpdatedAt": "2026-11-04T16:12:23.876Z",
+        "stale": false,
+        "lastError": null
+      }
+    ],
+    "privacy": "The light-wallet server sees the watcher's IP and sync timing. The watch-only key sees incoming amounts and memos. Explorers prove a txid exists but cannot show shielded amounts."
+  },
+  "readyz": {
+    "ready": true,
+    "environment": "testnet",
+    "db": true,
+    "priceFeed": {
+      "available": true,
+      "reason": null
+    },
+    "p2p": {
+      "available": true,
+      "reason": null
+    },
+    "scanner": {
+      "available": true,
+      "reason": null
+    },
+    "treasury": {
+      "available": false,
+      "reason": "USDC treasury balance has never been verified"
+    },
+    "signer": {
+      "available": false,
+      "reason": "No Base treasury signer configured"
+    },
+    "approvals": {
+      "available": true,
+      "reason": null
+    },
+    "features": {
+      "scanPay": {
+        "available": true,
+        "reason": null
+      },
+      "terminal": {
+        "available": true,
+        "reason": null
+      },
+      "paymentLinks": {
+        "available": true,
+        "reason": null
+      },
+      "withdrawals": {
+        "available": false,
+        "reason": "Credits are not redeemable in testnet"
+      }
+    },
+    "paused": [],
+    "checkedAt": "2026-11-04T16:12:39.663Z"
+  }
+}

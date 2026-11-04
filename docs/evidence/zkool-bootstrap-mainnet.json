@@ -1,0 +1,20 @@
+{
+  "capturedAt": "2026-11-04T16:11:23.624Z",
+  "network": "mainnet",
+  "tip": 3541756,
+  "receiver": {
+    "accountId": 1,
+    "birth": 3541746,
+    "defaultUa": "u18vzvaf5444j3q4shxyt4wp0fcmt8s6sar0u46aqmaz74qsxrehksnr02qhl7lfymawa9ktqdrjqc8huekdh74stx42xf627tnxvl6r8tghwjw5m4r0lnyyfy94zt09pef68pd7wcrka8prxj2wzr76plhk78jkry77m96fe9gcyer0av",
+    "ufvkLabel": "viewing key — reveals this demo wallet's history, cannot spend",
+    "ufvk": "(withheld)"
+  },
+  "sender": null,
+  "watchOnlyProof": {
+    "watch_account_observed_balance": "0",
+    "write_token": "No feasible note selection found",
+    "worker_read_only_token": "Unauthorized",
+    "seed_on_watch_account": "null (no seed stored)",
+    "write_token_note": "provisional: account has no notes yet, pay failed at note selection before signing; re-run with --recheck-watch-only after the first deposit"
+  }
+}

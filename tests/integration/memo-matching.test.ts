@@ -57,6 +57,6 @@ it("unique-address invoice: the SAME accepted note seen again with more confirma
   const obs = await h.db.query(`SELECT confirmations FROM deposit_observations WHERE txid=$1`, [txid]);
   expect(obs.rows).toHaveLength(1);
   expect(Number(obs.rows[0].confirmations)).toBe(6);
-  const credits = await h.db.query(`SELECT count(*)::int AS n FROM payment_receipts WHERE intent_id=$1`, [a.id]).catch(() => ({ rows: [{ n: 1 }] }));
+  const credits = await h.db.query(`SELECT count(*)::int AS n FROM receipts WHERE intent_id=$1`, [a.id]);
   expect(credits.rows[0].n).toBe(1);
 });

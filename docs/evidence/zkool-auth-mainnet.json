@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-11-04T16:10:31.846Z",
+  "network": "mainnet",
+  "url": "https://zebscan-zcash-main…",
+  "tipHeight": 3541756,
+  "results": {
+    "admin token → currentHeight (real chain tip)": {
+      "status": 200,
+      "body": "{\"data\":{\"currentHeight\":3541756}}",
+      "pass": true
+    },
+    "admin token → accounts": {
+      "status": 200,
+      "body": "{\"data\":{\"accounts\":[]}}",
+      "pass": true
+    },
+    "no token → accounts refused": {
+      "status": 500,
+      "body": "Unhandled rejection: AuthError",
+      "pass": true
+    },
+    "forged-key token → accounts refused": {
+      "status": 500,
+      "body": "Unhandled rejection: AuthError",
+      "pass": true
+    },
+    "expired token → refused": {
+      "status": 500,
+      "body": "Unhandled rejection: AuthError",
+      "pass": true
+    },
+    "account-scoped token → admin query refused": {
+      "status": 200,
+      "body": "{\"data\":null,\"errors\":[{\"message\":\"Unauthorized\",\"locations\":[{\"line\":1,\"column\":3}],\"path\":[\"accounts\"]}]}",
+      "pass": true
+    }
+  }
+}

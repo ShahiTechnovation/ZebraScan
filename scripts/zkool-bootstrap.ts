@@ -120,12 +120,18 @@ if (all.some((a) => a.name === "zebscan-receiver-seed-TEMP")) throw new Error("a
 
 // 4. watch-only proofs
 const proof: Record<string, string> = {};
+// The probe is a self-send of 0.0001 to the account's own default address: once the account
+// holds notes, note selection succeeds and only the missing signing key can stop it.
+await gql(`mutation { synchronizeAccount(idAccount: ${watch.id}, fast: false) }`, signZkoolJwt(key, { sub: watch.id, write: false })).catch(() => undefined);
+const selfUa = (await gql<{ addressByAccount: { ua: string } }>(`{ addressByAccount(idAccount: ${watch.id}) { ua } }`, signZkoolJwt(key, { sub: watch.id, write: false }))).addressByAccount.ua;
+const bal = (await gql<{ balanceByAccount: { total: string | number } }>(`{ balanceByAccount(idAccount: ${watch.id}) { total } }`, signZkoolJwt(key, { sub: watch.id, write: false }))).balanceByAccount;
+proof.watch_account_observed_balance = String(bal.total);
 for (const [label, token] of [
   ["write_token", signZkoolJwt(key, { sub: watch.id, write: true })],
   ["worker_read_only_token", signZkoolJwt(key, { sub: watch.id, write: false })],
 ] as const) {
   try {
-    await gql(`mutation { pay(idAccount: ${watch.id}, payment: { recipients: [], confirmations: 1 }) }`, token);
+    await gql(`mutation { pay(idAccount: ${watch.id}, payment: { recipients: [{ address: "${selfUa}", amount: 0.0001 }], confirmations: 1 }) }`, token);
     throw new Error(`SECURITY: pay succeeded with ${label}`);
   } catch (e) {
     const m = (e as Error).message;

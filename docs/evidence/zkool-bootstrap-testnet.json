@@ -1,11 +1,11 @@
 {
-  "capturedAt": "2026-11-04T15:51:45.040Z",
+  "capturedAt": "2026-11-04T16:09:46.926Z",
   "network": "testnet",
-  "tip": 4582542,
+  "tip": 4582581,
   "receiver": {
     "accountId": 1,
     "birth": 4582531,
-    "defaultUa": "utest1424hfl6km2mvk2tg6fkr4wcxujxvwrqq3gjd4m3kcvk3kjgsdn33ag849097dkw0es7cazgm06lcmjdglve3dt9quvqqhfu9yyvpgsfwchmcjc50xeaw3kr8carfm2dnnykpawsu6k2uptk800crnypcvavegqnvxdvj7w0zjy3kzxav",
+    "defaultUa": "utest1m8mtnuwdfsxy0d3e8p270ja8g88pvu6lchc92nxlq79jpzqpak6jktk3h3vvj85gjd90wz6zm2vdznv9r5ylc95vdnvwy5s2vq7vdkl73hfu84s5fmefyjzjspt6a5xdhch3yk47ed00p0avf25uhk5g43ndw9nhsr64t0xakya2zjeg",
     "ufvkLabel": "viewing key — reveals this demo wallet's history, cannot spend",
     "ufvk": "uviewtest1jxnxxt4tyn590h57wx4u7dqnw2lr7vjrzk073vseepuhlm56ws6393zh8njmh2nk4jqrm6z2stlxtaqdy225vadr77lmp73tvmw3zsuh7aujmgwracsxr84d3jycrz6k99gacf57kyr3k637qt7pw70t7sfp3fp9k27kszgs5wz5gctjv8fys0dmghmgf8afp9uxnvskktzwlgrtmnsf7z43569cdvhfsaf5yzpuwzjcd4nf70grrvhn3agnmrx0578dmv0unavm6prpscsulznzaztj9k2rxf9q8d8p6rfaa77jkks34vz2qjxpczwv8nqmz6sy66fyrqffv67lvr4v7aq3nrn5xze9m4fhu5vtd0peyhqdrlflxl937dg4zw8zt3n094eq0kc62l4adgfvzf88k82c2rz2xhv79slrfet3yycth3muj0gfkn9ppve650l7d0987k9pd7n230aclrt22hlcum0ufk7w2weuw6vq7ca0f8kp"
   },
@@ -14,9 +14,9 @@
     "ua": "utest14y6n5xgxdv8qpa5saql66jatm0trh5yyr3gzylqstjd9qwrye0k7jw6mgrrtenhgtsd03fldar5xx863ad3v62azl4h68luwa795hxs5zk89g2j5manenm87fte7umdf22px3yxja6x6weaew5h0mfw2gahmq5tfhtw266ey5q0zlm52"
   },
   "watchOnlyProof": {
-    "write_token": "No feasible note selection found",
+    "watch_account_observed_balance": "0.00836471",
+    "write_token": "No Signing Key",
     "worker_read_only_token": "Unauthorized",
-    "seed_on_watch_account": "null (no seed stored)",
-    "write_token_note": "provisional: account has no notes yet, pay failed at note selection before signing; re-run with --recheck-watch-only after the first deposit"
+    "seed_on_watch_account": "null (no seed stored)"
   }
 }

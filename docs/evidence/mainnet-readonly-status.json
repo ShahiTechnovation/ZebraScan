@@ -1,0 +1,82 @@
+{
+  "capturedAt": "2026-11-04T16:12:38.388Z",
+  "networks": {
+    "environment": "mainnet-readonly",
+    "network": "mainnet",
+    "watcher": {
+      "kind": "zkool_graphql",
+      "addressMode": "rotate",
+      "viewing": "watch-only UFVK (cannot spend)"
+    },
+    "confirmationsRequired": 10,
+    "receivingOpen": false,
+    "receivingReason": "Receiving payments is disabled in mainnet-readonly",
+    "explorerTxBase": "https://zexplorer.app/tx/",
+    "realMoney": false,
+    "networks": [
+      {
+        "network": "mainnet",
+        "status": "SYNCED",
+        "chainTipHeight": 3541759,
+        "walletSyncedHeight": 3541759,
+        "lagBlocks": 0,
+        "ironwood": true,
+        "nu7Active": false,
+        "watcherVersion": "zkool_graphql",
+        "lastUpdatedAt": "2026-11-04T16:12:21.280Z",
+        "stale": false,
+        "lastError": null
+      }
+    ],
+    "privacy": "The light-wallet server sees the watcher's IP and sync timing. The watch-only key sees incoming amounts and memos. Explorers prove a txid exists but cannot show shielded amounts."
+  },
+  "readyz": {
+    "ready": true,
+    "environment": "mainnet-readonly",
+    "db": true,
+    "priceFeed": {
+      "available": true,
+      "reason": null
+    },
+    "p2p": {
+      "available": false,
+      "reason": "P2P provider not configured (P2P_DIAMOND_ADDRESS / P2P_SUBGRAPH_URL / BASE_RPC_URL)"
+    },
+    "scanner": {
+      "available": true,
+      "reason": null
+    },
+    "treasury": {
+      "available": false,
+      "reason": "USDC treasury balance has never been verified"
+    },
+    "signer": {
+      "available": false,
+      "reason": "No Base treasury signer configured"
+    },
+    "approvals": {
+      "available": true,
+      "reason": null
+    },
+    "features": {
+      "scanPay": {
+        "available": false,
+        "reason": "Receiving payments is disabled in mainnet-readonly"
+      },
+      "terminal": {
+        "available": false,
+        "reason": "Receiving payments is disabled in mainnet-readonly"
+      },
+      "paymentLinks": {
+        "available": false,
+        "reason": "Receiving payments is disabled in mainnet-readonly"
+      },
+      "withdrawals": {
+        "available": false,
+        "reason": "Credits are not redeemable in mainnet-readonly"
+      }
+    },
+    "paused": [],
+    "checkedAt": "2026-11-04T16:12:38.578Z"
+  }
+}

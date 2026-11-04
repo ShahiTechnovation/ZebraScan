@@ -1,0 +1,591 @@
+{
+  "capturedAt": "2026-11-04T16:11:08.942Z",
+  "network": "mainnet",
+  "zkool": "6.36.0 (docker hhanh00/zkool-graphql@sha256:222039f6…)",
+  "tip": 3541756,
+  "schema": {
+    "q": {
+      "fields": [
+        {
+          "name": "nearIntentsListSwaps",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "pendingOnly"
+            }
+          ]
+        },
+        {
+          "name": "nearIntentsAssets",
+          "args": []
+        },
+        {
+          "name": "nearIntentsStatus",
+          "args": [
+            {
+              "name": "depositAddress"
+            },
+            {
+              "name": "depositMemo"
+            }
+          ]
+        },
+        {
+          "name": "apiVersion",
+          "args": []
+        },
+        {
+          "name": "votingRounds",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "votingRound",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "roundId"
+            }
+          ]
+        },
+        {
+          "name": "votingSubmissionStatus",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "roundId"
+            }
+          ]
+        },
+        {
+          "name": "accounts",
+          "args": [
+            {
+              "name": "accountFilter"
+            }
+          ]
+        },
+        {
+          "name": "transactionsByAccount",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "height"
+            }
+          ]
+        },
+        {
+          "name": "transactionById",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "txid"
+            }
+          ]
+        },
+        {
+          "name": "memosByTransaction",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "idTransaction"
+            }
+          ]
+        },
+        {
+          "name": "balanceByAccount",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "height"
+            }
+          ]
+        },
+        {
+          "name": "frostParams",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "unifiedFullViewingKey",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "pools"
+            },
+            {
+              "name": "incoming"
+            }
+          ]
+        },
+        {
+          "name": "addressByAccount",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "pools"
+            }
+          ]
+        },
+        {
+          "name": "unconfirmedByAccount",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "notesByAccount",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "diversifierIndices"
+            }
+          ]
+        },
+        {
+          "name": "assets",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "currentHeight",
+          "args": []
+        },
+        {
+          "name": "prepareSend",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "payment"
+            }
+          ]
+        },
+        {
+          "name": "decodePczt",
+          "args": [
+            {
+              "name": "pczt"
+            }
+          ]
+        },
+        {
+          "name": "signTx",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "pczt"
+            }
+          ]
+        },
+        {
+          "name": "broadcastTx",
+          "args": [
+            {
+              "name": "txBytes"
+            },
+            {
+              "name": "idAccount"
+            }
+          ]
+        }
+      ]
+    },
+    "m": {
+      "fields": [
+        {
+          "name": "nearIntentsClearClosedSwaps",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "nearIntentsDeleteClosedSwap",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "idSwap"
+            }
+          ]
+        },
+        {
+          "name": "nearIntentsRefreshSwapStatus",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "idSwap"
+            }
+          ]
+        },
+        {
+          "name": "nearIntentsQuote",
+          "args": [
+            {
+              "name": "request"
+            }
+          ]
+        },
+        {
+          "name": "nearIntentsSubmitDeposit",
+          "args": [
+            {
+              "name": "depositAddress"
+            },
+            {
+              "name": "txHash"
+            }
+          ]
+        },
+        {
+          "name": "setVotingConfigUrl",
+          "args": [
+            {
+              "name": "url"
+            }
+          ]
+        },
+        {
+          "name": "submitVote",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "roundId"
+            },
+            {
+              "name": "selections"
+            }
+          ]
+        },
+        {
+          "name": "createAccount",
+          "args": [
+            {
+              "name": "newAccount"
+            }
+          ]
+        },
+        {
+          "name": "editAccount",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "updateAccount"
+            }
+          ]
+        },
+        {
+          "name": "deleteAccount",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "resetAccount",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "synchronize",
+          "args": [
+            {
+              "name": "idAccounts"
+            },
+            {
+              "name": "fast"
+            }
+          ]
+        },
+        {
+          "name": "synchronizeAccount",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "fast"
+            }
+          ]
+        },
+        {
+          "name": "pay",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "payment"
+            }
+          ]
+        },
+        {
+          "name": "issueAsset",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "assetName"
+            },
+            {
+              "name": "amount"
+            },
+            {
+              "name": "firstIssuance"
+            },
+            {
+              "name": "finalize"
+            }
+          ]
+        },
+        {
+          "name": "setAssetName",
+          "args": [
+            {
+              "name": "idAsset"
+            },
+            {
+              "name": "name"
+            }
+          ]
+        },
+        {
+          "name": "newAddresses",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "dkgStart",
+          "args": [
+            {
+              "name": "name"
+            },
+            {
+              "name": "threshold"
+            },
+            {
+              "name": "participants"
+            },
+            {
+              "name": "messageAccount"
+            },
+            {
+              "name": "idParticipant"
+            },
+            {
+              "name": "dkgVersion"
+            }
+          ]
+        },
+        {
+          "name": "frostUpgrade",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "frostSweep",
+          "args": [
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "idCoordinator"
+            },
+            {
+              "name": "messageAccount"
+            }
+          ]
+        },
+        {
+          "name": "dkgCancel",
+          "args": []
+        },
+        {
+          "name": "dkgSetAddress",
+          "args": [
+            {
+              "name": "idParticipant"
+            },
+            {
+              "name": "address"
+            }
+          ]
+        },
+        {
+          "name": "doDkg",
+          "args": []
+        },
+        {
+          "name": "frostExportBackup",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "frostRestore",
+          "args": [
+            {
+              "name": "name"
+            },
+            {
+              "name": "backup"
+            },
+            {
+              "name": "ufvk"
+            },
+            {
+              "name": "legacy"
+            },
+            {
+              "name": "zip2005"
+            },
+            {
+              "name": "birth"
+            }
+          ]
+        },
+        {
+          "name": "frostSign",
+          "args": [
+            {
+              "name": "idCoordinator"
+            },
+            {
+              "name": "idAccount"
+            },
+            {
+              "name": "messageAccount"
+            },
+            {
+              "name": "pczt"
+            }
+          ]
+        },
+        {
+          "name": "stepMigration",
+          "args": [
+            {
+              "name": "idAccount"
+            }
+          ]
+        },
+        {
+          "name": "frostCancel",
+          "args": []
+        }
+      ]
+    },
+    "n": {
+      "fields": [
+        {
+          "name": "id"
+        },
+        {
+          "name": "height"
+        },
+        {
+          "name": "pool"
+        },
+        {
+          "name": "value"
+        },
+        {
+          "name": "address"
+        },
+        {
+          "name": "scope"
+        },
+        {
+          "name": "diversifier"
+        },
+        {
+          "name": "diversifierIndex"
+        },
+        {
+          "name": "memo"
+        },
+        {
+          "name": "tx"
+        }
+      ]
+    },
+    "a": {
+      "fields": [
+        {
+          "name": "ua"
+        },
+        {
+          "name": "transparent"
+        },
+        {
+          "name": "sapling"
+        },
+        {
+          "name": "orchard"
+        },
+        {
+          "name": "ironwood"
+        },
+        {
+          "name": "diversifierIndex"
+        }
+      ]
+    }
+  }
+}

@@ -1,57 +1,99 @@
-# Zeb Scan: pay any UPI QR or a merchant checkout in shielded ZEC — they get INR
+# Zeb Scan: pay a UPI QR or a merchant checkout in shielded ZEC
 
-**Pay in ZEC. They get INR.** Three products: **Scan & Pay** (pay an existing merchant's UPI QR), **Merchant QR Terminal**, and **Payment Links**.
+**One-line pitch:** Zeb Scan gives every checkout its own shielded Zcash address, detects the payment with a watch-only viewing key, and turns a confirmed payment into an INR obligation for a UPI payee or merchant. It is aimed at Zcash holders in India and the small merchants they pay.
 
-## Who it's for and the problem
-Zcash holders in India who want to pay ordinary UPI merchants, and small merchants who want to accept shielded ZEC without running a wallet stack. *No user interviews are recorded yet — add real evidence from the venue here; do not invent any.*
+Three products share one receiving and ledger core: **Scan & Pay** (pay an existing UPI QR), **Merchant QR Terminal**, and **Payment Links**.
 
-## Demo
-- Video: _not recorded yet_ · Public URL: _not deployed yet_
-- **Testnet transaction ID: none yet.** Real Ironwood deposit detection needs a watch-only `zkool_graphql` (or the Rust gateway) running; this build machine could not run either (see Status). Once a payment lands, record `txid` + `https://zexplorer.app/testnet/tx/<txid>` here.
-- Viewing key (optional): put the demo wallet's `uviewtest…` and birth height here (never a spending key).
+## Real public-testnet proof (Zcash testnet, NU7 + Ironwood)
 
-## Status (evidence: `docs/READINESS_REPORT.md`)
-| Area | State |
+| | |
 | --- | --- |
-| Demo + connected UI against the real API/DB/worker (DEMO env) | **Tested** (unit 89, integration 43, browser E2E 23 + 2) |
-| Payment-first redesign | **Done** (`docs/UI_SIMPLIFICATION_AUDIT.md`) |
-| Noir wallet sign-in (challenge → `signMessage` derived → server verify) | **Tested with generated vectors**; no real-extension signature captured yet |
-| Email one-time code sign-in | **Tested** |
-| Passkeys | **Not implemented** (shown as unavailable) |
-| HACKATHON_TESTNET deposit detection (zkool_graphql, memo-matched) | **Built + contract-tested; BLOCKED live** — needs a running zkool_graphql with a UFVK account |
-| TinyFish P2P.me payout rail (state machine, approval, reconciliation) | **Built + fault-tested with a scripted port; BLOCKED live** — `TINYFISH_API_KEY` not configured; read-only preflight reports BLOCKED (`docs/P2P_BROWSER_CAPABILITY.md`) |
-| Live INR payouts | **Disabled by policy** (never on testnet; pilot requires operator approval, caps, legal/provider permission) |
+| **Testnet txid (sent by this project)** | `5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7` |
+| Explorer | https://zexplorer.app/testnet/tx/5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7 |
+| What it is | Separate customer wallet A paid Scan & Pay checkout `pi_kddd0fe7xccewd6x2csrhykxdr` (₹1,000 test value = **0.00836471 TAZ**, Ironwood pool) |
+| Receiving address | `utest1m8mtnuwdfsxy0d3e8p270ja8g88pvu6lchc92nxlq79jpzqpak6jktk3h3vvj85gjd90wz6zm2vdznv9r5ylc95vdnvwy5s2vq7vdkl73hfu84s5fmefyjzjspt6a5xdhch3yk47ed00p0avf25uhk5g43ndw9nhsr64t0xakya2zjeg`, a diversified address issued only for this checkout (diversifier index 1) |
+| Detection | Automatic, with no txid pasted anywhere: mempool `deposit_seen` at 21:32:07 IST, mined at **height 4,582,568**, accepted at 21:32:55 IST with 1 confirmation required. 30+ confirmations later there is still exactly one observation, one receipt and two ledger journals, across several worker restarts |
+| Matching | By the note's diversifier index → invoice address (never by amount or by the account's net delta). Amount comes from the incoming note value (`scope: 0`) |
+| Watch-only proof | `pay` on the receiver account with a write token → **`No Signing Key`**. The worker's own token is account-scoped and read-only, so `pay` → `Unauthorized` |
+| Evidence files | `docs/evidence/testnet-checkout-pi_kddd0fe7.json`, `testnet-payment-5c1f713d64e7.json`, `zkool-bootstrap-testnet.json`, `zkool-auth-testnet.json`, `zkool-schema-testnet.json`, `screens/testnet-scanpay-confirmed.png` |
+
+**Demo wallet viewing key (receiver B, testnet only).** This is a viewing key: it reveals this demo wallet's history but **cannot spend**. Birth height **4582531**.
+
+```
+uviewtest1jxnxxt4tyn590h57wx4u7dqnw2lr7vjrzk073vseepuhlm56ws6393zh8njmh2nk4jqrm6z2stlxtaqdy225vadr77lmp73tvmw3zsuh7aujmgwracsxr84d3jycrz6k99gacf57kyr3k637qt7pw70t7sfp3fp9k27kszgs5wz5gctjv8fys0dmghmgf8afp9uxnvskktzwlgrtmnsf7z43569cdvhfsaf5yzpuwzjcd4nf70grrvhn3agnmrx0578dmv0unavm6prpscsulznzaztj9k2rxf9q8d8p6rfaa77jkks34vz2qjxpczwv8nqmz6sy66fyrqffv67lvr4v7aq3nrn5xze9m4fhu5vtd0peyhqdrlflxl937dg4zw8zt3n094eq0kc62l4adgfvzf88k82c2rz2xhv79slrfet3yycth3muj0gfkn9ppve650l7d0987k9pd7n230aclrt22hlcum0ufk7w2weuw6vq7ca0f8kp
+```
+
+The explorer proves the transaction exists, plus its height and fee. It cannot show a shielded amount or recipient. You can check those only with the viewing key above.
+
+Faucet funding of wallet A (Fauzec, not a project transaction): `b056fc3a752cc67edd6f212791846406985d387e09225cbcb3143ec8f7b0d9b2`.
+
+## Status per subsystem (evidence-backed)
+
+| Subsystem | Status | Evidence |
+| --- | --- | --- |
+| Testnet watch-only watcher (zkool_graphql 6.36.0 on Render, JWT ES256) | **READY** | 6/6 auth checks (no token, forged key, expired, scoped and cross-network tokens all refused); synced, lag 0 |
+| Unique address per checkout (`newAddresses` rotation) | **READY** | live checkout got dindex 1; unit test covers 2 concurrent allocations + index skipping after a wallet-DB reset |
+| Deposit detection → confirmation → acceptance → receipt | **READY (testnet)** | txid above |
+| Restart / replay idempotency | **READY** | observation key `(env, network, pool, txid, txid:p<pool>:d<dindex>:<zat>:<n>)` + `inbound_event_receipts`; regression test for a bug found live (re-seen accepted note mislabelled "Additional ZEC") |
+| Mainnet watcher (separate Render service, DB, key, API on its own port) | **READY as MAINNET_READONLY** | tip 3,541,759 synced, NU7 not yet active (scheduled at 3,543,405); receiving, quotes, payouts and withdrawals all closed. `docs/evidence/mainnet-readonly-status.json` |
+| Mainnet watch-only proof | **PARTIAL** | no seed on server + worker token `Unauthorized`; the `No Signing Key` probe needs a funded account and we will not fund mainnet. The mainnet monitor wallet's keys were generated on the watcher host, so it is **not for customer funds** |
+| INR payout via existing P2P.me account in TinyFish | **BLOCKED (by design + missing key)** | testnet never enqueues real TinyFish jobs; `TINYFISH_API_KEY` not configured; spendable USDC unverified → payouts blocked |
+| Merchant QR / Payment Link on testnet | built + integration-tested on the same core | live testnet run in this submission used Scan & Pay |
+| Custom pool / EVM contract / ZEC vault | **None, by design** | ZEC stays in a Zcash wallet; INR liquidity is the operator's existing P2P.me account |
+
+## How it works
+1. A checkout gets a quote in exact zatoshis (median CoinGecko/Kraken, integer math) and a **fresh diversified Unified Address** from the watch-only account (Ironwood + Sapling receivers, no transparent). The server returns a ZIP-321 URI `zcash:<utest1…>?amount=<8dp>` and a QR.
+2. The worker (`apps/worker`) polls zkool_graphql with a short-lived, account-scoped, read-only JWT. It syncs the account, reads incoming notes (mined + mempool), maps each note's diversifier index to the invoice it was issued for, and ingests idempotently.
+3. States: `awaiting_zec → deposit_seen (display only) → confirming → deposit_accepted`. Underpaid, overpaid, late, extra and unattributed payments, plus reorgs, each have a deterministic state and an operator action (`OPERATIONS/deposit-recovery.md`).
+4. Acceptance writes the ledger journal, receipt and outbox event in one DB transaction. Scan & Pay then creates a payout command for the existing TinyFish/P2P.me rail. That rail is operator-approved, preflighted read-only, and **disabled on testnet**. Merchant products create locked INR-denominated credits instead.
 
 ## Run it
 ```bash
 pnpm install
-cp .env.example .env    # fill secrets: pnpm exec tsx scripts/gen-dev-secrets.ts
+# 1. Deploy the watchers: Render Dashboard → New → Blueprint → this repo (render.yaml: zebscan-zcash-test + zebscan-zcash-main)
+# 2. JWT keys: var/secrets/zkool-<net>-jwt.key (private, git-ignored); public halves are in infra/zkool/
+pnpm exec tsx scripts/zkool-verify-auth.ts --network testnet --url https://<svc>.onrender.com/graphql
+pnpm zkool:bootstrap --network testnet --url https://<svc>.onrender.com/graphql --faucet   # watch-only B + customer wallet A
+cp config/zcash.testnet.example.env var/secrets/testnet.env   # fill DB URL + secrets (pnpm exec tsx scripts/gen-dev-secrets.ts)
 pnpm db:migrate
-NEXT_PUBLIC_ZEB_MODE=connected NEXT_PUBLIC_API_BASE_URL=http://localhost:4000 pnpm dev
+node scripts/dev.mjs --overlay var/secrets/testnet.env --overlay var/secrets/testnet-worker.env --no-web
+# web (connected mode needs a production build: its CSP blocks dev-mode eval)
+NEXT_DIST_DIR=.next-testnet NEXT_PUBLIC_ZEB_MODE=connected NEXT_PUBLIC_API_BASE_URL=http://localhost:4000 pnpm --filter @zeb/web build
+# pay an invoice like an external customer (testnet only):
+pnpm testnet:pay --url https://<svc>.onrender.com/graphql --uri "zcash:utest1…?amount=…"
 ```
-For real testnet deposits (HACKATHON_TESTNET): run `zkool_graphql -d wallet.db -p 8000 -l https://testnet.zec.rocks:443 -C 1` on Linux, create a **watch-only** account from your UFVK with `birth`, then set `ZEB_ENVIRONMENT=HACKATHON_TESTNET ZKOOL_GRAPHQL_URL=http://127.0.0.1:8000/graphql ZKOOL_ACCOUNT_ID=<id>`. The worker refuses an account that can spend.
+Public URL: https://zebrascan.vercel.app is the **DEMO-mode** frontend (simulated, labelled). The real testnet flow above ran against the local API/worker and the Render watcher.
 
-## How it works
-1. Payer scans/pastes a UPI QR (or a merchant shows a QR / link); the server validates it and quotes exact zatoshis from two price feeds (no floats).
-2. A checkout gets an Ironwood `utest1` address and a unique memo code `ZEB-…` in a ZIP-321 URI. Pay with any Zcash wallet (include the memo) or **Pay with Noir**.
-3. The watch-only watcher sees the note, matches it by memo (never by amount), waits for confirmations, handles late/under/over payments and reorgs.
-4. Merchant payments become locked INR-denominated credits (cooldown), then withdrawable. Scan & Pay (and withdrawals) create an immutable payout command for the TinyFish P2P.me rail — **operator-approved, read-only preflight first, reconciled separately; disabled on testnet**.
+## Design decisions
+* **Watcher, not a new wallet.** zkool2 `zkool_graphql` 6.36.0, pinned by image digest. Schema introspection at startup fails closed. The `--allow-unauthenticated` flag is never used.
+* **Viewing key only on the server.** The receiver seed was generated, backed up offline (git-ignored), then deleted from the watcher. The watch account was re-imported from its UFVK with a birth height. `ZCASH_SPEND_KEY_REF` must be blank or the API/worker refuses to boot.
+* **One address per checkout**, recoverable and concurrency-safe: serialized `newAddresses` calls, a Postgres unique index on address and on `(account, diversifier_index)`, and skipping indexes already issued after a wallet-DB reset. A shared UA plus a unique encrypted memo exists only as an explicit fallback (`ZKOOL_ADDRESS_MODE=memo`).
+* **Confirmation policy:** testnet demo = 1 block (stated, and not zero reorg risk); mainnet default = 10. Reorg detection runs every poll.
+* **Hard network isolation:** separate Render services, keys, databases and API ports. The network is stored on every row, and the start script refuses a testnet/mainnet lightwalletd mismatch. A `.env` change alone cannot enable real money: `MAINNET_READONLY` closes receiving and payouts in code.
+* **No liquidity pool, escrow, vault or bridge.** A confirmed ZEC deposit creates an obligation. It does not mint USDC. Payouts need verified spendable capacity in the operator's existing P2P.me account and operator approval (`OPERATIONS/provider-liquidity.md`).
 
 ## Privacy and trust note
-1. **What stays private:** sender, receiver and amount are shielded on-chain; the memo (invoice code only) is encrypted.
+1. **What stays private:** sender, receiver and amount are shielded on-chain (Ironwood). No memo is needed because the address itself identifies the invoice.
 2. **What the app reveals, to whom:**
-   - the light-wallet server (`testnet.zec.rocks`) sees the watcher's IP and sync timing;
-   - our server stores invoice codes, txids, amounts, masked UPI IDs, encrypted full UPI IDs (envelope encryption), and a keyed fingerprint of a Noir login identity (not the address); emails only for email sign-in;
-   - CoinGecko / Kraken see our price requests; P2P.me and its liquidity provider (and banks) see the INR recipient and amount for payouts; TinyFish operates our P2P.me account in a hosted browser and sees those screens;
-   - no LLM receives customer data except TinyFish's agent, which sees the payout command fields it must check.
-3. **Who users must trust:** Zeb Scan as custodian/operator; the P2P.me liquidity provider for INR delivery; TinyFish for browser automation; the light-wallet server for availability.
-4. **What we'd fix next:** Nym for the watcher's traffic; passkeys; deleting payout PII after reconciliation; a non-browser, provider-authorized payout API.
+   - the light-wallet server (`testnet.zec.rocks` / `zec.rocks`) sees the watcher host's IP and sync timing;
+   - the watcher host (Render) and anyone holding the viewing key see every incoming amount and memo of the receiving wallet;
+   - our server stores quotes, invoice addresses, txids, amounts, masked UPI IDs and envelope-encrypted full UPI IDs. Emails are stored only for email sign-in;
+   - CoinGecko and Kraken see our price requests. If a live payout is ever authorized, P2P.me, its liquidity provider, banks and TinyFish's hosted browser see the INR recipient and amount.
+3. **Who users must trust:** Zeb Scan as custodial operator; Render as the watcher host; the light-wallet server for availability; P2P.me and TinyFish for any future INR delivery.
+4. **What we'd fix next:** route watcher traffic over Nym; move the watcher to self-hosted Zebra + lightwalletd; generate mainnet keys offline; delete payout PII after reconciliation.
+
+Not "anonymous" or "untraceable": the operator links invoices to UPI payees.
 
 ## Technologies used
-Next.js 15 / React 19 / Tailwind 3; Fastify 5; PostgreSQL 16+ (tested on 18.4); Zod 4.3.6; viem 2.47.6; @noir-wallet/sdk 0.1.9; @tiny-fish/sdk 0.11.0; @p2pdotme/sdk 1.3.10 (reference only); zkool_graphql (zkool2 v6.36.0, external); librustzcash crates pinned in `services/zcash-gateway` (not compiled); Argon2id (@node-rs/argon2); Vitest 3; Playwright.
+Zcash testnet/mainnet (NU7, Ironwood); zkool2 `zkool_graphql` 6.36.0 (`hhanh00/zkool-graphql@sha256:222039f6…`); lightwalletd `testnet.zec.rocks:443` / `zec.rocks:443`; Render (Docker web services); Fauzec faucet API; ZIP-316 UA/UFVK, ZIP-321 URIs; Node 24, TypeScript, Fastify 5, Zod 4, PostgreSQL 18 (double-entry ledger with DB-enforced balance triggers); Next.js 15 / React 19 / Tailwind; Vitest + Playwright; @tiny-fish/sdk 0.11.0 (payout rail, not live); @noir-wallet/sdk 0.1.9 (sign-in). JWTs are ES256 via Node `crypto`.
+
+## Tests (run on this machine)
+`pnpm typecheck` ✅ · unit 52/52 ✅ · integration (real PostgreSQL) 44/44 ✅. See `docs/READINESS_REPORT.md`.
 
 ## Next 30 days
-Run the zkool watcher on a Linux host and record the first testnet txid; capture a real Noir extension signature as a test vector; get written P2P.me automation/permission and run the read-only TinyFish preflight; passkeys. *(Add links to any issue, PR or forum post you open.)*
+1. Run a stranger test: a judge or venue user pays a Merchant QR / Payment Link from their own Noir or Zingo wallet.
+2. Move the watcher to a persistent host (self-hosted Zebra + lightwalletd) and route its traffic through Nym.
+3. Generate the mainnet receiving keys offline and re-import as watch-only, then repeat `MAINNET_READONLY` verification after NU7 activates (height 3,543,405).
+4. Get written P2P.me automation permission, configure `TINYFISH_API_KEY`, and run the read-only TinyFish preflight against the existing account. Only then consider a tiny operator-approved pilot.
 
-## Feedback
-See `FEEDBACK.md`. More docs: `docs/` (architecture, API, security, runbooks, readiness, dependency matrix), `AGENTS.md`.
+Operator runbooks: `OPERATIONS/`. Feedback for the tool teams: `FEEDBACK.md`.
