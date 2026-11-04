@@ -83,3 +83,31 @@ Executed after this delta: `pnpm typecheck` ✅ · `pnpm lint` ✅ · `pnpm test
 | Redesign | DONE | `docs/UI_SIMPLIFICATION_AUDIT.md`, before/after screenshots |
 | Secondary merchant pages | partial | new palette/nav; old layouts |
 | Git history | not created | the project directory is not a git repository; the event requires a new repo with commits made during the hack |
+
+---
+
+## Delta 2026-11-04 evening: real Zcash testnet vertical slice + mainnet read-only (supersedes the "BLOCKED live" zkool row above)
+
+All rows below were **executed** tonight. Times are IST.
+
+| Subsystem | Status | Evidence |
+| --- | --- | --- |
+| zkool_graphql 6.36.0 watcher, testnet (Render `zebscan-zcash-test`, pinned image digest, JWT ES256 mandatory) | **READY** | `scripts/zkool-verify-auth.ts`: 6/6 (no token, forged key, expired, account-scoped admin query all refused). `docs/evidence/zkool-auth-testnet.json` |
+| Schema introspection guard | **READY** | `docs/evidence/zkool-schema-testnet.json`; worker refuses to run if `newAddresses`, `synchronizeAccount`, note fields etc. are missing |
+| Receiver B watch-only (UFVK import, birth 4582531, seed deleted from server, offline backup git-ignored) | **READY** | write-token `pay` → `No Signing Key` (with 0.00836471 TAZ in the account); worker token → `Unauthorized`; `seed` null |
+| Unique diversified address per checkout | **READY** | live checkout got dindex 1 (`utest1m8mt…`) ≠ default UA; unit tests: concurrency, index skip after DB reset, network-prefix rejection |
+| Real deposit detection → confirmations → acceptance | **READY (testnet)** | txid `5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7` from separate wallet A; `deposit_seen` 21:32:07, mined 4,582,568, accepted 21:32:55; no txid ever given to the backend |
+| Idempotency across restarts/replays | **READY** | after several worker restarts: 1 observation, 1 receipt, 2 journals; regression test for live bug (re-seen accepted note mislabelled "Additional ZEC") |
+| Minimal UI on real state (connected mode, production build) | **READY (local)** | `docs/evidence/screens/testnet-scanpay-confirmed.png`; payout panel says "INR payout disabled on testnet" |
+| Public URL | **PARTIAL** | https://zebrascan.vercel.app is DEMO mode; the connected testnet UI + API run locally (API/worker not hosted publicly) |
+| Mainnet watcher (Render `zebscan-zcash-main`, separate key/DB/API port 4100, encrypted wallet DB) | **READY as MAINNET_READONLY** | synced tip 3,541,759, `nu7Active=false` (scheduled 3,543,405). Receiving, quotes, payouts and withdrawals are all closed. Cross-network keys refused both ways. `docs/evidence/mainnet-readonly-status.json` |
+| Mainnet watch-only proof | **PARTIAL** | no seed on server + worker token `Unauthorized`; `No Signing Key` needs a funded account (not done, by policy). Monitor wallet keys were generated on the watcher host → not for customer funds |
+| Merchant QR / Payment Link on live testnet | **TESTED (integration), not run live tonight** | same allocation/ingestion core as Scan & Pay |
+| TinyFish / existing P2P.me payout | **BLOCKED** | no `TINYFISH_API_KEY`; spendable USDC, session identity and payout finality unverified; testnet/readonly never enqueue real jobs. Payout jobs created: **0**; merchant credits created tonight: **0** (the one accepted payment is Scan & Pay, test-only, payout disabled) |
+| Custom pool / EVM contract / ZEC vault | **NOT BUILT (by design)** | — |
+
+Commands executed after the changes: `pnpm typecheck` ✅ · unit 52/52 ✅ · integration (PostgreSQL 18) 44/44 ✅ · web unit 40/40 ✅ · `pnpm --filter @zeb/web build` (connected) ✅.
+
+Policies chosen: testnet confirmations = 1 (demo only, not zero reorg risk), mainnet = 10. Address mode `rotate`, with memo as an explicit fallback. The watcher refuses attribution while `syncing`.
+
+Known limitations: Render free plan has an ephemeral disk, so after a restart you must re-run `pnpm zkool:bootstrap` (idempotent; rescans from birth; the allocator skips used indexes). The worker polls; it does not use subscriptions. Explorer links prove existence, height and fee only.
