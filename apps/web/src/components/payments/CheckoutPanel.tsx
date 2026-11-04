@@ -24,13 +24,12 @@ export const WALLET_SHIELDED_ADDRESS =
 export const WALLET_TRANSPARENT_ADDRESS =
   "t1cst5qjbk1U9RNYsBmrkXyZTGGKKSDrVtc";
 
-function getEffectiveAddress(addr: string, pool: "shielded" | "transparent"): string {
-  if (pool === "transparent") {
-    return /^(t1|tm|t2|t3)/.test(addr) ? addr : WALLET_TRANSPARENT_ADDRESS;
-  }
-  if (!addr || addr.startsWith("zebscan-demo-address-")) {
-    return WALLET_SHIELDED_ADDRESS;
-  }
+/**
+ * Only ever show THIS checkout's own receiving address (issued per checkout and watched by Zeb Scan).
+ * Never substitute a fixed wallet address: nothing would attribute or confirm a payment sent there,
+ * and a mainnet fallback on a testnet checkout (or in the non-payable demo) would lose real funds.
+ */
+function getEffectiveAddress(addr: string, _pool: "shielded" | "transparent"): string {
   return addr;
 }
 

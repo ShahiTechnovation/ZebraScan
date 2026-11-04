@@ -196,11 +196,11 @@ async function track(id: string) {
 
 async function watch(auto: boolean) {
   const since = new Date();
-  log(`watching for newly confirmed testnet Scan & Pay checkouts (since ${since.toISOString()}), auto-authorize=${auto}`);
+  log(`watching for confirmed testnet Scan & Pay checkouts CREATED after start (since ${since.toISOString()}), auto-authorize=${auto}`);
   const seen = new Set<string>();
   for (;;) {
     const r = await ctx.db.query<{ id: string }>(
-      `SELECT id FROM payment_intents WHERE environment='testnet' AND mode='scan_pay' AND status='deposit_accepted' AND updated_at >= $1 ORDER BY updated_at`,
+      `SELECT id FROM payment_intents WHERE environment='testnet' AND mode='scan_pay' AND status='deposit_accepted' AND created_at >= $1 ORDER BY updated_at`,
       [since],
     );
     for (const { id } of r.rows) {
