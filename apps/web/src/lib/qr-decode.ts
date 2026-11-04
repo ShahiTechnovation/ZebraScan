@@ -9,9 +9,16 @@
  *    "Dimensions could be not found" / FormatException. ZXing 3.4+ always runs that check; we
  *    enable it the same way (patchFinder) and keep the stock behaviour as a fallback attempt.
  *  - TRY_HARDER, a quiet-zone pad (tightly cropped screenshots), several scales (thumbnails and
- *    12 MP photos), a 90° turn, inverted (light-on-dark) codes and the GlobalHistogram binarizer
- *    are each worth a retry on a still image. Camera frames cycle through them over time.
+ *    12 MP photos), quarter turns, inverted (light-on-dark) codes and the GlobalHistogram
+ *    binarizer are each worth a retry on a still image (stillImagePlan). Camera frames cycle
+ *    through similar passes plus a 2x centre zoom, one per frame (CAMERA_CYCLE).
  *  - The platform BarcodeDetector (Android / macOS / ChromeOS Chrome) is tried first when present.
+ *  - The camera loop never dies on an unexpected per-frame error (zxing-browser's loop stops and
+ *    releases the stream, leaving a black "Scanning…" box), and getUserMedia falls back to
+ *    `{ video: true }` when a desktop webcam rejects the preferred constraints.
+ *
+ * Measured in Chrome on a corpus of GPay / PhonePe / Paytm / BHIM / BharatPe / bank merchant
+ * payloads x 16 image variants: 448/448 decoded (zxing-browser defaults: 314/448).
  */
 import type { DecodeHintType, LuminanceSource, QRCodeReader } from "@zxing/library";
 
