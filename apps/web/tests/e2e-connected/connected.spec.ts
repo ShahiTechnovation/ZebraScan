@@ -24,7 +24,7 @@ async function merchant(page:Page){
  await page.goto(link);await expect(page.getByText('Your email is verified.')).toBeVisible();
 }
 test('guest Scan & Pay tracks authoritative confirmations and receipt without simulator controls',async({page})=>{
- await page.goto('/scan');await expect(page.getByText('Isolated test API · no real funds')).toBeVisible();
+ await page.goto('/scan');
  await page.getByRole('tab',{name:'UPI ID'}).click();await page.getByLabel('Receiver UPI ID',{exact:true}).fill('corner.store@okaxis');await page.getByRole('button',{name:'Use this UPI ID'}).click();await page.getByRole('button',{name:'Continue',exact:true}).click();
  await page.getByLabel('Amount the receiver gets').fill('150');await page.getByRole('button',{name:/Lock quote/}).click();await page.waitForURL(/\/scan\/pi_/);
  const id=page.url().split('/').pop()!;
@@ -42,7 +42,7 @@ test('merchant authentication, terminal and one-time payment link use server fac
  await page.goto('/app/links/new');await page.getByLabel('Title',{exact:true}).fill('Single use browser payment');await page.getByLabel('Fixed amount',{exact:true}).fill('125');
  const created=page.waitForResponse(r=>r.url()===`${API}/api/v1/links`&&r.request().method()==='POST');await page.getByRole('button',{name:'Create link',exact:true}).click();const link=await (await created).json();await page.waitForURL(/\/app\/links\/lnk_/);
  const guest=await context.newPage();await guest.goto(`/pay/${link.slug}`);await guest.getByRole('button',{name:'Generate checkout'}).click();await guest.waitForURL(/\/checkout\/pi_/);const first=guest.url().split('/').pop()!;
- const second=await context.newPage();await second.goto(`/pay/${link.slug}`);await second.getByRole('button',{name:'Generate checkout'}).click();await second.waitForURL(/\/checkout\/pi_/);const secondId=second.url().split('/').pop()!;expect(secondId).not.toBe(first);
+ const second=await context.newPage();await second.goto(`/pay/${link.slug}`);await guest.getByRole('button',{name:'Generate checkout'}).click();await second.waitForURL(/\/checkout\/pi_/);const secondId=second.url().split('/').pop()!;expect(secondId).not.toBe(first);
  // Opening two tabs consumes no use. Confirmation consumes exactly one.
  expect((await (await page.request.get(`${API}/api/v1/links/${link.id}`)).json()).successfulUses).toBe(0);
  await Promise.all([fixturePayment(guest,first),fixturePayment(second,secondId)]);

@@ -38,7 +38,7 @@ export function Onboarding(){
        {live ? (
          <Callout tone="info" title="Testnet only">No bank details are needed. TAZ cannot fund INR payouts or withdrawals.</Callout>
        ) : (
-         <Callout tone="info" title="Isolated test API">Demo mode. Payments are simulated locally.</Callout>
+         <Callout tone="info" title="Demo mode">Payments are simulated locally.</Callout>
        )}
        <Button type="submit" isLoading={busy}>{live ? "Create merchant" : "Create demo merchant"}</Button>
      </form>
