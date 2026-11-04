@@ -2,10 +2,20 @@ node_modules
 **/node_modules
 .next
 **/.next
-.next-connected
-**/.next-connected
+.next-*
+**/.next-*
 var
 test-results
 coverage
 services/zcash-gateway/target
-
+# never upload local secrets or tooling
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem.key
+*.key
+.claude
+docs/evidence/audit-2026-11-04/*.log
