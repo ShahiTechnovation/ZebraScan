@@ -1,0 +1,49 @@
+# Render Blueprint — Zeb Scan watch-only Zcash wallet servers (zkool_graphql 6.36.0).
+# Deploy: Render Dashboard → New → Blueprint → this repo. Two SEPARATE services, never cross-wired:
+#   zebscan-zcash-test : public Zcash TESTNET (TAZ, no value), lightwalletd testnet.zec.rocks
+#   zebscan-zcash-main : Zcash MAINNET, READ-ONLY (watch-only UFVK only; no seed, no payout)
+# Both REQUIRE ES256 JWT auth. Only the public halves are here; the private keys live in the
+# Zeb Scan worker's secret store (var/secrets/, git-ignored). Free instances have an ephemeral
+# disk: after a restart run scripts/bootstrap-testnet-watch-only.ts again (it is idempotent and
+# re-imports the UFVK with its birth height, so no deposit is lost — they are rescanned).
+services:
+  - type: web
+    name: zebscan-zcash-test
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./infra/zkool/Dockerfile
+    dockerContext: ./infra/zkool
+    autoDeploy: false
+    envVars:
+      - key: ZKOOL_NETWORK
+        value: testnet
+      - key: ZKOOL_LWD_URL
+        value: https://testnet.zec.rocks:443
+      - key: ZKOOL_JWT_PUBLIC_KEY
+        value: |
+          -----BEGIN PUBLIC KEY-----
+          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXku3V84/s3Ym41SDTcycmUAth/2h
+          uYKcOgpbn6JNZcoYAM4LUj8YszgrNYO8g3oxzsjNhjXISefR6d8thJug+g==
+          -----END PUBLIC KEY-----
+  - type: web
+    name: zebscan-zcash-main
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./infra/zkool/Dockerfile
+    dockerContext: ./infra/zkool
+    autoDeploy: false
+    envVars:
+      - key: ZKOOL_NETWORK
+        value: mainnet
+      - key: ZKOOL_LWD_URL
+        value: https://zec.rocks:443
+      - key: ZKOOL_DB_PASSWORD
+        generateValue: true
+      - key: ZKOOL_JWT_PUBLIC_KEY
+        value: |
+          -----BEGIN PUBLIC KEY-----
+          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3cdNWbHIIKHk4DKhDVua0NHV4yYl
+          UucejPZ49gUNSb++7lE9HyMNBZ5Yp4+270JwvZFRKMc0NyS8+qy+nr3NyQ==
+          -----END PUBLIC KEY-----
