@@ -38,11 +38,10 @@ export function ModeBanner() {
         Payments temporarily unavailable. Keep your checkout reference and try again.
       </div>
     );
-  if (isDemo)
-    return <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">Isolated test API · no real funds</div>;
+  if (isDemo || live?.config?.environment === "demo") return null;
   return (
     <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">
-      {live?.config?.environment === "demo" ? "Isolated test API · no real funds" : live?.config?.environment === "testnet" ? (live.config.liveDemoPayouts ? "Zcash testnet · TAZ has no value · live INR payout demo paid from Zeb Scan's own P2P.lol USDC" : "Zcash testnet · TAZ only · INR payouts disabled") : "Mainnet read-only · payments disabled"}
+      {live?.config?.environment === "testnet" ? (live.config.liveDemoPayouts ? "Zcash testnet · TAZ has no value · live INR payout demo paid from Zeb Scan's own P2P.lol USDC" : "Zcash testnet · TAZ only · INR payouts disabled") : "Mainnet read-only · payments disabled"}
     </div>
   );
 }
@@ -61,8 +60,9 @@ export function NotConnectedNotice({ className }: { className?: string }) {
 /** Network indicator badge. */
 export function ModeBadge({ className }: { className?: string }) {
   const { isDemo, canTransact, live } = useZeb();
-  if (isDemo) return <DemoBadge className={className} label="Isolated test API" />;
+  if (isDemo) return null;
   const envLabel = live?.config?.label;
-  const label = envLabel === "TEST" ? "Testnet" : envLabel === "DEMO" ? "Isolated test API" : canTransact ? envLabel ?? "Connected" : "Unavailable";
+  if (envLabel === "DEMO") return null;
+  const label = envLabel === "TEST" ? "Testnet" : canTransact ? envLabel ?? "Connected" : "Unavailable";
   return <DemoBadge className={className} label={label} />;
 }

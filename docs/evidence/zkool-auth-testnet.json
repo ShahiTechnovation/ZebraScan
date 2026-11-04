@@ -1,17 +1,17 @@
 {
-  "capturedAt": "2026-11-04T15:50:42.636Z",
+  "capturedAt": "2026-11-04T18:30:40.398Z",
   "network": "testnet",
   "url": "https://zebscan-zcash-test…",
-  "tipHeight": 4582540,
+  "tipHeight": 4582923,
   "results": {
     "admin token → currentHeight (real chain tip)": {
       "status": 200,
-      "body": "{\"data\":{\"currentHeight\":4582540}}",
+      "body": "{\"data\":{\"currentHeight\":4582923}}",
       "pass": true
     },
     "admin token → accounts": {
       "status": 200,
-      "body": "{\"data\":{\"accounts\":[]}}",
+      "body": "{\"data\":{\"accounts\":[{\"id\":1,\"name\":\"zebscan-receiver-watch\",\"birth\":4582531,\"height\":4582923,\"incomingOnly\":false},{\"id\":2,\"name\":\"demo-customer-wallet-A\",\"birth\":4582532,\"height\":4582666,\"incomingOnly\":false},{\"id\":3,\"name\":\"zebscan-receiver-user\",\"birth\":4582654,\"height\":4582922,\"incomingOnly\":fa",
       "pass": true
     },
     "no token → accounts refused": {

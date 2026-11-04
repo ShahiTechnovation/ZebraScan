@@ -437,7 +437,8 @@ function waitForFrames(video: HTMLVideoElement, timeoutMs: number): Promise<void
       video.removeEventListener("loadeddata", check);
       video.removeEventListener("playing", check);
       if (ok) resolve();
-      else reject(Object.assign(new Error("The camera started but sent no video. Try again, or upload a screenshot of the QR."), { name: "CameraNoFrames" }));
+      // No trailing period: QRScanner's "Camera error" callout renders `${message}. Try upload, paste or manual entry.`
+      else reject(Object.assign(new Error("The camera started but sent no video"), { name: "CameraNoFrames" }));
     };
     const check = () => ready() && done(true);
     const poll = setInterval(check, 100);
