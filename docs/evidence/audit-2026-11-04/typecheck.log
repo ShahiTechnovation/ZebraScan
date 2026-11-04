@@ -39,3 +39,7 @@ Scope: 10 of 11 workspace projects
 > @zeb/api@0.2.0 typecheck P:\Zebra Scan\zeb-scan\apps\api
 > tsc -p tsconfig.json
 
+
+> @zeb/worker@0.2.0 typecheck P:\Zebra Scan\zeb-scan\apps\worker
+> tsc -p tsconfig.json
+

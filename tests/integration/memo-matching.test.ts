@@ -39,3 +39,24 @@ it("two same-amount invoices on ONE shared address are told apart only by memo",
   expect(exc.rows[0].severity).toBe("urgent");
   expect(JSON.stringify(exc.rows[0].details)).not.toContain("ZEB-");
 });
+
+it("unique-address invoice: the SAME accepted note seen again with more confirmations is bookkeeping, not an extra deposit (found live on testnet)", async () => {
+  const c = new Client(h.app);
+  const a = await intent(c, "20000");
+  const addr = (await h.db.query(`SELECT address FROM zcash_addresses WHERE intent_id=$1`, [a.id])).rows[0].address as string;
+  const txid = createHash("sha256").update("live-regression").digest("hex");
+  const ev = (conf: number, height: number | null) => ({ eventId: `t:${txid}:${height}:${conf}`, kind: height ? ("note_confirmed" as const) : ("note_seen" as const), network: "demo", pool: "demo" as const, txid, outputRef: `${txid}:p3:d1:${a.zat}:0`, valueZatoshis: a.zat, address: addr, blockHeight: height, blockHash: null, confirmations: conf, scanVersion: "test", memo: null });
+  await ingestScannerEvent(h.ctx, ev(0, null)); // mempool
+  await ingestScannerEvent(h.ctx, ev(3, 10)); // mined, accepted
+  for (const conf of [4, 5, 6]) await ingestScannerEvent(h.ctx, ev(conf, 10)); // later polls
+  await ingestScannerEvent(h.ctx, ev(6, 10)); // exact replay (restart)
+  const s = await c.req("GET", `/api/v1/checkout/${a.id}`, { bearer: a.token });
+  expect(s.json.status).toBe("deposit_accepted");
+  expect(s.json.receivedZatoshis).toBe(a.zat);
+  expect(s.json.timeline.filter((t: { label: string }) => /Additional ZEC/.test(t.label))).toHaveLength(0);
+  const obs = await h.db.query(`SELECT confirmations FROM deposit_observations WHERE txid=$1`, [txid]);
+  expect(obs.rows).toHaveLength(1);
+  expect(Number(obs.rows[0].confirmations)).toBe(6);
+  const credits = await h.db.query(`SELECT count(*)::int AS n FROM payment_receipts WHERE intent_id=$1`, [a.id]).catch(() => ({ rows: [{ n: 1 }] }));
+  expect(credits.rows[0].n).toBe(1);
+});

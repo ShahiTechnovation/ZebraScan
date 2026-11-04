@@ -85,6 +85,9 @@ export async function ingestScannerEvent(ctx: CoreContext, ev: ScannerEvent, sou
       return { accepted: true, duplicate: false };
     }
     if (!OPEN.includes(intent.status)) {
+      // The SAME note we already accepted, seen again with more confirmations: bookkeeping only
+      // (confirmations were updated above). Not an additional deposit.
+      if (obs.accepted) return { accepted: true, duplicate: true };
       // Additional output on an already-decided intent (e.g. second payment): refund review, never silently absorbed.
       if (!obs.accepted) await raiseException(t, ctx.env, { kind: "extra_deposit", severity: "warning", intentId: intent.id, details: { txid: ev.txid, status: intent.status } });
       await emitResource(t, ctx.env, `checkout:${intent.id}`, "deposit.extra", { label: "Additional ZEC detected", detail: "Routed to refund review." });
