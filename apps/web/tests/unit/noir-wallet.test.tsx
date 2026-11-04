@@ -372,9 +372,11 @@ describe("Pay with Noir in the checkout (real component)", () => {
     const calls = installNoir({ zcash_requestAccounts: () => MAINNET, zcash_sendTransaction: () => "c".repeat(64) });
     // Demo checkout: its non-payable placeholder address is displayed as a hard-coded mainnet u1 address.
     await renderCheckout(checkout({ receivingAddress: "zebscan-demo-address-chk_noir_0001-not-payable", qrPayload: "zebscan-demo://checkout/chk_noir_0001" }));
-    fireEvent.click(await screen.findByRole("button", { name: /Pay with Noir Wallet/ }));
-    expect((await screen.findByRole("alert")).textContent).toMatch(/not a Zcash testnet address/);
-    expect(calls).toEqual([]); // refused before any wallet request
+    // The demo shows the operator's real mainnet shielded address for deliberate QR payments, but never offers
+    // a one-click wallet payment from a checkout that cannot confirm it or pay INR.
+    await screen.findByText(/Real ZEC — Zcash mainnet/);
+    expect(screen.queryByRole("button", { name: /Pay with Noir Wallet/ })).toBeNull();
+    expect(calls).toEqual([]); // no wallet request at all
   });
 
   it("keeps the wallet's error on screen instead of only in a ~3 s toast", async () => {

@@ -14,6 +14,13 @@ export const demoConfig = {
     lifetimeMs: 900_000, // 15 min: shielded sends + 1 block can take a few minutes
     provider: "Demo constants",
   },
+  /**
+   * Operator's Zcash MAINNET shielded receiving address, shown on demo checkouts instead of the
+   * non-payable placeholder (operator request 2026-11-05). Payments to it are REAL ZEC. This public
+   * demo build cannot confirm them or send INR; the operator's watch-only viewing key sees them.
+   */
+  receiveAddress:
+    "u18q08uwzmzc062zn03nf7dsw2q3jkrs5nslgr28pwq29xghu9y8uzvkm77z5fhzcsz882yxj20shh92e303nqw0wjjkw0dnyn00q5j5kgagtnr4txv8q805jl2q07kgrgzytakp2dk6j4spnwfv4fju9ghhc6kwx52gk7xgl0lsvhdxgz",
   limits: {
     minInrMinor: 100, // ₹1
     maxInrMinor: 1_000_000, // ₹10,000

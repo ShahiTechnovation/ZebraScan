@@ -17,6 +17,7 @@ import { Panel, PanelBody, PanelHeader } from "@/components/ui/Panel";
 import { CREDIT_META, MetaBadge } from "@/components/ui/StatusBadge";
 import { EventLog } from "@/components/ui/Timeline";
 import { CheckoutPanel } from "@/components/payments/CheckoutPanel";
+import { demoConfig } from "@/config/demo";
 import { DepositProgress } from "@/components/payments/Progress";
 import { PrivacyBadge } from "@/components/payments/Quote";
 import { NotFoundPanel } from "@/components/screens/NotFoundPanel";
@@ -114,7 +115,7 @@ export function TransactionDetail({ id }: { id: string }) {
                 <p className="text-label text-foreground-secondary">Checkout id</p>
                 <CopyableValue value={c.id} label="Checkout id" />
                 <p className="text-label text-foreground-secondary">Receiving address</p>
-                <CopyableValue value={c.receivingAddress} label="Address" />
+                <CopyableValue value={c.receivingAddress.startsWith("zebscan-demo-address-") ? demoConfig.receiveAddress : c.receivingAddress} label="Address" />
                 {c.deposit && (
                   <>
                     <p className="text-label text-foreground-secondary">Deposit output ref</p>

@@ -17,6 +17,7 @@ import { payWithNoir } from "@/services/live/noir";
 import { QRRenderer } from "./QR";
 import { PrivacyBadge, RateExpiry } from "./Quote";
 import { DepositProgress } from "./Progress";
+import { demoConfig } from "@/config/demo";
 import { CheckPaymentButton } from "./CheckPaymentButton";
 
 export const WALLET_SHIELDED_ADDRESS =
@@ -25,12 +26,20 @@ export const WALLET_TRANSPARENT_ADDRESS =
   "t1cst5qjbk1U9RNYsBmrkXyZTGGKKSDrVtc";
 
 /**
- * Only ever show THIS checkout's own receiving address (issued per checkout and watched by Zeb Scan).
- * Never substitute a fixed wallet address: nothing would attribute or confirm a payment sent there,
- * and a mainnet fallback on a testnet checkout (or in the non-payable demo) would lose real funds.
+ * Connected app: always THIS checkout's own issued, watched receiving address (never substituted).
+ * Public demo build: its checkouts only have a non-payable placeholder, so show the operator's real
+ * mainnet SHIELDED address instead (demoConfig.receiveAddress), with a memo code for matching.
  */
-function getEffectiveAddress(addr: string, _pool: "shielded" | "transparent"): string {
-  return addr;
+function isDemoPlaceholder(addr: string): boolean {
+  return !addr || addr.startsWith("zebscan-demo-address-");
+}
+function getEffectiveAddress(addr: string): string {
+  return isDemoPlaceholder(addr) ? demoConfig.receiveAddress : addr;
+}
+function b64url(s: string): string {
+  let bin = "";
+  for (const b of new TextEncoder().encode(s)) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 export function CheckoutPanel({
@@ -49,9 +58,6 @@ export function CheckoutPanel({
   const now = useNow(1000);
   const { run, busy } = useAction();
 
-  const [activePool, setActivePool] = useState<"shielded" | "transparent">(
-    c.privacy === "transparent" ? "transparent" : "shielded"
-  );
 
   const credit = state.credits.find((cr) => cr.checkoutId === c.id && !cr.parentCreditId) ?? null;
   const receipt = state.receipts.find((r) => r.checkoutId === c.id);
@@ -61,8 +67,16 @@ export function CheckoutPanel({
   const [refundAddr, setRefundAddr] = useState("");
   const [noirError, setNoirError] = useState<string | null>(null);
 
-  const activeAddress = getEffectiveAddress(c.receivingAddress, activePool);
-  const activeQrPayload = `zcash:${activeAddress}?amount=${exactZec}`;
+  const demoReal = isDemoPlaceholder(c.receivingAddress);
+  const activeAddress = getEffectiveAddress(c.receivingAddress);
+  // Demo → operator's mainnet shielded wallet: memo "ZEB <checkout id>" lets the operator match the payment.
+  const demoMemo = demoReal ? `ZEB ${c.id}` : null;
+  const activeQrPayload = demoReal
+    ? `zcash:${activeAddress}?amount=${exactZec}&memo=${b64url(demoMemo!)}`
+    : c.qrPayload?.startsWith("zcash:")
+      ? c.qrPayload
+      : `zcash:${activeAddress}?amount=${exactZec}`;
+  const shownMemo = c.memo ?? demoMemo;
 
   const refresh = async () => {
     if (!services) return;
@@ -89,7 +103,7 @@ export function CheckoutPanel({
     const net = c.network === "mainnet" ? "mainnet" : "testnet";
     setNoirError(null);
     void run(
-      () => payWithNoir({ to: activeAddress, zat: c.quote.zecZat, memo: c.memo ?? null, network: net }),
+      () => payWithNoir({ to: activeAddress, zat: c.quote.zecZat, memo: shownMemo, network: net }),
       "Payment initiated in Noir Wallet — waiting for network confirmation"
     ).then((r) => {
       if (!r.ok) setNoirError(r.error); // toasts vanish after ~3 s; wallet errors carry multi-step fixes
@@ -135,36 +149,11 @@ export function CheckoutPanel({
 
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-label font-medium text-foreground-secondary">Unique receiving address</p>
-              <div className="inline-flex rounded-lg border border-border bg-surface-2 p-0.5 text-[12px]">
-                <button
-                  type="button"
-                  onClick={() => setActivePool("shielded")}
-                  className={clsx(
-                    "flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all",
-                    activePool === "shielded"
-                      ? "bg-accent/15 text-accent font-semibold shadow-sm"
-                      : "text-foreground-secondary hover:text-foreground"
-                  )}
-                  title="Shielded pool receiving (u1...)"
-                >
-                  <ShieldCheck aria-hidden className="h-3.5 w-3.5" />
-                  Shielded
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePool("transparent")}
-                  className={clsx(
-                    "flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all",
-                    activePool === "transparent"
-                      ? "bg-surface-1 text-foreground font-semibold shadow-sm"
-                      : "text-foreground-secondary hover:text-foreground"
-                  )}
-                  title="Transparent receiving (t1...)"
-                >
-                  Transparent
-                </button>
-              </div>
+              <p className="text-label font-medium text-foreground-secondary">{demoReal ? "Shielded receiving address" : "Unique receiving address"}</p>
+              <span className={clsx("inline-flex items-center gap-1.5 rounded-md bg-accent/15 px-2.5 py-1 text-[12px] font-semibold text-accent")} title="Shielded pool receiving">
+                <ShieldCheck aria-hidden className="h-3.5 w-3.5" />
+                Shielded
+              </span>
             </div>
 
             <CopyableValue value={activeAddress} label="Address" />
@@ -172,16 +161,23 @@ export function CheckoutPanel({
             <div className="flex flex-wrap gap-2">
               <CopyButton value={exactZec} label="Copy exact amount" toastMessage="Exact ZEC amount copied" />
               <CopyButton value={activeQrPayload} label="Copy payment URI" toastMessage="Payment URI copied" />
-              {c.memo && <CopyButton value={c.memo} label="Copy memo" toastMessage="Memo copied" />}
+              {shownMemo && <CopyButton value={shownMemo} label="Copy memo" toastMessage="Memo copied" />}
             </div>
 
-            {c.memo && (
+            {shownMemo && (
               <p className="rounded-input border border-gold/40 bg-gold/[0.06] px-3 py-2 text-label text-foreground">
-                Memo (required): <span className="font-mono font-semibold">{c.memo}</span> — it identifies this invoice.
+                Memo (required): <span className="font-mono font-semibold">{shownMemo}</span> — it identifies this invoice.
+              </p>
+            )}
+            {demoReal && (
+              <p className="rounded-input border border-warning/40 bg-warning/[0.06] px-3 py-2 text-label text-foreground">
+                <strong>Real ZEC — Zcash mainnet.</strong> This is Zeb Scan&apos;s shielded wallet. This public demo does not confirm payments or send INR automatically;
+                include the memo so the operator can match your payment.
               </p>
             )}
 
-            {awaiting && (
+            {/* No one-click real payment from the public demo (it cannot confirm or pay INR): scan the QR deliberately instead. */}
+            {awaiting && !demoReal && (
               <Button
                 className="w-full"
                 isLoading={busy}
@@ -196,7 +192,7 @@ export function CheckoutPanel({
               </p>
             )}
             <p className="text-micro text-foreground-muted">
-              Network: {c.envLabel === "TEST" ? "Zcash testnet" : "Zcash"} · {activePool === "shielded" ? "Protected by Shielded Pool" : "Transparent Address"}
+              Network: {demoReal ? "Zcash mainnet" : c.envLabel === "TEST" ? "Zcash testnet" : "Zcash"} · Protected by Shielded Pool
             </p>
           </div>
 
@@ -207,7 +203,7 @@ export function CheckoutPanel({
               </p>
               <ol className="mt-1.5 list-decimal space-y-0.5 pl-5">
                 <li>Click <strong>Pay with Noir Wallet</strong> to review the exact transfer.</li>
-                <li>Or scan the QR with a compatible {activePool === "shielded" ? "shielded" : "Zcash"} wallet.</li>
+                <li>Or scan the QR with a compatible shielded wallet.</li>
                 <li>Verify exact amount and memo. Keep this page open until confirmed.</li>
               </ol>
             </div>
