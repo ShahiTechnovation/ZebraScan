@@ -53,6 +53,7 @@ export interface Config {
   zcashGateway: { url: string; accountId: string; tls?: { certPath: string; keyPath: string; caPath: string } } | null;
   /** HACKATHON_TESTNET watch-only watcher (zkool_graphql UFVK account, memo-matched invoices). */
   zkool: { url: string; accountId: number; network: "testnet" | "mainnet"; jwt?: string; jwtFile?: string; pools: number; addressMode: "rotate" | "memo"; birthHeight?: number } | null;
+  zkoolLegacy?: Array<{accountId:number;birthHeight:number;jwtFile:string}>;
   p2p: { chainId: string; rpcUrl: string; diamondAddress: string; subgraphUrl: string; usdcAddress: string; diamondCodeHash?: string } | null;
   treasuryAddress: string | null;
   signer: { mode: "none" } | { mode: "testnet-file"; keyFile: string } | { mode: "remote"; url: string; authHeader?: string };
@@ -72,6 +73,12 @@ export interface Config {
     approvalTtlSec: number;
     runMaxDurationSec: number;
     runMaxSteps: number;
+    /**
+     * TESTNET_LIVE_PAYOUT_DEMO (HACKATHON_TESTNET only, strict opt-in, default false). A confirmed
+     * testnet Scan & Pay payment only AUTHORIZES an operator-approved INR payout that is paid from
+     * Zeb Scan's OWN pre-funded P2P.lol USDC. TAZ has no value. See liveDemoPayoutsEnabled().
+     */
+    testnetLivePayoutDemo: boolean;
   };
   cookieSecure: boolean;
   policy: Policy;
@@ -97,6 +104,47 @@ function req(env: Env, key: string): string {
   const v = env[key];
   if (!v) throw new DomainError("SYSTEM_CONFIG", `${key} is required`);
   return v;
+}
+/** Strict boolean: unset/empty → false; only the exact strings "true"/"false" are accepted. */
+function strictBool(env: Env, key: string): boolean {
+  const raw = env[key];
+  if (raw === undefined || raw === "") return false;
+  if (raw !== "true" && raw !== "false") throw new DomainError("SYSTEM_CONFIG", `${key} must be exactly "true" or "false"`);
+  return raw === "true";
+}
+
+/** Hard ceilings for TESTNET_LIVE_PAYOUT_DEMO: Rs 200 per Scan & Pay payout, 3 USDC per rolling day. */
+export const TESTNET_LIVE_DEMO_LIMITS = { maxPayoutInrPaise: 20_000n, dailyMaxUsdcMicros: 3_000_000n } as const;
+
+/** Boot-time validation of the strict opt-in (fatal, never a silent fallback). */
+function assertTestnetLiveDemo(cfg: Config): void {
+  if (!cfg.pilot.testnetLivePayoutDemo) return;
+  const L = TESTNET_LIVE_DEMO_LIMITS;
+  if (cfg.environment !== "testnet") throw new DomainError("SYSTEM_CONFIG", "TESTNET_LIVE_PAYOUT_DEMO=true is only permitted in HACKATHON_TESTNET");
+  if (!cfg.pilot.livePayoutsEnabled) throw new DomainError("SYSTEM_CONFIG", "TESTNET_LIVE_PAYOUT_DEMO=true requires LIVE_PAYOUTS_ENABLED=true");
+  if (cfg.pilot.maxPayoutInrPaise <= 0n || cfg.pilot.maxPayoutInrPaise > L.maxPayoutInrPaise) throw new DomainError("SYSTEM_CONFIG", `TESTNET_LIVE_PAYOUT_DEMO=true requires 0 < PILOT_MAX_PAYOUT_INR_PAISE <= ${L.maxPayoutInrPaise} (Rs 200)`);
+  if (cfg.pilot.dailyMaxUsdcMicros <= 0n || cfg.pilot.dailyMaxUsdcMicros > L.dailyMaxUsdcMicros) throw new DomainError("SYSTEM_CONFIG", `TESTNET_LIVE_PAYOUT_DEMO=true requires 0 < PILOT_DAILY_MAX_USDC_MICROS <= ${L.dailyMaxUsdcMicros} (3 USDC)`);
+  if (cfg.payoutRail !== "P2P_TINYFISH_WEB") throw new DomainError("SYSTEM_CONFIG", "TESTNET_LIVE_PAYOUT_DEMO=true requires PAYOUT_RAIL=P2P_TINYFISH_WEB");
+}
+
+/**
+ * Runtime gate for the testnet live payout demo, re-checked on every use (not only at boot):
+ * HACKATHON_TESTNET + TESTNET_LIVE_PAYOUT_DEMO=true + LIVE_PAYOUTS_ENABLED=true + both demo caps
+ * within TESTNET_LIVE_DEMO_LIMITS. False ⇒ testnet behaves exactly as before (no payout commands).
+ */
+export function liveDemoPayoutsEnabled(cfg: Config): boolean {
+  const p = cfg.pilot;
+  const L = TESTNET_LIVE_DEMO_LIMITS;
+  return (
+    cfg.environment === "testnet" &&
+    p.testnetLivePayoutDemo === true &&
+    p.livePayoutsEnabled === true &&
+    cfg.payoutRail === "P2P_TINYFISH_WEB" &&
+    p.maxPayoutInrPaise > 0n &&
+    p.maxPayoutInrPaise <= L.maxPayoutInrPaise &&
+    p.dailyMaxUsdcMicros > 0n &&
+    p.dailyMaxUsdcMicros <= L.dailyMaxUsdcMicros
+  );
 }
 
 export function loadConfig(env: Env = process.env): Config {
@@ -143,6 +191,18 @@ export function loadConfig(env: Env = process.env): Config {
     };
   }
 
+  let zkoolLegacy: NonNullable<Config['zkoolLegacy']> = [];
+  if (env.ZKOOL_LEGACY_WATCHERS_JSON) {
+    try {
+      const rows:unknown=JSON.parse(env.ZKOOL_LEGACY_WATCHERS_JSON);
+      if (!zkool || !Array.isArray(rows) || rows.length>10) throw new Error();
+      const ids=new Set([zkool.accountId]);
+      zkoolLegacy=rows.map((r:Record<string,unknown>)=>{
+        if (!r || !Number.isSafeInteger(r.accountId) || Number(r.accountId)<1 || ids.has(Number(r.accountId)) || !Number.isSafeInteger(r.birthHeight) || Number(r.birthHeight)<1 || typeof r.jwtFile!=='string' || !r.jwtFile) throw new Error();
+        ids.add(Number(r.accountId));return {accountId:Number(r.accountId),birthHeight:Number(r.birthHeight),jwtFile:r.jwtFile};
+      });
+    } catch {throw new DomainError('SYSTEM_CONFIG','ZKOOL_LEGACY_WATCHERS_JSON must list distinct account IDs, birthdays and viewer token files');}
+  }
   const p2p =
     env.P2P_DIAMOND_ADDRESS && environment !== "demo"
       ? {
@@ -212,7 +272,7 @@ export function loadConfig(env: Env = process.env): Config {
   };
   if (policy.minInrPaise <= 0n || policy.minInrPaise > policy.maxInrPaise) throw new DomainError("SYSTEM_CONFIG", "MIN_INR_PAISE must be > 0 and <= MAX_INR_PAISE");
 
-  return {
+  const cfg: Config = {
     environment,
     zcashNetwork: expectedNet,
     databaseUrl: req(env, "DATABASE_URL"),
@@ -225,6 +285,7 @@ export function loadConfig(env: Env = process.env): Config {
     kms: { provider: "local", keks: req(env, "ZEB_LOCAL_KEKS"), activeKek: req(env, "ZEB_ACTIVE_KEK") },
     zcashGateway,
     zkool,
+    zkoolLegacy,
     p2p,
     treasuryAddress: env.TREASURY_ADDRESS || null,
     signer,
@@ -249,8 +310,11 @@ export function loadConfig(env: Env = process.env): Config {
       approvalTtlSec: int(env, "OPERATOR_APPROVAL_TTL_SECONDS", 900, 60, 86_400),
       runMaxDurationSec: int(env, "TINYFISH_MAX_DURATION_SECONDS", 150, 30, 900),
       runMaxSteps: int(env, "TINYFISH_MAX_STEPS", 28, 5, 100),
+      testnetLivePayoutDemo: strictBool(env, "TESTNET_LIVE_PAYOUT_DEMO"),
     },
     cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE === "true" : environment !== "demo",
     policy,
   };
+  assertTestnetLiveDemo(cfg);
+  return cfg;
 }

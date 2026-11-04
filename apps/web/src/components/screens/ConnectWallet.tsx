@@ -7,7 +7,21 @@ import { useZeb } from "@/providers/ZebProvider";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { api, errorMessage, setCsrf } from "@/services/live/api";
-import { detectNoir, signInWithNoir } from "@/services/live/noir";
+import {
+  connectNoir,
+  detectNoir,
+  getNoirProvider,
+  noirErrorMessage,
+  noirOriginProblem,
+  onNoirInitialized,
+  signInWithNoir,
+  type NoirConnection,
+  type NoirNetwork,
+} from "@/services/live/noir";
+
+function shortAddress(a: string): string {
+  return a.length > 26 ? `${a.slice(0, 14)}…${a.slice(-8)}` : a;
+}
 
 export function ConnectWalletButton({ className, label = "Connect Noir Wallet" }: { className?: string; label?: string }) {
   const [open, setOpen] = useState(false);
@@ -31,13 +45,32 @@ export function ConnectWalletModal({ open, onClose, next = "/app" }: { open: boo
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
+  const [connected, setConnected] = useState<NoirConnection | null>(null);
+  const [originProblem, setOriginProblem] = useState<string | null>(null);
   const network = live?.config?.wallet.noirNetwork ?? "zcash-testnet";
+  const expected: NoirNetwork = network === "zcash-mainnet" ? "mainnet" : "testnet";
+  // Sign-in needs the Zeb Scan API. Without it (public demo build) the wallet can still connect.
+  const canSignIn = !!live && !live.error;
 
   useEffect(() => {
     if (!open) return;
+    let active = true;
     setView("choose");
     setError(null);
-    void detectNoir().then((ok) => setNoir(ok ? "installed" : "not_installed"));
+    setConnected(null);
+    setOriginProblem(noirOriginProblem());
+    // The extension defines window.noirwallet at document_start, so this is normally immediate.
+    setNoir(getNoirProvider() ? "installed" : "checking");
+    void detectNoir().then((ok) => {
+      if (active) setNoir(ok ? "installed" : "not_installed");
+    });
+    const stop = onNoirInitialized(() => {
+      if (active) setNoir("installed");
+    });
+    return () => {
+      active = false;
+      stop();
+    };
   }, [open]);
 
   const finish = async () => {
@@ -46,17 +79,12 @@ export function ConnectWalletModal({ open, onClose, next = "/app" }: { open: boo
     router.push(live?.merchant ? next : "/onboarding");
   };
 
-  const noirLogin = async () => {
+  // Not async on purpose: the wallet request must be posted inside this click, with nothing awaited first.
+  const noirConnect = () => {
     setBusy("noir");
     setError(null);
-    try {
-      await signInWithNoir("login");
-      await finish();
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(null);
-    }
+    const flow = canSignIn ? signInWithNoir("login", expected).then(finish) : connectNoir(expected).then(setConnected);
+    flow.catch((e: unknown) => setError(noirErrorMessage(e))).finally(() => setBusy(null));
   };
 
   return (
@@ -81,18 +109,21 @@ export function ConnectWalletModal({ open, onClose, next = "/app" }: { open: boo
               {noir === "checking"
                 ? "Detecting browser extension..."
                 : noir === "installed"
-                  ? "Extension detected. Sign a server challenge to authenticate. Hardware accounts may not support message signing."
-                  : "Noir Wallet is the premier shielded Zcash browser extension. Install it to authenticate."}
+                  ? canSignIn
+                    ? "Extension detected. Approve the connection, then sign a server challenge to authenticate. Hardware accounts may not support message signing."
+                    : "Extension detected. Approve the connection in Noir Wallet to see your account. Merchant sign-in needs the Zeb Scan API, which this build does not include."
+                  : originProblem ?? "Noir Wallet is the premier shielded Zcash browser extension. Install it to authenticate."}
             </p>
 
             <div className="mt-4">
-              {noir === "installed" ? (
-                <Button
-                  className="w-full"
-                  isLoading={busy === "noir"}
-                  onClick={noirLogin}
-                >
-                  <Wallet className="h-4 w-4" /> Connect &amp; Sign In
+              {connected ? (
+                <div role="status" className="rounded-input border border-success/40 bg-success/[0.06] px-3 py-2 text-[13px]">
+                  <p className="font-medium text-foreground">Noir Wallet connected{connected.network ? ` · Zcash ${connected.network}` : ""}</p>
+                  <p className="mt-0.5 font-mono text-micro text-foreground-secondary">{shortAddress(connected.shielded ?? connected.transparent ?? "")}</p>
+                </div>
+              ) : noir === "installed" ? (
+                <Button className="w-full" isLoading={busy === "noir"} onClick={noirConnect}>
+                  <Wallet className="h-4 w-4" /> {canSignIn ? "Connect & Sign In" : "Connect Noir Wallet"}
                 </Button>
               ) : (
                 <div className="space-y-2">
@@ -105,8 +136,15 @@ export function ConnectWalletModal({ open, onClose, next = "/app" }: { open: boo
                     <Download className="h-4 w-4" /> Install Noir Wallet <ExternalLink className="h-3 w-3" />
                   </a>
                   <p className="text-center text-micro text-foreground-muted">
-                    {network === "zcash-testnet" ? "For testnet: use the release asset ending in -testnet.zip" : "Available for Chrome, Brave, and Chromium browsers"}
+                    {network === "zcash-testnet"
+                      ? 'For testnet: load the release asset ending in -testnet.zip ("[Testnet] Noir Wallet"). The standard "Noir Wallet" build is mainnet.'
+                      : "Available for Chrome, Brave, and Chromium browsers"}
                   </p>
+                  {noir === "not_installed" && (
+                    <Button variant="ghost" size="sm" className="w-full" onClick={() => window.location.reload()}>
+                      Installed or enabled it just now? Reload this page
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

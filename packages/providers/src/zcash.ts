@@ -39,6 +39,7 @@ export interface ScannerStatus {
 }
 
 export interface DepositEvent {
+  walletId?: string;
   eventId: string;
   kind: "note_seen" | "note_confirmed" | "note_reorged";
   network: ZcashNetwork;

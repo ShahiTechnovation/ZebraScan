@@ -1,16 +1,14 @@
 # P2P.me browser capability (TinyFish, read-only)
 
-- Checked: 2026-11-04T16:41:04.852Z (environment mainnet-readonly)
+- Checked: 2026-11-04T17:25:59.869Z (environment mainnet-readonly)
 - Result: **BLOCKED**
-- TinyFish run: 6b0e63aa-6ba3-49c4-800e-6af4375e17a3
+- TinyFish run: 1b619cd8-bfd2-4aeb-9e16-7336d9acdf36
 - Final page origin: https://app.p2p.lol
-- Operational account fingerprint: 2c5763d485c1a575035a9dd9a960646a (keyed hash; the account id itself is not stored)
-- Start URL: https://app.p2p.lol/ · profile: default Browser Context Profile (use_profile: true)
+- Operational account fingerprint: 404a234c538bf9bb3eefc499bbb3c284 (keyed hash; the account id itself is not stored)
+- Start URL: https://app.p2p.lol/ · profile: explicit profile_id
 
 ## Blockers
-- profile is not authenticated (login page shown)
 - orders require a wallet signature/extension/OTP that a hosted browser cannot provide
-- provider blocker: Account appears anonymous (no account handle, wallet address, or profile identifier visible) — no known user identity confirmed.
 - spendable USDC balance not visible
 
 ## Unverified dependencies (delta spec §1 A–H) — a logged-in profile proves none of these

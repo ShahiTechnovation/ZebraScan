@@ -22,7 +22,7 @@ function useOnline() {
 
 /** Offline notice and service connectivity alerts. */
 export function ModeBanner() {
-  const { canTransact, live } = useZeb();
+  const { mode, canTransact, isDemo, live } = useZeb();
   const online = useOnline();
   if (!online)
     return (
@@ -31,14 +31,20 @@ export function ModeBanner() {
         You&apos;re currently offline. Reconnecting to update real-time payment status...
       </div>
     );
-  if (live?.error || !canTransact)
+  if (live?.error || (!canTransact && mode === "connected"))
     return (
       <div role="status" className="no-print theme-dark border-b border-warning/40 bg-surface-nav px-4 py-2 text-center text-[13px] text-foreground">
         <PlugZap aria-hidden className="mr-1.5 inline h-4 w-4 text-warning" />
         Payments temporarily unavailable. Keep your checkout reference and try again.
       </div>
     );
-  return <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">{live?.config?.environment === "demo" ? "Isolated test API · no real funds" : live?.config?.environment === "testnet" ? "Zcash testnet · TAZ only · INR payouts disabled" : "Mainnet read-only · payments disabled"}</div>;
+  if (isDemo)
+    return <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">Isolated test API · no real funds</div>;
+  return (
+    <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">
+      {live?.config?.environment === "demo" ? "Isolated test API · no real funds" : live?.config?.environment === "testnet" ? "Zcash testnet · TAZ only · INR payouts disabled" : "Mainnet read-only · payments disabled"}
+    </div>
+  );
 }
 
 export function NotConnectedNotice({ className }: { className?: string }) {
@@ -54,7 +60,8 @@ export function NotConnectedNotice({ className }: { className?: string }) {
 
 /** Network indicator badge. */
 export function ModeBadge({ className }: { className?: string }) {
-  const { canTransact, live } = useZeb();
+  const { isDemo, canTransact, live } = useZeb();
+  if (isDemo) return <DemoBadge className={className} label="Isolated test API" />;
   const envLabel = live?.config?.label;
   const label = envLabel === "TEST" ? "Testnet" : envLabel === "DEMO" ? "Isolated test API" : canTransact ? envLabel ?? "Connected" : "Unavailable";
   return <DemoBadge className={className} label={label} />;

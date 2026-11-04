@@ -333,6 +333,7 @@ export class ZkoolWatcher implements AddressAllocator {
         const address = shared ?? (dindex !== null ? addressByIndex.get(dindex) : undefined) ?? n.address ?? `unmapped:${ref}`;
         const confirmations = height ? Math.max(0, tip - height + 1) : 0;
         out.push({
+          walletId: `zkool:${this.network}:${id}`,
           eventId: `zkool:${this.network}:${ref}:${height ?? "mempool"}:${Math.min(confirmations, 100)}`,
           kind: height ? "note_confirmed" : "note_seen",
           network: this.network,

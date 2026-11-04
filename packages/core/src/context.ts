@@ -41,6 +41,7 @@ export interface CoreContext {
   allocator: AddressAllocator | null;
   gateway: ZcashGatewayClient | null;
   zkool: ZkoolWatcher | null;
+  zkoolLegacy?: ZkoolWatcher[];
   email: EmailProvider | null;
   log: Logger;
   now(): Date;
@@ -129,6 +130,7 @@ export function buildContext(cfg: Config, opts: { db?: Db; log?: Logger; now?: (
     allocator,
     gateway,
     zkool,
+    zkoolLegacy: cfg.zkool ? (cfg.zkoolLegacy ?? []).map(account=>new ZkoolWatcher({...cfg.zkool!,...account,jwt:undefined})) : [],
     email,
     log: opts.log ?? consoleLogger,
     now: opts.now ?? (() => new Date()),

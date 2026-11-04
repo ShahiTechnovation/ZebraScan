@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { ingestScannerEvent, expireIntents, quoteInputsHash, buildHandlers, claim, runJob, type ScannerEvent, type CoreContext, type QuoteRow } from "@zeb/core";
+import { ingestScannerEvent, expireIntents, quoteInputsHash, buildHandlers, claim, runJob, pollZkool, type ScannerEvent, type CoreContext, type QuoteRow } from "@zeb/core";
+import {deliverOutbox} from '../../packages/core/src/alerts';
+import {createServer} from 'node:http';
 import { environmentCapabilities } from "@zeb/domain";
 import { Client, key, makeHarness, type Harness } from "./harness";
 
@@ -83,6 +85,12 @@ it("testnet receipts create only ZEC books, no INR credit or payout, and survive
   expect((await h.db.query(`SELECT 1 FROM merchant_credits WHERE environment='testnet'`)).rowCount).toBe(0);
   expect((await h.db.query(`SELECT 1 FROM payout_commands WHERE environment='testnet'`)).rowCount).toBe(0);
   expect((await h.db.query(`SELECT p.currency FROM ledger_postings p JOIN ledger_journals j ON j.id=p.journal_id WHERE j.environment='testnet'`)).rows.map(r=>r.currency)).toEqual(["ZEC","ZEC"]);
+  await ingestScannerEvent(ctx,{...e,eventId:'testnet-reorg',kind:'note_reorged',blockHeight:null,confirmations:0});
+  expect((await h.db.query(`SELECT status FROM payment_intents WHERE id=$1`,[id])).rows[0].status).toBe('chain_reorg_review');
+  await ingestScannerEvent(ctx,{...e,eventId:'testnet-reappeared',confirmations:5});
+  expect((await h.db.query(`SELECT status,payout_status FROM payment_intents WHERE id=$1`,[id])).rows[0]).toEqual({status:'deposit_accepted',payout_status:'not_started'});
+  expect((await h.db.query(`SELECT 1 FROM receipts WHERE intent_id=$1`,[id])).rowCount).toBe(1);
+  expect((await h.db.query(`SELECT 1 FROM ledger_journals WHERE environment='testnet'`)).rowCount).toBe(1);
 });
 
 it("early credit unlock claim remains durably queued, then unlocks exactly once when due",async()=>{
@@ -104,4 +112,36 @@ it("early credit unlock claim remains durably queued, then unlocks exactly once 
   await runJob(future,buildHandlers(null),due,"unlock-regression");
   expect((await h.db.query(`SELECT status FROM merchant_credits WHERE id=$1`,[credit])).rows[0].status).toBe("credit_available");
   expect((await h.db.query(`SELECT 1 FROM ledger_journals WHERE event_id=$1`,[`credit_unlock:${credit}`])).rowCount).toBe(1);
+});
+
+it('reorg absence is scoped to the scanned wallet including unmatched outputs',async()=>{
+  const a={...event('unmapped-wallet-a','500','wallet-a'),network:'testnet',pool:'ironwood' as const,walletId:'zkool:testnet:1',scanVersion:'zkool_graphql'};
+  const b={...event('unmapped-wallet-b','700','wallet-b'),network:'testnet',pool:'ironwood' as const,walletId:'zkool:testnet:3',scanVersion:'zkool_graphql'};
+  await ingestScannerEvent(h.ctx,a);await ingestScannerEvent(h.ctx,b);
+  let notes:ScannerEvent[]=[{...a,eventId:'wallet-a-scan'}];
+  const z={network:'testnet',accountId:1,assertSchema:async()=>({}),assertWatchOnly:async()=>'read_only_token',status:async()=>({tipHeight:110,scannedHeight:110,tipTime:new Date().toISOString(),tipHash:'a'.repeat(64),consensusBranchId:'77190ad9',ironwoodSupported:true,state:'synced',version:'zkool_graphql',nu7Active:true}),snapshot:async()=>notes} as unknown as NonNullable<CoreContext['zkool']>;
+  expect((await pollZkool(h.ctx,z)).reorged).toBe(0);
+  notes=[];expect((await pollZkool(h.ctx,z)).reorged).toBe(1);
+  expect((await h.db.query(`SELECT canonical FROM deposit_observations WHERE txid=$1`,[b.txid])).rows[0].canonical).toBe(true);
+  notes=[{...a,eventId:'wallet-a-scan'}];await pollZkool(h.ctx,z);
+  expect((await h.db.query(`SELECT canonical FROM deposit_observations WHERE txid=$1`,[a.txid])).rows[0].canonical).toBe(true);
+});
+
+it('alerts survive failure, carry no private payload and acknowledge only after delivery',async()=>{
+  await h.db.query(`UPDATE outbox_events SET retry_at=now()+interval '1 hour'`);
+  const row=await h.db.query(`INSERT INTO outbox_events(environment,aggregate_type,aggregate_id,event_type,payload) VALUES ('demo','exception','exc_delivery','alert.urgent', $1) RETURNING id`,[JSON.stringify({memo:'PRIVATE_TEST_MEMO',vpa:'private@bank'})]);
+  const id=row.rows[0].id;let status=503;const bodies:string[]=[];const ids:string[]=[];
+  const server=createServer((req,res)=>{let body='';req.on('data',c=>body+=String(c));req.on('end',()=>{bodies.push(body);ids.push(String(req.headers['idempotency-key']));res.writeHead(status).end();});});
+  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try {
+    const port=(server.address() as {port:number}).port;
+    const url=`http://127.0.0.1:${port}/alerts`;
+    expect(await deliverOutbox(h.ctx,url)).toBe(0);
+    expect((await h.db.query(`SELECT dispatched_at FROM outbox_events WHERE id=$1`,[id])).rows[0].dispatched_at).toBeNull();
+    await h.db.query(`UPDATE outbox_events SET retry_at=now() WHERE id=$1`,[id]);status=200;
+    expect(await deliverOutbox(h.ctx,url)).toBe(1);
+    expect(ids).toEqual([`zeb:demo:${id}`,`zeb:demo:${id}`]);
+    expect(bodies.join('')).not.toMatch(/PRIVATE_TEST_MEMO|private@bank/);
+    expect((await h.db.query(`SELECT dispatched_at IS NOT NULL AS sent FROM outbox_events WHERE id=$1`,[id])).rows[0].sent).toBe(true);
+  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });

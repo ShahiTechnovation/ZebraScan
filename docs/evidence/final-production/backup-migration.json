@@ -1,0 +1,31 @@
+{
+  "at": "2026-11-04T17:24:59.322Z",
+  "backup": "var/backups/testnet-20261104172456613.aesgcm",
+  "backupSha256": "f4da0724a9427e7d3ad207822b48d84dfed708d36f83eb95c8d6d716934eb6e7",
+  "keyLocation": "var/secrets/backup-20261104172456613.key",
+  "restoreDatabase": "zebscan_recovery_20261104172456613_test",
+  "before": {
+    "outputs": "1",
+    "receipts": "1",
+    "postings": "10",
+    "journals": "4"
+  },
+  "restored": {
+    "outputs": "1",
+    "receipts": "1",
+    "postings": "10",
+    "journals": "4"
+  },
+  "after": {
+    "outputs": "1",
+    "receipts": "1",
+    "postings": "10",
+    "journals": "4"
+  },
+  "migrations": [
+    "0008_frozen_credit_origin.sql",
+    "0009_outbox_delivery.sql",
+    "0010_wallet_observation_scope.sql"
+  ],
+  "offlineBackup": "BLOCKED: operator must escrow encrypted backup and key separately off-host"
+}

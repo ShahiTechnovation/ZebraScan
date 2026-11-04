@@ -70,7 +70,7 @@ export const intentMachine = machine<IntentStatus>(
     late_deposit: ["refund_queued", "manual_review"],
     underpaid: ["refund_queued", "manual_review"],
     overpaid: ["deposit_accepted", "refund_queued", "manual_review"],
-    chain_reorg_review: ["confirming", "awaiting_zec", "manual_review"],
+    chain_reorg_review: ["confirming", "awaiting_zec", "manual_review", "deposit_accepted"],
     manual_review: ["deposit_accepted", "refund_queued", "rejected"],
     refund_queued: ["refunded", "manual_review"],
     refunded: [],

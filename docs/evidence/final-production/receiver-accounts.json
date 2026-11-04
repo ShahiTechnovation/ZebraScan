@@ -1,0 +1,50 @@
+{
+  "at": "2026-11-04T17:22:15.151Z",
+  "saved": [
+    {
+      "output_ref": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7:p3:d1:836471:0",
+      "block_height": null,
+      "canonical": false,
+      "scan_version": "zkool_graphql",
+      "updated_at": "2026-11-04T16:56:48.100Z",
+      "reorged_at": "2026-11-04T16:56:48.100Z",
+      "wallet_id": "zkool:testnet:1",
+      "birthday_height": "4582531"
+    }
+  ],
+  "accounts": [
+    {
+      "id": 1,
+      "name": "zebscan-receiver-watch",
+      "birth": 4582531,
+      "height": 4582662,
+      "incomingOnly": false
+    },
+    {
+      "id": 2,
+      "name": "demo-customer-wallet-A",
+      "birth": 4582532,
+      "height": 4582666,
+      "incomingOnly": false
+    },
+    {
+      "id": 3,
+      "name": "zebscan-receiver-user",
+      "birth": 4582654,
+      "height": 4582772,
+      "incomingOnly": false
+    }
+  ],
+  "tip": 4582772,
+  "scanned": 4582772,
+  "matching": [
+    {
+      "txid": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7",
+      "outputRef": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7:p3:d1:836471:0",
+      "blockHeight": 4582568,
+      "confirmations": 205,
+      "pool": "ironwood",
+      "valueZatoshis": "836471"
+    }
+  ]
+}

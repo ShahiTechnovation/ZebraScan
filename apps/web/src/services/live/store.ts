@@ -86,11 +86,16 @@ class LiveStore {
 
   private async reconnect() {
     try {
-      if (this.error || !this.config) { this.config = await api.call("getPublicConfig");
-      if (this.config.environment === "demo" && process.env.NEXT_PUBLIC_ISOLATED_TEST_API !== "true") throw new Error("Payments temporarily unavailable: a test fixture API cannot serve this build"); await this.refreshSession(); }
-      else await this.refreshMerchantData();
+      if (this.error || !this.config) {
+        this.config = await api.call("getPublicConfig");
+        await this.refreshSession();
+      } else {
+        await this.refreshMerchantData();
+      }
       this.error = null;
-    } catch { this.error = "Payments temporarily unavailable"; }
+    } catch (e) {
+      this.error = e instanceof Error ? e.message : "Payments temporarily unavailable";
+    }
     this.emit();
   }
 

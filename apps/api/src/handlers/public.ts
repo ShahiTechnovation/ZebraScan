@@ -32,7 +32,7 @@ export const getPublicConfig: Handler = async ({ ctx }) => {
     requiredConfirmations: ctx.cfg.policy.requiredConfirmations,
     fees: { platformFeeBps: ctx.cfg.policy.platformFeeBps, withdrawalFeeBps: ctx.cfg.policy.withdrawalFeeBps },
     disclaimers: ctx.env === "testnet" ? ["HACKATHON_TESTNET: real shielded TAZ (worthless test coins). No INR is ever paid out and balances are not redeemable.", ...DISCLAIMERS] : ctx.env === "demo" ? ["DEMO: simulated payments only. Nothing here moves real money.", ...DISCLAIMERS] : DISCLAIMERS,
-    auth: { emailPassword: true, emailOtp: true, passkey: false, noirWallet: true, google: false, emailDelivery: !!ctx.email },
+    auth: { emailPassword: true, emailOtp: true, passkey: false, noirWallet: true, google: false, emailDelivery: ctx.cfg.email.mode==='smtp' || (ctx.env==='demo' && !!ctx.email) },
     wallet: { noirNetwork: ctx.env === "mainnet-readonly" || ctx.env === "mainnet-enabled" ? "zcash-mainnet" : "zcash-testnet", payWithNoir: ctx.caps.realChainAddresses },
     payoutRail: ctx.cfg.payoutRail,
     modeName: ENVIRONMENT_DISPLAY[ctx.env] as "DEMO",

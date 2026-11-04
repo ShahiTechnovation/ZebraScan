@@ -111,8 +111,7 @@ const zkoolSchemaChecked = new WeakSet<object>();
  * whose diversified address it was paid to, and ingest idempotently. Restart-safe: every event id
  * is derived from (network, note identity, height, confirmations), so replays are no-ops.
  */
-export async function pollZkool(ctx: CoreContext): Promise<{ events: number; reorged: number }> {
-  const z = ctx.zkool!;
+export async function pollZkool(ctx: CoreContext, z = ctx.zkool!): Promise<{ events: number; reorged: number }> {
   const net = z.network;
   try {
     if (!zkoolSchemaChecked.has(z)) {
@@ -142,14 +141,19 @@ export async function pollZkool(ctx: CoreContext): Promise<{ events: number; reo
     );
     const byIndex = new Map(rows.map((r) => [r.diversifier_index, r.address]));
     const events = await z.snapshot(st.tipHeight, byIndex);
-    for (const ev of events) await ingestScannerEvent(ctx, ev, "zkool");
+    for (const ev of events) {
+      // A clamped confirmation event may already have been seen before a reorg.
+      const previous=await ctx.db.query<{reorged_at:Date}>(`SELECT reorged_at FROM deposit_observations WHERE environment=$1 AND network=$2 AND output_ref=$3 AND NOT canonical`,[ctx.env,net,ev.outputRef]);
+      const removed=previous.rows[0]?.reorged_at;
+      await ingestScannerEvent(ctx, removed ? {...ev,eventId:`${ev.eventId}:reobserved:${removed.toISOString()}`} : ev, "zkool");
+    }
     // Reorg detection: a mined, canonical observation whose note is no longer reported as mined.
     const minedNow = new Set(events.filter((e) => e.blockHeight !== null).map((e) => e.outputRef));
     const known = await many<{ txid: string; output_ref: string; pool: string; value_zatoshis: string; address: string }>(
       ctx.db,
       `SELECT d.txid, d.output_ref, d.pool, d.value_zatoshis, coalesce(za.address,d.observed_address) AS address FROM deposit_observations d LEFT JOIN zcash_addresses za ON za.id=d.zcash_address_id
         WHERE d.environment=$1 AND d.network=$2 AND d.mined AND d.canonical AND d.scan_version='zkool_graphql'
-          AND (za.wallet_id=$3 OR za.id IS NULL)`, // only notes of the wallet we are watching now: switching/re-importing a receiver is NOT a reorg
+          AND d.wallet_id=$3`, // unknown historical account ownership is never guessed
       [ctx.env, net, `zkool:${net}:${z.accountId}`],
     );
     let reorged = 0;
@@ -171,7 +175,17 @@ export async function pollZkool(ctx: CoreContext): Promise<{ events: number; reo
 
 export async function pollScanner(ctx: CoreContext): Promise<void> {
   if (ctx.zkool) {
-    await pollZkool(ctx);
+    for (const z of [ctx.zkool,...(ctx.zkoolLegacy ?? [])]) {
+      await pollZkool(ctx,z);
+      const status=(await ctx.db.query<{status:string}>(`SELECT status FROM scanner_state WHERE environment=$1 AND network=$2`,[ctx.env,z.network])).rows[0]?.status;
+      if(status!=='synced') throw new DomainError('WALLET_CATCHING_UP','All receiving accounts must finish scanning before readiness opens');
+    }
+    const watched=[ctx.zkool,...(ctx.zkoolLegacy ?? [])].map(z=>`zkool:${z.network}:${z.accountId}`);
+    const missing=await ctx.db.query(`SELECT DISTINCT wallet_id FROM zcash_addresses WHERE environment=$1 AND network=$2 AND wallet_id LIKE 'zkool:%' AND NOT(wallet_id=ANY($3))`,[ctx.env,ctx.zkool.network,watched]);
+    if(missing.rowCount) {
+      await ctx.db.query(`UPDATE scanner_state SET status='error',last_error='Existing receiving account is no longer configured for monitoring',updated_at=now() WHERE environment=$1 AND network=$2`,[ctx.env,ctx.zkool.network]);
+      throw new DomainError('WALLET_MONITORING_GAP','Every previously issued receiver must remain monitored');
+    }
     return;
   }
   if (!ctx.gateway || !ctx.cfg.zcashNetwork) return;

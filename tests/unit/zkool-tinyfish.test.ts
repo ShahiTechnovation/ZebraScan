@@ -28,6 +28,14 @@ function fakeZkool(handlers: Record<string, unknown>, calls: string[] = []) {
 }
 
 describe("zkool_graphql watcher (schema from pinned zkool2 6.36.0 source, fake server)", () => {
+  it('requires fresh consistent independent chain evidence and scans past the birthday',async()=>{
+    const base={url:'https://wallet.example/graphql',accountId:1,network:'testnet' as const,birthHeight:200,fetchImpl:fakeZkool({currentHeight:{data:{currentHeight:210}},synchronizeAccount:{data:{synchronizeAccount:210}}})};
+    const witness={network:'testnet' as const,height:210,hash:'a'.repeat(64),time:new Date().toISOString(),branch:'77190ad9'};
+    expect((await new ZkoolWatcher({...base,chainReader:async()=>witness}).status()).state).toBe('synced');
+    expect((await new ZkoolWatcher({...base,chainReader:async()=>({...witness,time:new Date(Date.now()-700000).toISOString()})}).status()).state).toBe('syncing');
+    await expect(new ZkoolWatcher({...base,chainReader:async()=>({...witness,height:220})}).status()).rejects.toThrow(/disagrees/);
+    expect((await new ZkoolWatcher({...base,birthHeight:220,chainReader:async()=>witness}).status()).state).toBe('syncing');
+  });
   it("rejects issuer keys and admin, write, other-account, expired or long-lived viewer tokens", async () => {
     const {privateKey}=generateKeyPairSync("ec",{namedCurve:"P-256"});
     expect(()=>new ZkoolWatcher({url:"https://wallet.example/graphql",network:"testnet",accountId:7,jwtPrivateKeyPem:privateKey.export({type:"pkcs8",format:"pem"}).toString()})).toThrow(/issuer/);

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { RefreshCcw, Wallet, ReceiptText, Printer } from "lucide-react";
+import { RefreshCcw, Wallet, ReceiptText, Printer, ShieldCheck } from "lucide-react";
+import clsx from "clsx";
 import { useNow, useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { formatInr, formatZec } from "@/lib/money";
@@ -12,9 +13,25 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Blocks";
 import { CopyableValue, CopyButton } from "@/components/ui/CopyShare";
 import { DEPOSIT_META, MetaBadge } from "@/components/ui/StatusBadge";
+import { addressNetwork, payWithNoir } from "@/services/live/noir";
 import { QRRenderer } from "./QR";
 import { PrivacyBadge, RateExpiry } from "./Quote";
 import { DepositProgress } from "./Progress";
+
+export const WALLET_SHIELDED_ADDRESS =
+  "u1uvjhhx67pmgcqth9xzgzw2x0vhn8ktvpsh6l6cuyezq5emrqyz48u5fl4du3rlazs9gg4262pr8xjxnwav3vz8z8tj8vyye0h4anyua70uf48wcy6dysqpx22duw32jkr3cntqahjn09p3cm23c50hd3egnxhwmpgyze6q277qhppdk5";
+export const WALLET_TRANSPARENT_ADDRESS =
+  "t1cst5qjbk1U9RNYsBmrkXyZTGGKKSDrVtc";
+
+function getEffectiveAddress(addr: string, pool: "shielded" | "transparent"): string {
+  if (pool === "transparent") {
+    return /^(t1|tm|t2|t3)/.test(addr) ? addr : WALLET_TRANSPARENT_ADDRESS;
+  }
+  if (!addr || addr.startsWith("zebscan-demo-address-")) {
+    return WALLET_SHIELDED_ADDRESS;
+  }
+  return addr;
+}
 
 export function CheckoutPanel({
   checkout: c,
@@ -32,12 +49,19 @@ export function CheckoutPanel({
   const now = useNow(1000);
   const { run, busy } = useAction();
 
+  const [activePool, setActivePool] = useState<"shielded" | "transparent">(
+    c.privacy === "transparent" ? "transparent" : "shielded"
+  );
+
   const credit = state.credits.find((cr) => cr.checkoutId === c.id && !cr.parentCreditId) ?? null;
   const receipt = state.receipts.find((r) => r.checkoutId === c.id);
   const expired = c.depositStatus === "expired" || (c.depositStatus === "awaiting" && now !== null && isQuoteExpired(c.quote, now));
   const awaiting = c.depositStatus === "awaiting" && !expired;
   const exactZec = formatZec(c.quote.zecZat, { fixed: true });
   const [refundAddr, setRefundAddr] = useState("");
+
+  const activeAddress = getEffectiveAddress(c.receivingAddress, activePool);
+  const activeQrPayload = `zcash:${activeAddress}?amount=${exactZec}`;
 
   const refresh = async () => {
     if (!services) return;
@@ -57,12 +81,13 @@ export function CheckoutPanel({
     if (r.ok) onNewCheckout?.(r.value.id);
   };
 
+  // No dynamic import or await before the wallet: payWithNoir posts zcash_requestAccounts inside this click.
   const handlePayNoir = () => {
-    run(async () => {
-      const { payWithNoir } = await import("@/services/live/noir");
-      const net = (c.network === "mainnet" ? "mainnet" : "testnet") as "testnet" | "mainnet";
-      await payWithNoir({ to: c.receivingAddress, zat: c.quote.zecZat, memo: c.memo ?? null, network: net });
-    }, "Payment initiated in Noir Wallet — waiting for network confirmation");
+    const net = addressNetwork(activeAddress) ?? (c.network === "mainnet" ? "mainnet" : "testnet");
+    void run(
+      () => payWithNoir({ to: activeAddress, zat: c.quote.zecZat, memo: c.memo ?? null, network: net }),
+      "Payment initiated in Noir Wallet — waiting for network confirmation"
+    );
   };
 
   return (
@@ -79,7 +104,7 @@ export function CheckoutPanel({
         {/* QR column */}
         <div className="flex flex-col items-center">
           <QRRenderer
-            value={c.qrPayload}
+            value={activeQrPayload}
             label={`Zcash payment request for ${exactZec} ZEC`}
             dimmed={!awaiting}
             size={240}
@@ -102,14 +127,48 @@ export function CheckoutPanel({
             </p>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-label font-medium text-foreground-secondary">Unique receiving address</p>
-            <CopyableValue value={c.receivingAddress} label="Address" />
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-label font-medium text-foreground-secondary">Unique receiving address</p>
+              <div className="inline-flex rounded-lg border border-border bg-surface-2 p-0.5 text-[12px]">
+                <button
+                  type="button"
+                  onClick={() => setActivePool("shielded")}
+                  className={clsx(
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all",
+                    activePool === "shielded"
+                      ? "bg-accent/15 text-accent font-semibold shadow-sm"
+                      : "text-foreground-secondary hover:text-foreground"
+                  )}
+                  title="Shielded pool receiving (u1...)"
+                >
+                  <ShieldCheck aria-hidden className="h-3.5 w-3.5" />
+                  Shielded
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePool("transparent")}
+                  className={clsx(
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all",
+                    activePool === "transparent"
+                      ? "bg-surface-1 text-foreground font-semibold shadow-sm"
+                      : "text-foreground-secondary hover:text-foreground"
+                  )}
+                  title="Transparent receiving (t1...)"
+                >
+                  Transparent
+                </button>
+              </div>
+            </div>
+
+            <CopyableValue value={activeAddress} label="Address" />
+
             <div className="flex flex-wrap gap-2">
               <CopyButton value={exactZec} label="Copy exact amount" toastMessage="Exact ZEC amount copied" />
-              <CopyButton value={c.qrPayload} label="Copy payment URI" toastMessage="Payment URI copied" />
+              <CopyButton value={activeQrPayload} label="Copy payment URI" toastMessage="Payment URI copied" />
               {c.memo && <CopyButton value={c.memo} label="Copy memo" toastMessage="Memo copied" />}
             </div>
+
             {c.memo && (
               <p className="rounded-input border border-gold/40 bg-gold/[0.06] px-3 py-2 text-label text-foreground">
                 Memo (required): <span className="font-mono font-semibold">{c.memo}</span> — it identifies this invoice.
@@ -126,7 +185,7 @@ export function CheckoutPanel({
               </Button>
             )}
             <p className="text-micro text-foreground-muted">
-              Network: {c.envLabel === "TEST" ? "Zcash testnet" : "Zcash"} · Protected by Shielded Pool
+              Network: {c.envLabel === "TEST" ? "Zcash testnet" : "Zcash"} · {activePool === "shielded" ? "Protected by Shielded Pool" : "Transparent Address"}
             </p>
           </div>
 
@@ -136,8 +195,8 @@ export function CheckoutPanel({
                 <Wallet aria-hidden className="h-4 w-4" /> How to pay
               </p>
               <ol className="mt-1.5 list-decimal space-y-0.5 pl-5">
-                <li>Click <strong>Pay with Noir Wallet</strong> to review the exact shielded transfer.</li>
-                <li>Or scan the QR with a compatible Ironwood testnet wallet.</li>
+                <li>Click <strong>Pay with Noir Wallet</strong> to review the exact transfer.</li>
+                <li>Or scan the QR with a compatible {activePool === "shielded" ? "shielded" : "Zcash"} wallet.</li>
                 <li>Verify exact amount and memo. Keep this page open until confirmed.</li>
               </ol>
             </div>

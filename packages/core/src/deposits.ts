@@ -18,9 +18,10 @@ import { audit, emitResource, enqueueJob, raiseException } from "./events";
 import { holdPolicy, lockIntent, transitionIntent, type IntentRow } from "./intents";
 import { assertQuoteIntegrity, type QuoteRow } from "./quotes";
 import { issuePaymentReceipt } from "./receipts";
-import { createPayoutCommand } from "./tfpayouts";
+import { createPayoutCommand, queueTestnetDemoPayout, testnetLiveDemo } from "./tfpayouts";
 
 export interface ScannerEvent {
+  walletId?: string;
   eventId: string;
   kind: "note_seen" | "note_confirmed" | "note_reorged";
   network: string;
@@ -44,6 +45,7 @@ interface Observation {
   id: string; first_seen_at: Date; accepted: boolean; canonical: boolean;
   intent_id: string | null; zcash_address_id: string | null; value_zatoshis: string;
   custody_booked: boolean; custody_revision: number;
+  wallet_id: string | null;
 }
 
 async function custody(t: Tx, ctx: CoreContext, obs: Observation, ev: ScannerEvent) {
@@ -73,6 +75,7 @@ export async function ingestScannerEvent(ctx: CoreContext, ev: ScannerEvent, sou
     const code = ev.memo?.trim() && INVOICE_MEMO_RE.test(ev.memo.trim()) ? ev.memo.trim() : null;
     const persisted = await maybeOne<Observation>(t, `SELECT * FROM deposit_observations WHERE environment=$1 AND network=$2 AND pool=$3 AND txid=$4 AND output_ref=$5 FOR UPDATE`, [ctx.env, ev.network, ev.pool, ev.txid, ev.outputRef]);
     if (persisted && BigInt(persisted.value_zatoshis) !== BigInt(ev.valueZatoshis)) throw new DomainError("WALLET_OUTPUT_CONFLICT", "wallet output value changed");
+    if (persisted?.wallet_id && ev.walletId && persisted.wallet_id!==ev.walletId) throw new DomainError("WALLET_OUTPUT_CONFLICT", "wallet output owner changed");
     const addr = persisted?.intent_id ? { id: persisted.zcash_address_id!, intent_id: persisted.intent_id } : code
       ? await maybeOne<{ id: string; intent_id: string }>(t, `SELECT id, intent_id FROM zcash_addresses WHERE environment=$1 AND network=$2 AND address=$3 AND memo_code=$4`, [ctx.env, ev.network, ev.address, code])
       : await maybeOne<{ id: string; intent_id: string }>(t, `SELECT id, intent_id FROM zcash_addresses WHERE environment=$1 AND network=$2 AND address=$3 AND memo_code IS NULL`, [ctx.env, ev.network, ev.address]);
@@ -81,15 +84,16 @@ export async function ingestScannerEvent(ctx: CoreContext, ev: ScannerEvent, sou
 
     const obs = await one<Observation>(
       t,
-      `INSERT INTO deposit_observations(id, environment, network, pool, txid, output_ref, value_zatoshis, zcash_address_id, intent_id, block_height, block_hash, mined, confirmations, canonical, scan_version, observed_address)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+      `INSERT INTO deposit_observations(id, environment, network, pool, txid, output_ref, value_zatoshis, zcash_address_id, intent_id, block_height, block_hash, mined, confirmations, canonical, scan_version, observed_address, wallet_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        ON CONFLICT (environment, network, pool, txid, output_ref) DO UPDATE SET
+         wallet_id=coalesce(deposit_observations.wallet_id, EXCLUDED.wallet_id),
          intent_id=coalesce(deposit_observations.intent_id, EXCLUDED.intent_id), zcash_address_id=coalesce(deposit_observations.zcash_address_id, EXCLUDED.zcash_address_id),
          block_height = EXCLUDED.block_height, block_hash = EXCLUDED.block_hash, mined = EXCLUDED.mined,
          confirmations = EXCLUDED.confirmations, canonical = EXCLUDED.canonical, scan_version = EXCLUDED.scan_version,
          reorged_at = CASE WHEN EXCLUDED.canonical THEN deposit_observations.reorged_at ELSE now() END, updated_at = now()
        RETURNING *`,
-      [newId("deposit"), ctx.env, ev.network, ev.pool, ev.txid, ev.outputRef, ev.valueZatoshis, addr?.id ?? null, intent?.id ?? null, ev.blockHeight, ev.blockHash, mined, ev.kind === "note_reorged" ? 0 : ev.confirmations, ev.kind !== "note_reorged", ev.scanVersion, ev.address],
+      [newId("deposit"), ctx.env, ev.network, ev.pool, ev.txid, ev.outputRef, ev.valueZatoshis, addr?.id ?? null, intent?.id ?? null, ev.blockHeight, ev.blockHash, mined, ev.kind === "note_reorged" ? 0 : ev.confirmations, ev.kind !== "note_reorged", ev.scanVersion, ev.address, ev.walletId ?? persisted?.wallet_id ?? null],
     );
 
     if (!intent) {
@@ -120,7 +124,19 @@ export async function ingestScannerEvent(ctx: CoreContext, ev: ScannerEvent, sou
     if (!OPEN.includes(intent.status)) {
       // The SAME note we already accepted, seen again with more confirmations: bookkeeping only
       // (confirmations were updated above). Not an additional deposit.
-      if (obs.accepted) return { accepted: true, duplicate: true };
+      if (obs.accepted) {
+        // Recover only a nonredeemable TESTNET receipt once every accepted output
+        // is canonical again. Never re-enter acceptance, issue credit or settle INR.
+        if (ctx.env==='testnet' && intent.status==='chain_reorg_review') {
+          const missing=await t.query(`SELECT 1 FROM deposit_observations WHERE intent_id=$1 AND accepted AND (NOT canonical OR NOT mined OR confirmations<$2)`,[intent.id,ctx.cfg.policy.requiredConfirmations]);
+          if(!missing.rowCount && mined && ev.confirmations>=ctx.cfg.policy.requiredConfirmations) {
+            await transitionIntent(t,ctx,intent,'deposit_accepted',{label:'Testnet payment reverified',detail:'The receiving wallet confirms the original output. Original receipt and journals retained; no INR payout.',set:{exception_reason:null}});
+            await t.query(`UPDATE payment_intents SET payout_status='not_started' WHERE id=$1 AND payout_status='manual_review'`,[intent.id]);
+            await audit(t,ctx.env,{actorType:'system',action:'deposit.testnet_reverified',target:intent.id,details:{depositId:obs.id,walletId:obs.wallet_id}});
+          }
+        }
+        return { accepted: true, duplicate: true };
+      }
       // Additional output on an already-decided intent (e.g. second payment): refund review, never silently absorbed.
       await custody(t, ctx, obs, ev);
       if (!obs.accepted) await raiseException(t, ctx.env, { kind: "extra_deposit", severity: "warning", intentId: intent.id, depositId: obs.id, details: { txid: ev.txid, status: intent.status } });
@@ -248,8 +264,8 @@ export async function acceptDeposit(t: Tx, ctx: CoreContext, intent: IntentRow, 
     }
 
   if (ctx.env === "testnet") {
-    // TAZ proves receiving only; INR is display/reference metadata, never an asset or entitlement.
-    await emitResource(t, ctx.env, `checkout:${intent.id}`, "payout.disabled", { label: "ZEC confirmed on testnet", detail: "Nonredeemable test receipt. INR payouts and withdrawals are disabled on testnet." });
+    // TAZ proves receiving only; INR is display/reference metadata, never an asset or entitlement. Sole exception: the strict TESTNET_LIVE_PAYOUT_DEMO opt-in (Scan & Pay only), where the TAZ payment only AUTHORIZES an operator-approved payout paid from Zeb Scan's own pre-funded P2P.lol USDC.
+    if (intent.mode === "scan_pay" && testnetLiveDemo(ctx)) await queueTestnetDemoPayout(t, ctx, cur, quote); else await emitResource(t, ctx.env, `checkout:${intent.id}`, "payout.disabled", { label: "ZEC confirmed on testnet", detail: "Nonredeemable test receipt. INR payouts and withdrawals are disabled on testnet." });
     if (intent.merchant_id) await emitResource(t, ctx.env, `merchant:${intent.merchant_id}`, "payment.testnet_received", { intentId: intent.id });
     await issuePaymentReceipt(t, ctx, intent.id);
     await audit(t, ctx.env, { actorType: "system", action: "deposit.accept", target: intent.id, details: { received: receivedZat.toString(), due: due.toString(), nonredeemable: true } });

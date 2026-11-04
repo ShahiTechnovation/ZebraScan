@@ -14,3 +14,10 @@ var/
 
 .vercel
 .next-testnet
+
+# per-build Next.js output dirs (connected/testnet/agent builds)
+.next-*
+**/.next-*
+# local tooling / scratch
+*.local.env
+.tf-*

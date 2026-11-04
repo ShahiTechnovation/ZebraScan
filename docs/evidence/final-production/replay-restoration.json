@@ -1,0 +1,36 @@
+{
+  "at": "2026-11-04T17:28:36.963Z",
+  "before": [
+    {
+      "id": "pi_kddd0fe7xccewd6x2csrhykxdr",
+      "status": "chain_reorg_review"
+    }
+  ],
+  "after": [
+    {
+      "id": "pi_kddd0fe7xccewd6x2csrhykxdr",
+      "status": "deposit_accepted",
+      "payout_status": "not_started"
+    }
+  ],
+  "saved": [
+    {
+      "txid": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7",
+      "output_ref": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7:p3:d1:836471:0",
+      "block_height": "4582568",
+      "canonical": true,
+      "confirmations": 218,
+      "wallet_id": "zkool:testnet:1"
+    }
+  ],
+  "counts": {
+    "receipts": "1",
+    "journals": "4",
+    "postings": "10",
+    "payouts": "0"
+  },
+  "watchedAccounts": [
+    3,
+    1
+  ]
+}

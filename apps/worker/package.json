@@ -17,7 +17,7 @@
     "@zeb/core": "workspace:*",
     "@zeb/providers": "workspace:*",
     "neverthrow": "8.2.0",
-    "nodemailer": "^10.0.6",
+    "nodemailer": "^10.1.4",
     "pg": "^8.16.0",
     "undici": "^7.16.0",
     "viem": "2.47.6",

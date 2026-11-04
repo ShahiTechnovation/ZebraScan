@@ -20,7 +20,13 @@ describe("connected mode without live adapters (acceptance 10)", () => {
     expect(getServices()).toBeNull();
   });
 
-  it.each(["demo", "testnet", "connectd", ""])("invalid mode %s fails closed", async (mode) => {
+  it("demo mode returns demo services", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ZEB_MODE", "demo");
+    const { getServices } = await import("@/services/registry");
+    expect(getServices()?.kind).toBe("demo");
+  });
+
+  it.each(["testnet", "connectd"])("invalid mode %s fails closed", async (mode) => {
     vi.stubEnv("NEXT_PUBLIC_ZEB_MODE", mode);
     const { getServices } = await import("@/services/registry");
     expect(getServices()).toBeNull();

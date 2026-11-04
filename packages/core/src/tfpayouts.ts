@@ -25,10 +25,14 @@ import {
   PreflightObservation,
   RECONCILE_SCHEMA,
   ReconcileObservation,
+  SELL_EXECUTE_SCHEMA,
+  SellExecuteObservation,
   accountFingerprint,
   buildExecuteGoal,
   buildPreflightGoal,
   buildReconcileGoal,
+  formatInrPaise,
+  formatUsdcMicros,
   isTrustedOrigin,
   parseVisibleInr,
   parseVisibleUsdc,
@@ -38,6 +42,7 @@ import {
   type TinyFishPort,
 } from "@zeb/providers";
 import { canonicalJson } from "@zeb/security";
+import { liveDemoPayoutsEnabled } from "./config";
 import type { CoreContext } from "./context";
 import { audit, emitResource, enqueueJob, raiseException } from "./events";
 import { finalizeWithdrawal, restoreWithdrawal, type WithdrawalRow } from "./withdrawals";
@@ -82,15 +87,16 @@ export interface Verdict {
   reasons: string[];
 }
 
-export function evaluatePreflight(raw: unknown, web: P2PWebConfig, need: { flow: "SCAN_PAY" | "MERCHANT_WITHDRAWAL" | null; usdcMicros: bigint | null }): Verdict & { obs: PreflightObservation | null; visibleUsdcMicros: bigint | null } {
+export function evaluatePreflight(raw: unknown, web: P2PWebConfig, need: { flow: "SCAN_PAY" | "MERCHANT_WITHDRAWAL" | null; usdcMicros: bigint | null; via?: "PAY" | "SELL" }): Verdict & { obs: PreflightObservation | null; visibleUsdcMicros: bigint | null } {
   const parsed = PreflightObservation.safeParse(raw);
   if (!parsed.success) return { ok: false, reasons: ["observation did not match the expected schema"], obs: null, visibleUsdcMicros: null };
   const o = parsed.data;
   const reasons: string[] = [];
   if (!isTrustedOrigin(o.observed_url, web)) reasons.push("final page was not on an allowlisted P2P.me origin");
   if (o.login_page_shown || !o.account_authenticated) reasons.push("profile is not authenticated (login page shown)");
-  if (need.flow !== "MERCHANT_WITHDRAWAL" && !o.pay_ui_available) reasons.push("PAY (Scan & Pay) flow not available");
-  if (need.flow !== "SCAN_PAY" && !o.sell_ui_available) reasons.push("SELL flow not available");
+  // `via` = the provider UI flow that will actually execute (testnet live demo: Scan & Pay executed as a SELL).
+  if ((need.via ? need.via === "PAY" : need.flow !== "MERCHANT_WITHDRAWAL") && !o.pay_ui_available) reasons.push("PAY (Scan & Pay) flow not available");
+  if ((need.via ? need.via === "SELL" : need.flow !== "SCAN_PAY") && !o.sell_ui_available) reasons.push("SELL flow not available");
   if (o.wallet_signature_required) reasons.push("orders require a wallet signature/extension/OTP that a hosted browser cannot provide");
   if (o.blocker.trim()) reasons.push(`provider blocker: ${o.blocker.trim().slice(0, 160)}`);
   const bal = o.visible_usdc_balance ? parseVisibleUsdc(o.visible_usdc_balance) : null;
@@ -101,7 +107,50 @@ export function evaluatePreflight(raw: unknown, web: P2PWebConfig, need: { flow:
   return { ok: reasons.length === 0, reasons, obs: o, visibleUsdcMicros: bal };
 }
 
-export function evaluateExecution(raw: unknown, cmd: { vpa: string; inrPaise: bigint; maxUsdc: bigint; variance: bigint }, web: P2PWebConfig): Verdict & { obs: ExecuteObservation | null; urgent: boolean; usdc: bigint | null } {
+/** Command terms used by the evaluators. `sellUsdc` set ⇒ executed as an app.p2p.lol SELL of exactly that USDC amount. */
+export interface EvalTerms {
+  vpa: string;
+  inrPaise: bigint;
+  maxUsdc: bigint;
+  variance: bigint;
+  sellUsdc?: bigint;
+}
+
+/**
+ * SELL by USDC amount: the agent must have typed exactly the approved amount and UPI ID, clicked
+ * "Place Order" exactly once, and the order must show the same recipient, a USDC debit within the
+ * authorized maximum and an INR payout of at least the authorized INR (minus the command variance).
+ */
+function evaluateSellExecution(raw: unknown, cmd: EvalTerms & { sellUsdc: bigint }, web: P2PWebConfig): Verdict & { obs: ExecuteObservation | null; urgent: boolean; usdc: bigint | null } {
+  const parsed = SellExecuteObservation.safeParse(raw);
+  if (!parsed.success) return { ok: false, urgent: false, reasons: ["observation did not match the expected schema"], obs: null, usdc: null };
+  const o = parsed.data;
+  const reasons: string[] = [];
+  if (!isTrustedOrigin(o.final_url, web)) reasons.push("final page was not on an allowlisted P2P.me origin");
+  if (o.place_order_clicks === "more_than_1") reasons.push("Place Order was clicked more than once (possible duplicate order)");
+  if (!o.submitted) {
+    // Untrusted claim: reconciliation must verify that no order exists.
+    if (o.place_order_clicks !== "0") reasons.push("agent reports not submitted but also reports a Place Order click");
+    reasons.push(`agent reports not submitted${o.blocking_issue ? `: ${o.blocking_issue.slice(0, 160)}` : ""}`);
+    return { ok: false, urgent: o.place_order_clicks !== "0", reasons, obs: o, usdc: null };
+  }
+  if (o.place_order_clicks !== "1") reasons.push(`Place Order click count ${o.place_order_clicks} is not exactly 1`);
+  if (!o.provider_order_id.trim()) reasons.push("no provider order id observed");
+  if (!sameVpa(o.entered_upi_id, cmd.vpa)) reasons.push("entered UPI ID differs from the authorized VPA");
+  if (!sameVpa(o.visible_recipient, cmd.vpa)) reasons.push("visible recipient differs from the authorized VPA");
+  if (parseVisibleUsdc(o.entered_usdc_amount) !== cmd.sellUsdc) reasons.push("entered USDC amount differs from the approved sell amount");
+  const usdc = parseVisibleUsdc(o.visible_usdc);
+  if (usdc === null) reasons.push("visible USDC debit unparseable");
+  else if (usdc > cmd.maxUsdc) reasons.push("visible USDC debit exceeds the authorized maximum");
+  const inr = parseVisibleInr(o.visible_inr);
+  if (inr === null) reasons.push("visible INR payout unparseable");
+  else if (inr < cmd.inrPaise - cmd.variance) reasons.push("visible INR payout is below the authorized amount");
+  const mismatchAfterSubmit = reasons.some((r) => /differs|exceeds|allowlisted|below|more than once|not exactly 1/.test(r));
+  return { ok: reasons.length === 0, urgent: mismatchAfterSubmit, reasons, obs: o, usdc };
+}
+
+export function evaluateExecution(raw: unknown, cmd: EvalTerms, web: P2PWebConfig): Verdict & { obs: ExecuteObservation | null; urgent: boolean; usdc: bigint | null } {
+  if (cmd.sellUsdc !== undefined) return evaluateSellExecution(raw, { ...cmd, sellUsdc: cmd.sellUsdc }, web);
   const parsed = ExecuteObservation.safeParse(raw);
   if (!parsed.success) return { ok: false, urgent: false, reasons: ["observation did not match the expected schema"], obs: null, usdc: null };
   const o = parsed.data;
@@ -129,7 +178,7 @@ export type ReconcileVerdict =
   | { kind: "not_found" }
   | { kind: "invalid"; reasons: string[]; urgent: boolean };
 
-export function evaluateReconcile(raw: unknown, cmd: { vpa: string; inrPaise: bigint; maxUsdc: bigint; variance: bigint }, knownOrderId: string | null, web: P2PWebConfig): ReconcileVerdict {
+export function evaluateReconcile(raw: unknown, cmd: EvalTerms, knownOrderId: string | null, web: P2PWebConfig): ReconcileVerdict {
   const parsed = ReconcileObservation.safeParse(raw);
   if (!parsed.success) return { kind: "invalid", reasons: ["observation did not match the expected schema"], urgent: false };
   const o = parsed.data;
@@ -140,7 +189,10 @@ export function evaluateReconcile(raw: unknown, cmd: { vpa: string; inrPaise: bi
   if (!o.provider_order_id.trim()) reasons.push("missing provider order id");
   if (!sameVpa(o.visible_recipient, cmd.vpa)) reasons.push("recipient differs");
   const inr = parseVisibleInr(o.visible_inr);
-  if (inr === null || (inr > cmd.inrPaise ? inr - cmd.inrPaise : cmd.inrPaise - inr) > cmd.variance) reasons.push("INR amount differs");
+  if (cmd.sellUsdc !== undefined) {
+    // SELL by USDC amount: the INR is the provider's conversion; it may exceed but never undercut the authorized INR.
+    if (inr === null || inr < cmd.inrPaise - cmd.variance) reasons.push("INR payout below the authorized amount");
+  } else if (inr === null || (inr > cmd.inrPaise ? inr - cmd.inrPaise : cmd.inrPaise - inr) > cmd.variance) reasons.push("INR amount differs");
   const usdc = parseVisibleUsdc(o.visible_usdc);
   if (usdc !== null && usdc > cmd.maxUsdc) reasons.push("USDC debit exceeds the authorized maximum");
   if (o.provider_order_status === "COMPLETED" && (usdc === null || usdc <= 0n)) reasons.push("completed observation lacks exact positive USDC debit");
@@ -176,8 +228,9 @@ export async function createPayoutCommand(
   ctx: CoreContext,
   c: { flow: "SCAN_PAY" | "MERCHANT_WITHDRAWAL"; intentId?: string; withdrawalId?: string; vpa: string; inrPaise: bigint; maxUsdcMicros: bigint; quoteId: string | null; authorizationId: string; reservedTreasuryId: string | null },
 ): Promise<string> {
-  if (ctx.env === "testnet") throw new DomainError("FEATURE_UNAVAILABLE", "HACKATHON_TESTNET never executes payouts");
-  const mode = ctx.env === "mainnet-enabled" || ctx.env === "demo" ? "EXECUTE_AFTER_APPROVAL" : "READ_ONLY";
+  // HACKATHON_TESTNET never executes payouts — except the strict TESTNET_LIVE_PAYOUT_DEMO opt-in, Scan & Pay only.
+  if (ctx.env === "testnet" && !(testnetLiveDemo(ctx) && c.flow === "SCAN_PAY")) throw new DomainError("FEATURE_UNAVAILABLE", "HACKATHON_TESTNET never executes payouts");
+  const mode = ctx.env === "mainnet-enabled" || ctx.env === "demo" || ctx.env === "testnet" ? "EXECUTE_AFTER_APPROVAL" : "READ_ONLY";
   const id = newId("order").replace(/^ord_/, "pay_");
   const variance = 0n; // policy: exact INR; any override requires a new explicit authorization
   const hash = commandHash({ flow: c.flow, vpa: c.vpa, inrPaise: c.inrPaise, maxUsdc: c.maxUsdcMicros, variance, authorizationId: c.authorizationId, quoteId: c.quoteId, environment: ctx.env });
@@ -190,6 +243,57 @@ export async function createPayoutCommand(
   await enqueueJob(t, ctx.env, "tfpayout.advance", id, { id });
   await audit(t, ctx.env, { actorType: "system", action: "payout_command.create", target: id, details: { flow: c.flow, mode } });
   return id;
+}
+
+/* ================================================================== TESTNET_LIVE_PAYOUT_DEMO */
+
+/** The strict testnet live payout demo gate (see liveDemoPayoutsEnabled in config.ts). */
+export function testnetLiveDemo(ctx: CoreContext): boolean {
+  return ctx.env === "testnet" && liveDemoPayoutsEnabled(ctx.cfg);
+}
+
+/** Honest framing shown wherever the demo payout appears. */
+export const TESTNET_DEMO_FUNDING_NOTE = "INR is paid from Zeb Scan's own pre-funded P2P.lol USDC; the testnet payment only authorizes it.";
+
+/**
+ * TESTNET_LIVE_PAYOUT_DEMO, called from deposit acceptance (same transaction) for a confirmed testnet
+ * Scan & Pay payment. The TAZ payment only AUTHORIZES an operator-approved INR payout that Zeb Scan
+ * pays from its OWN pre-funded P2P.lol USDC: TAZ has no value and is never booked as INR, and no Zeb
+ * Scan treasury exists on testnet. From here on the normal strict rail applies (immutable command +
+ * hash → policy caps → read-only preflight → operator approval → one execute attempt → read-only
+ * reconciliation). Never throws for a missing prerequisite: deposit acceptance must not roll back.
+ */
+export async function queueTestnetDemoPayout(
+  t: Tx,
+  ctx: CoreContext,
+  intent: { id: string; mode: string; payout_status: string; recipient_vpa_ct: string | null },
+  quote: { id: string; inr_paise: string; required_usdc_micros: string },
+): Promise<string | null> {
+  const unavailable = async (why: string) => {
+    await emitResource(t, ctx.env, `checkout:${intent.id}`, "payout.disabled", { label: "ZEC confirmed on testnet", detail: `The INR payout demo could not be prepared (${why}). Nothing was sent to the UPI ID.` });
+    await raiseException(t, ctx.env, { kind: "testnet_demo_payout_unavailable", severity: "warning", intentId: intent.id, details: { reason: why } });
+    return null;
+  };
+  if (!testnetLiveDemo(ctx) || intent.mode !== "scan_pay") throw new DomainError("FEATURE_UNAVAILABLE", "HACKATHON_TESTNET never executes payouts");
+  if (!intent.recipient_vpa_ct) return unavailable("no UPI recipient on this checkout");
+  if (intent.payout_status !== "not_started") return unavailable(`payout already ${intent.payout_status}`);
+  const auth = await maybeOne<{ id: string }>(t, `SELECT id FROM payout_authorizations WHERE intent_id=$1 AND environment=$2 ORDER BY created_at LIMIT 1`, [intent.id, ctx.env]);
+  if (!auth) return unavailable("no payer authorization snapshot");
+  // Savepoint: a failure here must never roll back the (already verified) deposit acceptance.
+  await t.query("SAVEPOINT testnet_demo_payout");
+  try {
+    const vpa = await ctx.envelope.open(intent.recipient_vpa_ct, `payment_intents:${intent.id}:recipient_vpa`);
+    payoutMachine.assert("not_started", "payout_queued");
+    await t.query(`UPDATE payment_intents SET payout_status='payout_queued', updated_at=now() WHERE id=$1`, [intent.id]);
+    const id = await createPayoutCommand(t, ctx, { flow: "SCAN_PAY", intentId: intent.id, vpa, inrPaise: BigInt(quote.inr_paise), maxUsdcMicros: BigInt(quote.required_usdc_micros), quoteId: quote.id, authorizationId: auth.id, reservedTreasuryId: null });
+    await emitResource(t, ctx.env, `checkout:${intent.id}`, "payout.payout_queued", { label: "Testnet ZEC confirmed — INR payout authorized", detail: `${TESTNET_DEMO_FUNDING_NOTE} An operator approves every payout before anything is submitted.` });
+    await audit(t, ctx.env, { actorType: "system", action: "payout.testnet_demo_authorized", target: id, details: { intentId: intent.id, fundedBy: "operator-prefunded-p2p.lol-usdc" } });
+    await t.query("RELEASE SAVEPOINT testnet_demo_payout");
+    return id;
+  } catch (e) {
+    await t.query("ROLLBACK TO SAVEPOINT testnet_demo_payout");
+    return unavailable(`could not create the payout command: ${(e as Error).message.slice(0, 120)}`);
+  }
 }
 
 /* ================================================================== mirror onto intent / withdrawal */
@@ -391,15 +495,18 @@ export async function payoutReadiness(ctx: CoreContext, deps: TfDeps) {
   const cap = await latestCapability(ctx);
   const reasons: string[] = [];
   const rail = railReady(ctx, deps);
-  if (ctx.env !== "demo") reasons.push("independent spendable-capacity and settlement verification are not provisioned");
-  if (ctx.env === "testnet") reasons.push("HACKATHON_TESTNET never executes INR payouts");
+  // TESTNET_LIVE_PAYOUT_DEMO replaces the treasury requirement with the operator's own pre-funded P2P.lol USDC.
+  const demoLive = testnetLiveDemo(ctx);
+  if (ctx.env !== "demo" && !demoLive) reasons.push("independent spendable-capacity and settlement verification are not provisioned");
+  if (ctx.env === "testnet" && !demoLive) reasons.push("HACKATHON_TESTNET never executes INR payouts");
   if (ctx.env === "mainnet-readonly") reasons.push("MAINNET_READONLY: no fund movement");
   if (rail) reasons.push(rail);
   if (!cap) reasons.push("no P2P capability report yet");
   else if (cap.status !== "PASS") reasons.push("latest P2P capability report is BLOCKED");
   else if (!cap.fresh) reasons.push("P2P capability report is stale");
-  if (ctx.env === "mainnet-enabled" && !ctx.cfg.pilot.livePayoutsEnabled) reasons.push("live payouts are disabled by policy");
-  if (ctx.env === "mainnet-enabled" && ctx.cfg.pilot.maxPayoutInrPaise === 0n) reasons.push("pilot per-order cap is 0");
+  if ((ctx.env === "mainnet-enabled" || demoLive) && !ctx.cfg.pilot.livePayoutsEnabled) reasons.push("live payouts are disabled by policy");
+  if ((ctx.env === "mainnet-enabled" || demoLive) && ctx.cfg.pilot.maxPayoutInrPaise === 0n) reasons.push("pilot per-order cap is 0");
+  if (demoLive && (!ctx.cfg.approvals.legal || !ctx.cfg.approvals.provider)) reasons.push("legal/provider approval references missing (LEGAL_APPROVAL_REF / PROVIDER_APPROVAL_REF)");
   return { rail: "P2P_TINYFISH_WEB", eligible_for_payout: reasons.length === 0, reasons, lastCheckedAt: cap ? new Date(cap.created_at).toISOString() : null };
 }
 
@@ -411,8 +518,12 @@ async function load(t: Tx, id: string): Promise<PayoutCommandRow> {
   return one<PayoutCommandRow>(t, `SELECT * FROM payout_commands WHERE id=$1 FOR UPDATE`, [id]);
 }
 
-function cmdTerms(_ctx: CoreContext, cmd: PayoutCommandRow, vpa: string) {
-  return { vpa, inrPaise: BigInt(cmd.requested_inr_paise), maxUsdc: BigInt(cmd.max_usdc_debit_micros), variance: BigInt(cmd.max_fiat_variance_paise) };
+function cmdTerms(_ctx: CoreContext, cmd: PayoutCommandRow, vpa: string): EvalTerms {
+  const maxUsdc = BigInt(cmd.max_usdc_debit_micros);
+  // Testnet commands exist only under TESTNET_LIVE_PAYOUT_DEMO and execute as an app.p2p.lol SELL of exactly
+  // the authorized maximum USDC debit (derived from the immutable, hashed terms — never from page or agent text).
+  const sell = cmd.environment === "testnet" ? { sellUsdc: maxUsdc } : {};
+  return { vpa, inrPaise: BigInt(cmd.requested_inr_paise), maxUsdc, variance: BigInt(cmd.max_fiat_variance_paise), ...sell };
 }
 
 async function startRun(ctx: CoreContext, deps: TfDeps, cmd: PayoutCommandRow, kind: "preflight" | "execute" | "reconcile", goal: string, schema: Record<string, unknown>, fencing?: bigint): Promise<{ runId: string | null; outcome: "queued" | "rejected" | "error"; message?: string }> {
@@ -463,11 +574,19 @@ async function executionBlockers(t: Tx, ctx: CoreContext, deps: TfDeps, c: Payou
   const reasons: string[] = [];
   const now = ctx.now();
   if (c.environment !== ctx.env || c.mode !== "EXECUTE_AFTER_APPROVAL" || c.state !== "QUEUED" || c.held) reasons.push("command is not executable");
+  // TESTNET_LIVE_PAYOUT_DEMO: paid from the operator's OWN pre-funded P2P.lol USDC (the TAZ payment only
+  // authorizes it). It replaces ONLY the treasury / production-capacity requirements below; every other
+  // check (approval, caps, pause, hash, authorization, finality, fresh preflight, lease) still applies.
+  const demoLive = c.environment === "testnet" && testnetLiveDemo(ctx);
   if (ctx.env !== "demo") {
-    // A browser balance is not authenticated spendable reserves. No production
-    // capacity authority is provisioned yet, regardless of configured credentials.
-    reasons.push("independent spendable-capacity verification is not provisioned");
-    if (ctx.env !== "mainnet-enabled" || !ctx.caps.canSubmitTransactions || !ctx.cfg.pilot.livePayoutsEnabled) reasons.push("live money movement disabled");
+    if (demoLive) {
+      if (c.flow !== "SCAN_PAY") reasons.push("testnet live demo pays Scan & Pay only");
+    } else {
+      // A browser balance is not authenticated spendable reserves. No production
+      // capacity authority is provisioned yet, regardless of configured credentials.
+      reasons.push("independent spendable-capacity verification is not provisioned");
+      if (ctx.env !== "mainnet-enabled" || !ctx.caps.canSubmitTransactions || !ctx.cfg.pilot.livePayoutsEnabled) reasons.push("live money movement disabled");
+    }
     if (!ctx.cfg.approvals.legal || !ctx.cfg.approvals.provider) reasons.push("legal/provider approval missing");
     if (BigInt(c.requested_inr_paise) > ctx.cfg.pilot.maxPayoutInrPaise) reasons.push("per-order cap exceeded");
     const daily = await one<{ total: string }>(t, `SELECT coalesce(sum(max_usdc_debit_micros),0) AS total FROM payout_commands WHERE environment=$1 AND created_at > now()-interval '1 day' AND state NOT IN ('PREFLIGHT_BLOCKED','EXPIRED','USER_ABORTED','REFUNDED')`, [ctx.env]);
@@ -481,10 +600,16 @@ async function executionBlockers(t: Tx, ctx: CoreContext, deps: TfDeps, c: Payou
   const auth = await maybeOne(t, `SELECT 1 FROM payout_authorizations WHERE id=$1 AND environment=$2 AND intent_id IS NOT DISTINCT FROM $3 AND withdrawal_id IS NOT DISTINCT FROM $4`, [c.authorization_id, ctx.env, c.source_intent_id, c.withdrawal_id]);
   if (!auth) reasons.push("payer authorization does not bind this obligation");
   const obligation = c.source_intent_id ?? c.withdrawal_id!;
-  const alloc = await treasury.activeAllocation(t, ctx.env, obligation, false);
-  if (!alloc || alloc.id !== c.reserved_treasury_id || BigInt(alloc.amount_micros) < BigInt(c.max_usdc_debit_micros)) reasons.push("exact reserve unavailable");
-  const capacity = await treasury.treasuryCapacity(t, ctx.env, { inventoryMaxAgeMs: ctx.cfg.policy.treasuryInventoryMaxAgeSec * 1000, bufferMicros: 0n }, now);
-  if (capacity.stale || capacity.activeMicros > capacity.inventoryMicros) reasons.push("capacity stale or below obligations");
+  if (demoLive) {
+    // No Zeb Scan treasury exists on testnet; the fresh read-only preflight below must have seen a
+    // spendable P2P.lol USDC balance >= the max debit, and the per-order/daily caps above bound exposure.
+    if (c.reserved_treasury_id) reasons.push("testnet live demo command must not reference a treasury reserve");
+  } else {
+    const alloc = await treasury.activeAllocation(t, ctx.env, obligation, false);
+    if (!alloc || alloc.id !== c.reserved_treasury_id || BigInt(alloc.amount_micros) < BigInt(c.max_usdc_debit_micros)) reasons.push("exact reserve unavailable");
+    const capacity = await treasury.treasuryCapacity(t, ctx.env, { inventoryMaxAgeMs: ctx.cfg.policy.treasuryInventoryMaxAgeSec * 1000, bufferMicros: 0n }, now);
+    if (capacity.stale || capacity.activeMicros > capacity.inventoryMicros) reasons.push("capacity stale or below obligations");
+  }
   const sources = c.source_intent_id ? [c.source_intent_id] : (await many<{ intent_id: string }>(t, `SELECT DISTINCT coalesce(c.intent_id,p.intent_id) AS intent_id FROM merchant_credits c LEFT JOIN merchant_credits p ON p.id=c.parent_credit_id WHERE c.withdrawal_id=$1`, [c.withdrawal_id])).map((r) => r.intent_id);
   if (!sources.length) reasons.push("source deposits unavailable");
   for (const id of sources) {
@@ -525,11 +650,16 @@ export async function advanceTfPayout(ctx: CoreContext, deps: TfDeps, payoutId: 
     case "CREATED": {
       const reasons: string[] = [];
       if (cmd0.mode !== "EXECUTE_AFTER_APPROVAL") reasons.push(`mode ${cmd0.mode} never executes`);
-      if (ctx.env === "mainnet-enabled") {
+      const demoLive = testnetLiveDemo(ctx);
+      if (ctx.env === "testnet") {
+        if (!demoLive) reasons.push("HACKATHON_TESTNET never executes INR payouts (TESTNET_LIVE_PAYOUT_DEMO is off)");
+        if (cmd0.flow !== "SCAN_PAY") reasons.push("testnet live demo pays Scan & Pay only");
+      }
+      if (ctx.env === "mainnet-enabled" || demoLive) {
         if (!p.livePayoutsEnabled) reasons.push("live payouts disabled by policy");
-        if (terms.inrPaise > p.maxPayoutInrPaise) reasons.push("amount above pilot per-order cap");
+        if (terms.inrPaise > p.maxPayoutInrPaise) reasons.push(demoLive ? `amount above pilot per-order cap: INR ${formatInrPaise(terms.inrPaise)} > INR ${formatInrPaise(p.maxPayoutInrPaise)} (PILOT_MAX_PAYOUT_INR_PAISE)` : "amount above pilot per-order cap");
         const day = await one<{ total: string | null }>(ctx.db, `SELECT sum(max_usdc_debit_micros) AS total FROM payout_commands WHERE environment=$1 AND created_at > now() - interval '1 day' AND state NOT IN ('PREFLIGHT_BLOCKED','EXPIRED','USER_ABORTED','REFUNDED')`, [ctx.env]);
-        if (BigInt(day.total ?? "0") > p.dailyMaxUsdcMicros) reasons.push("daily USDC exposure cap reached");
+        if (BigInt(day.total ?? "0") > p.dailyMaxUsdcMicros) reasons.push(demoLive ? `daily USDC exposure cap reached: ${formatUsdcMicros(BigInt(day.total ?? "0"))} > ${formatUsdcMicros(p.dailyMaxUsdcMicros)} USDC (PILOT_DAILY_MAX_USDC_MICROS)` : "daily USDC exposure cap reached");
       }
       await tx(ctx.db, async (t) => {
         const c = await load(t, payoutId);
@@ -538,6 +668,17 @@ export async function advanceTfPayout(ctx: CoreContext, deps: TfDeps, payoutId: 
       return { rerunInMs: reasons.length ? null : 0 };
     }
     case "POLICY_CHECKED": {
+      if (cmd0.environment === "testnet") {
+        // TESTNET_LIVE_PAYOUT_DEMO: no Zeb Scan treasury on testnet. Funding = the operator's own pre-funded
+        // P2P.lol USDC; the read-only preflight must see a spendable balance >= the max debit before approval.
+        const on = testnetLiveDemo(ctx);
+        await tx(ctx.db, async (t) => {
+          const c = await load(t, payoutId);
+          if (!on) await setState(t, ctx, c, "PREFLIGHT_BLOCKED", "TESTNET_LIVE_PAYOUT_DEMO is off");
+          else await setState(t, ctx, c, "LIQUIDITY_RESERVED", "testnet live demo: operator-funded P2P.lol USDC (no Zeb Scan treasury); balance checked by the read-only preflight");
+        });
+        return { rerunInMs: on ? 0 : null };
+      }
       const obligation = cmd0.source_intent_id ?? cmd0.withdrawal_id!;
       const alloc = await treasury.activeAllocation(ctx.db, ctx.env, obligation, false);
       await tx(ctx.db, async (t) => {
@@ -561,7 +702,7 @@ export async function advanceTfPayout(ctx: CoreContext, deps: TfDeps, payoutId: 
       const a = await latestAttempt(ctx, payoutId, "preflight");
       const run = await deps.port!.get(a!.run_id!);
       if (run.status === "PENDING" || run.status === "RUNNING") return { rerunInMs: 5_000 };
-      const v = run.status === "COMPLETED" ? evaluatePreflight(run.result, deps.web!, { flow: cmd0.flow, usdcMicros: terms.maxUsdc }) : { ok: false, reasons: [`preflight run ${run.status}`], obs: null, visibleUsdcMicros: null };
+      const v = run.status === "COMPLETED" ? evaluatePreflight(run.result, deps.web!, { flow: cmd0.flow, usdcMicros: terms.maxUsdc, ...(terms.sellUsdc !== undefined ? { via: "SELL" as const } : {}) }) : { ok: false, reasons: [`preflight run ${run.status}`], obs: null, visibleUsdcMicros: null };
       const fp = v.obs?.account_identifier ? accountFingerprint(v.obs.account_identifier, ctx.cfg.tokenSecret) : null;
       if (v.ok && !fp) v.reasons.push("no stable account identifier visible");
       await ctx.db.query(`UPDATE payout_attempts SET status=$2, observation=$3, outcome=$4, updated_at=now() WHERE id=$1`, [a!.id, run.status === "COMPLETED" ? "completed" : "failed", JSON.stringify({ reasons: v.reasons }), v.ok && fp ? "pass" : "blocked"]);
@@ -594,8 +735,11 @@ export async function advanceTfPayout(ctx: CoreContext, deps: TfDeps, payoutId: 
         await tx(ctx.db, async (t) => setState(t, ctx, await load(t, payoutId), existing.run_id ? "AGENT_RUNNING" : "OUTCOME_UNKNOWN_REVIEW", existing.run_id ? undefined : "execute attempt persisted without a confirmed run id"));
         return { rerunInMs: 5_000 };
       }
-      const goal = buildExecuteGoal({ payoutId: cmd0.id, flow: cmd0.flow, recipientVpa: vpa, inrPaise: terms.inrPaise, maxUsdcDebitMicros: terms.maxUsdc, commit: true }, deps.web!);
-      const r = await startRun(ctx, deps, cmd0, "execute", goal, EXECUTE_SCHEMA as unknown as Record<string, unknown>, fencing);
+      // Testnet live demo: app.p2p.lol SELL of exactly the authorized max USDC debit to this command's UPI ID;
+      // the provider-displayed INR payout must be at least the authorized INR (minus the command variance).
+      const sell = terms.sellUsdc !== undefined ? { sell: { usdcMicros: terms.sellUsdc, minInrPaise: terms.inrPaise - terms.variance } } : {};
+      const goal = buildExecuteGoal({ payoutId: cmd0.id, flow: cmd0.flow, recipientVpa: vpa, inrPaise: terms.inrPaise, maxUsdcDebitMicros: terms.maxUsdc, commit: true, ...sell }, deps.web!);
+      const r = await startRun(ctx, deps, cmd0, "execute", goal, (terms.sellUsdc !== undefined ? SELL_EXECUTE_SCHEMA : EXECUTE_SCHEMA) as unknown as Record<string, unknown>, fencing);
       await tx(ctx.db, async (t) => {
         const c = await load(t, payoutId);
         if (r.outcome === "queued") { if (c.state !== "AGENT_RUNNING") await setState(t, ctx, c, "AGENT_RUNNING"); }
@@ -702,6 +846,12 @@ async function independentlyVerified(t: Tx, ctx: CoreContext, cmd: PayoutCommand
 
 async function settle(t: Tx, ctx: CoreContext, cmd: PayoutCommandRow) {
   if (!await independentlyVerified(t, ctx, cmd, "delivered")) throw new DomainError("PAYOUT_EVIDENCE_REQUIRED", "Independent provider, exact debit and bank evidence required");
+  if (cmd.environment === "testnet") {
+    // TESTNET_LIVE_PAYOUT_DEMO: paid from the operator's own P2P.lol USDC, outside Zeb Scan's books. TAZ has no
+    // value, so no INR obligation or USDC treasury asset was ever booked; testnet books stay ZEC-only.
+    await setState(t, ctx, cmd, "RECONCILED", "operator-funded testnet demo payout: independent settlement evidence verified");
+    return;
+  }
   const order = await one<{ actual_usdc_micros: string; provider_order_id: string }>(t, `SELECT actual_usdc_micros, provider_order_id FROM payout_settlement_evidence WHERE payout_id=$1`, [cmd.id]);
   const usdc = BigInt(order.actual_usdc_micros);
   await postJournal(t, ctx.env, {
@@ -782,6 +932,7 @@ export async function requestReconcile(ctx: CoreContext, deps: TfDeps, payoutId:
 
 /** Dual-control decision after reconciliation proves no order exists: the slot may be retried. */
 export async function markVerifiedNotSubmitted(ctx: CoreContext, payoutId: string, approvalId: string): Promise<void> {
+  if(ctx.env!=='demo') throw new DomainError('FEATURE_UNAVAILABLE','Retry requires independently verified non-submission and no-debit evidence; browser absence is insufficient',undefined,{status:409});
   await tx(ctx.db, async (t) => {
     const c = await load(t, payoutId);
     const rec = await maybeOne<{ outcome: string | null }>(t, `SELECT outcome FROM payout_attempts WHERE payout_id=$1 AND kind='reconcile' ORDER BY created_at DESC LIMIT 1`, [payoutId]);

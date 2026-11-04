@@ -1,0 +1,30 @@
+Fetching deployment "zebrascan.vercel.app" in builder3base-8480s-projects
+> Fetched deployment "zebrascan-bhfhifo5v-builder3base-8480s-projects.vercel.app" in builder3base-8480s-projects [497ms]
+
+  General
+
+    id		dpl_5bavxQ3XEbaqCMvc1z8rM4atsAfy
+    name	zebrascan
+    target	production
+    status	● Ready
+    url		https://zebrascan-bhfhifo5v-builder3base-8480s-projects.vercel.app
+    created	Wed Nov 04 2026 22:55:46 GMT+0530 (India Standard Time) [5m ago]
+
+
+  Aliases
+
+    ╶ https://zebrascan.vercel.app
+    ╶ https://zebrascan-builder3base-8480s-projects.vercel.app
+    
+
+  Builds
+
+    ┌ .        [0ms]
+    ├── λ index (1.67MB) [iad1]
+    ├── λ _not-found (1.67MB) [iad1]
+    ├── λ _not-found.rsc (1.67MB) [iad1]
+    ├── λ app (1.67MB) [iad1]
+    ├── λ app.rsc (1.67MB) [iad1]
+    └── 69 output items hidden
+    
+

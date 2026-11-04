@@ -1,0 +1,6 @@
+Retrieving project…
+> No Environment Variables found for builder3base-8480s-projects/zebrascan [294ms]
+Common next commands:
+- `vercel env add`
+- `vercel env rm`
+- `vercel env pull`
