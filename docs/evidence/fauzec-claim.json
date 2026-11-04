@@ -1,0 +1,12 @@
+{
+  "at": "2026-11-04T15:51:45.039Z",
+  "status": 200,
+  "body": {
+    "request_id": "01M6KM4D0PV9WMN0TK8A2NFCHG",
+    "network": "testnet",
+    "state": "broadcasting",
+    "outcome": "accepted",
+    "txid": "b056fc3a752cc67edd6f212791846406985d387e09225cbcb3143ec8f7b0d9b2",
+    "claim_amount_zat": 100000000
+  }
+}

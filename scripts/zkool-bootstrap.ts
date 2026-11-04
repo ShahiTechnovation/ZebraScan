@@ -41,13 +41,21 @@ const key = createPrivateKey(readFileSync(`${SECRETS}/zkool-${network}-jwt.key`,
 const admin = () => signZkoolJwt(key, { sub: 0, write: true, ttlSeconds: 600 });
 const log = (m: string) => console.log(`[zkool-bootstrap ${network}] ${m}`);
 
+async function post(body: string, token: string): Promise<Response> {
+  // Transport-level retry only (ECONNRESET / timeouts). GraphQL errors are never retried.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(url!, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body, signal: AbortSignal.timeout(600_000) });
+    } catch (e) {
+      if (attempt >= 6) throw e;
+      log(`transport error (${(e as Error).message}); retry ${attempt}/5`);
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+}
+
 async function gql<T>(query: string, token: string = admin(), variables?: Record<string, unknown>): Promise<T> {
-  const res = await fetch(url!, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-    body: JSON.stringify(variables ? { query, variables } : { query }),
-    signal: AbortSignal.timeout(600_000),
-  });
+  const res = await post(JSON.stringify(variables ? { query, variables } : { query }), token);
   const text = await res.text();
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
   const body = JSON.parse(text) as { data?: T; errors?: Array<{ message: string }> };
@@ -125,7 +133,16 @@ for (const [label, token] of [
     proof[label] = m.slice(0, 120);
   }
 }
-if (!/No Signing Key/i.test(proof.write_token!)) throw new Error(`expected "No Signing Key", got: ${proof.write_token}`);
+// zkool runs note selection before signing: an account with no spendable notes fails with
+// "No feasible note selection found" before it can reach "No Signing Key". That is NOT a
+// watch-only proof, so additionally require that the account holds no seed, and re-prove with
+// `--recheck-watch-only` once the account has received a note.
+const seedOnWatch = (await gql<{ accounts: Array<{ seed: string | null }> }>(`{ accounts(accountFilter: { id: ${watch.id} }) { seed } }`)).accounts[0]?.seed;
+if (seedOnWatch) throw new Error("SECURITY: the watch account holds a seed — refusing");
+proof.seed_on_watch_account = "null (no seed stored)";
+if (/No feasible note selection/i.test(proof.write_token!)) {
+  proof.write_token_note = "provisional: account has no notes yet, pay failed at note selection before signing; re-run with --recheck-watch-only after the first deposit";
+} else if (!/No Signing Key/i.test(proof.write_token!)) throw new Error(`expected "No Signing Key", got: ${proof.write_token}`);
 if (!/Unauthorized/i.test(proof.worker_read_only_token!)) throw new Error(`expected "Unauthorized", got: ${proof.worker_read_only_token}`);
 log(`watch-only proven: write token → "${proof.write_token}", worker token → "${proof.worker_read_only_token}"`);
 

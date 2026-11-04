@@ -1,0 +1,41 @@
+
+> zeb-scan-monorepo@0.2.0 typecheck P:\Zebra Scan\zeb-scan
+> pnpm -r --workspace-concurrency=1 run typecheck && tsc -p tsconfig.json
+
+Scope: 10 of 11 workspace projects
+
+> @zeb/contracts@0.2.0 typecheck P:\Zebra Scan\zeb-scan\packages\contracts
+> tsc -p tsconfig.json
+
+
+> @zeb/domain@0.2.0 typecheck P:\Zebra Scan\zeb-scan\packages\domain
+> tsc -p tsconfig.json
+
+
+> @zeb/web@0.1.0 typecheck P:\Zebra Scan\zeb-scan\apps\web
+> tsc --noEmit
+
+
+> @zeb/db@0.2.0 typecheck P:\Zebra Scan\zeb-scan\packages\db
+> tsc -p tsconfig.json
+
+
+> @zeb/providers@0.2.0 typecheck P:\Zebra Scan\zeb-scan\packages\providers
+> tsc -p tsconfig.json
+
+
+> @zeb/security@0.2.0 typecheck P:\Zebra Scan\zeb-scan\packages\security
+> tsc -p tsconfig.json
+
+
+> @zeb/ledger@0.2.0 typecheck P:\Zebra Scan\zeb-scan\packages\ledger
+> tsc -p tsconfig.json
+
+
+> @zeb/core@0.2.0 typecheck P:\Zebra Scan\zeb-scan\packages\core
+> tsc -p tsconfig.json
+
+
+> @zeb/api@0.2.0 typecheck P:\Zebra Scan\zeb-scan\apps\api
+> tsc -p tsconfig.json
+
