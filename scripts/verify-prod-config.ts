@@ -5,7 +5,7 @@
  *   ZEB_ENVIRONMENT=testnet ... pnpm verify:prod-config
  */
 import { loadConfig } from "@zeb/core";
-import { P2PClient, validateP2PConfig, ZcashGatewayClient } from "@zeb/providers";
+import { P2PClient, validateP2PConfig, ZcashGatewayClient, ZkoolWatcher } from "@zeb/providers";
 import type { Address } from "viem";
 
 type Level = "PASS" | "WARN" | "FAIL";
@@ -56,7 +56,22 @@ if (live) {
       add("FAIL", `P2P configuration: ${(e as Error).message}`);
     }
   }
-  if (!cfg!.zcashGateway) add(env === "mainnet-readonly" ? "WARN" : "FAIL", "Zcash gateway configured");
+  if (cfg!.zkool) {
+    // Selected watcher: zkool (watch-only, JWT-scoped). The Rust gateway is non-production.
+    const z = cfg!.zkool;
+    add(z.network === cfg!.zcashNetwork ? "PASS" : "FAIL", `zkool network ${z.network} matches ${cfg!.zcashNetwork}`);
+    add(z.jwtFile ? "PASS" : mainnet ? "FAIL" : "WARN", "zkool uses a short-lived viewer token file");
+    add(new URL(z.url).protocol === "https:" || ["localhost", "127.0.0.1"].includes(new URL(z.url).hostname) ? "PASS" : "FAIL", "zkool endpoint is https or loopback");
+    try {
+      const st = await new ZkoolWatcher({ url: z.url, accountId: z.accountId, jwt: z.jwt, jwtFile: z.jwtFile, pools: z.pools, network: z.network, addressMode: z.addressMode, birthHeight: z.birthHeight }).status();
+      add(st.network === cfg!.zcashNetwork ? "PASS" : "FAIL", `zkool chain network ${st.network}`);
+      add("PASS", `zkool consensus branch ${st.consensusBranchId ?? "unknown"} (NU7 active: ${st.nu7Active})`);
+      add(st.state === "synced" ? "PASS" : "FAIL", `zkool scanner state ${st.state} (tip ${st.tipHeight}, scanned ${st.scannedHeight})`);
+      add(st.ironwoodSupported ? "PASS" : "FAIL", "zkool reports Ironwood support");
+    } catch (e) {
+      add("FAIL", `zkool unreachable or unauthorized: ${(e as Error).message}`);
+    }
+  } else if (!cfg!.zcashGateway) add(env === "mainnet-readonly" ? "WARN" : "FAIL", "No Zcash watcher configured (ZKOOL_GRAPHQL_URL or ZCASH_GATEWAY_URL)");
   else {
     add(cfg!.zcashGateway.tls ? "PASS" : "FAIL", "Zcash gateway uses mTLS");
     try {
@@ -68,7 +83,8 @@ if (live) {
       add("FAIL", `gateway unreachable: ${(e as Error).message}`);
     }
   }
-  add(cfg!.signer.mode !== "none" || env === "mainnet-readonly" ? "PASS" : "WARN", `Base signer mode: ${cfg!.signer.mode}`);
+  // Payout readiness only (receiving ZEC never needs a Base signer).
+  add(cfg!.signer.mode !== "none" || env === "mainnet-readonly" ? "PASS" : "WARN", `[payouts only] Base signer mode: ${cfg!.signer.mode}`);
 }
 
 report();

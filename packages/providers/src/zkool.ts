@@ -24,7 +24,7 @@ import { sign as edSign, type KeyObject } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DomainError, INVOICE_MEMO_RE, addressMatchesNetwork, buildZip321, parseDecimalToMinor } from "@zeb/domain";
 import type { AddressAllocator, AllocatedAddress, DepositEvent, ScannerStatus } from "./zcash";
-import { readChainWitness, type ChainWitness } from "./chain";
+import { expectedNu7Branch, NU7_HEIGHT, readChainWitness, type ChainWitness } from "./chain";
 
 export type ZkoolNetwork = "testnet" | "mainnet";
 export type ZkoolAddressMode = "rotate" | "memo";
@@ -279,6 +279,26 @@ export class ZkoolWatcher implements AddressAllocator {
     };
   }
 
+  private ironwoodProbe: { at: number; ok: boolean } | null = null;
+  /**
+   * Runtime capability proof (cached 5 min): the live GraphQL schema still has every field this adapter
+   * reads (incl. Note.pool) AND the account derives a unified address valid for this network (pool
+   * selection per ZKOOL_ADDRESS_POOLS). Any failure yields false (receiving is blocked by the readiness gate), never a throw.
+   */
+  private async probeIronwood(): Promise<boolean> {
+    if (this.ironwoodProbe && Date.now() - this.ironwoodProbe.at < 300_000) return this.ironwoodProbe.ok;
+    let ok = false;
+    try {
+      await this.assertSchema();
+      const ua = await this.receivingAddress(); // checkAddress() validates network + unified format
+      ok = typeof ua === "string" && ua.length > 60;
+    } catch {
+      ok = false;
+    }
+    this.ironwoodProbe = { at: Date.now(), ok };
+    return ok;
+  }
+
   async status(): Promise<ScannerStatus> {
     const chain = await (this.cfg.chainReader ?? readChainWitness)(this.network);
     const h = await this.gql<{ currentHeight: number }>(`{ currentHeight }`);
@@ -295,8 +315,8 @@ export class ZkoolWatcher implements AddressAllocator {
       tipTime: chain.time,
       scannedHeight: scanned,
       consensusBranchId: chain.branch,
-      ironwoodSupported: true, // zkool2 6.36 scans Ironwood (pool 3); verified by schema + live notes
-      nu7Active: tip >= (this.network === "testnet" ? 4_465_026 : MAINNET_NU7_HEIGHT) && chain.branch === "77190ad9",
+      ironwoodSupported: await this.probeIronwood(),
+      nu7Active: tip >= NU7_HEIGHT[this.network] && chain.branch === expectedNu7Branch(this.network),
       state: fresh && scanned >= (this.cfg.birthHeight ?? 1) && Math.abs(tip - scanned) <= 3 ? "synced" : "syncing",
       walletBirthday: this.cfg.birthHeight ?? 0,
       version: "zkool_graphql",

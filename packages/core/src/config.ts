@@ -12,6 +12,8 @@ export interface Policy {
   /** Window after the funding deadline in which confirmations may complete. */
   finalityWindowSec: number;
   requiredConfirmations: number;
+  /** Confirmations at which READ-ONLY P2P preparation (TinyFish preflight) may start. Never moves money. */
+  p2pInitConfirmations: number;
   platformFeeBps: number;
   p2pSpreadReserveBps: number;
   zecVolatilityPremiumBps: number;
@@ -168,9 +170,19 @@ export function loadConfig(env: Env = process.env): Config {
 
   let zkool: Config["zkool"] = null;
   if (env.ZKOOL_GRAPHQL_URL) {
-    // zkool watch-only watcher: HACKATHON_TESTNET (receiving) or MAINNET_READONLY (monitoring only;
-    // mainnet-readonly never opens payouts). Never in demo or mainnet-enabled.
-    if (environment !== "testnet" && environment !== "mainnet-readonly") throw new DomainError("SYSTEM_CONFIG", "ZKOOL_GRAPHQL_URL is only permitted in HACKATHON_TESTNET or MAINNET_READONLY");
+    // zkool watch-only watcher: HACKATHON_TESTNET (receiving), MAINNET_READONLY (monitoring only, no
+    // addresses issued) or CONTROLLED_LIVE_PILOT / mainnet-enabled (receiving, still gated by approvals,
+    // feature gates and scanner/consensus readiness). Never in demo.
+    if (environment === "demo") throw new DomainError("SYSTEM_CONFIG", "ZKOOL_GRAPHQL_URL is not permitted in DEMO");
+    if (environment === "mainnet-enabled") {
+      const u = (() => { try { return new URL(env.ZKOOL_GRAPHQL_URL!); } catch { throw new DomainError("SYSTEM_CONFIG", "ZKOOL_GRAPHQL_URL is not a valid URL"); } })();
+      const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+      if (u.protocol !== "https:" && !loopback) throw new DomainError("SYSTEM_CONFIG", "mainnet-enabled requires an https ZKOOL_GRAPHQL_URL (or loopback)");
+      if (env.ZKOOL_JWT) throw new DomainError("SYSTEM_CONFIG", "mainnet-enabled forbids a static ZKOOL_JWT; use ZKOOL_VIEWER_TOKEN_FILE (short-lived, rotated)");
+      if (!env.ZKOOL_VIEWER_TOKEN_FILE) throw new DomainError("SYSTEM_CONFIG", "mainnet-enabled requires ZKOOL_VIEWER_TOKEN_FILE");
+      if (!env.ZKOOL_ACCOUNT_ID) throw new DomainError("SYSTEM_CONFIG", "mainnet-enabled requires an explicit ZKOOL_ACCOUNT_ID");
+      if (!env.ZKOOL_BIRTH_HEIGHT) throw new DomainError("SYSTEM_CONFIG", "mainnet-enabled requires an explicit ZKOOL_BIRTH_HEIGHT (wallet birthday)");
+    }
     if (zcashGateway) throw new DomainError("SYSTEM_CONFIG", "configure either ZCASH_GATEWAY_URL or ZKOOL_GRAPHQL_URL, not both");
     const zNet = environment === "testnet" ? "testnet" : "mainnet";
     if (env.ZKOOL_NETWORK && env.ZKOOL_NETWORK !== zNet) throw new DomainError("SYSTEM_CONFIG", `ZKOOL_NETWORK=${env.ZKOOL_NETWORK} conflicts with environment ${environment} (expects ${zNet})`);
@@ -245,6 +257,7 @@ export function loadConfig(env: Env = process.env): Config {
     finalityWindowSec: int(env, "FINALITY_WINDOW_SECONDS", 7200, 60, 172_800),
     // Testnet evidence demo: 1 block (event guide). Mainnet values require risk review.
     requiredConfirmations: int(env, "REQUIRED_CONFIRMATIONS", isDemo ? 3 : environment === "testnet" ? 1 : 10, 1, 1000),
+    p2pInitConfirmations: int(env, "P2P_INIT_CONFIRMATIONS", 1, 1, 1000),
     platformFeeBps: int(env, "PLATFORM_FEE_BPS", 50, 0, 1000),
     p2pSpreadReserveBps: int(env, "P2P_SPREAD_RESERVE_BPS", 100, 0, 2000),
     zecVolatilityPremiumBps: int(env, "ZEC_VOLATILITY_PREMIUM_BPS", 150, 0, 2000),
@@ -270,6 +283,7 @@ export function loadConfig(env: Env = process.env): Config {
     scannerMaxLagBlocks: int(env, "SCANNER_MAX_LAG_BLOCKS", 3, 0, 1000),
     scannerMaxTipAgeSec: int(env, "SCANNER_MAX_TIP_AGE_SECONDS", 900, 60, 86_400),
   };
+  if (policy.p2pInitConfirmations > policy.requiredConfirmations) throw new DomainError("SYSTEM_CONFIG", "P2P_INIT_CONFIRMATIONS must be <= REQUIRED_CONFIRMATIONS");
   if (policy.minInrPaise <= 0n || policy.minInrPaise > policy.maxInrPaise) throw new DomainError("SYSTEM_CONFIG", "MIN_INR_PAISE must be > 0 and <= MAX_INR_PAISE");
 
   const cfg: Config = {

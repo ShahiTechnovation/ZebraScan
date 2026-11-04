@@ -155,4 +155,17 @@ describe("config", () => {
     expect(() => loadConfig({ ...base, ZEB_ENVIRONMENT: "testnet", P2P_DIAMOND_ADDRESS: "0x1", P2P_CHAIN_ID: "8453", BASE_RPC_URL: "x", P2P_SUBGRAPH_URL: "x", P2P_USDC_ADDRESS: "x" })).toThrow(/Sepolia/);
     expect(loadConfig({ ...base, ZEB_ENVIRONMENT: "demo" }).policy.quoteLifetimeSec).toBe(90);
   });
+  it("mainnet-enabled accepts only a hardened watch-only zkool watcher", () => {
+    const m = { ...base, ZEB_ENVIRONMENT: "mainnet-enabled", ZKOOL_GRAPHQL_URL: "https://zkool.example.com/graphql", ZKOOL_VIEWER_TOKEN_FILE: "/run/secrets/t", ZKOOL_ACCOUNT_ID: "1", ZKOOL_BIRTH_HEIGHT: "3541765" };
+    const cfg = loadConfig(m);
+    expect(cfg.zkool?.network).toBe("mainnet");
+    expect(() => loadConfig({ ...m, ZKOOL_GRAPHQL_URL: "http://zkool.example.com/graphql" })).toThrow(/https/);
+    expect(() => loadConfig({ ...m, ZKOOL_NETWORK: "testnet" })).toThrow(/conflicts/);
+    expect(() => loadConfig({ ...m, ZKOOL_JWT: "static" })).toThrow(/static/);
+    expect(() => loadConfig({ ...m, ZCASH_SPEND_KEY_REF: "ref" })).toThrow(/watch-only/);
+    expect(() => loadConfig({ ...m, ZKOOL_JWT_PRIVATE_KEY_FILE: "/k" })).toThrow(/issuer/);
+    const { ZKOOL_BIRTH_HEIGHT: _b, ...noBirth } = m;
+    expect(() => loadConfig(noBirth)).toThrow(/BIRTH/);
+    expect(() => loadConfig({ ...m, ZEB_ENVIRONMENT: "demo" })).toThrow(/DEMO/);
+  });
 });

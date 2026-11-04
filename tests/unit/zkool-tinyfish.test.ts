@@ -238,3 +238,14 @@ describe("TinyFish guards", () => {
     expect(evaluateReconcile({ ...r, order_found: false }, cmd, "77", web)).toMatchObject({ kind: "not_found" });
   });
 });
+
+import { expectedNu7Branch, NU7_HEIGHT } from "../../packages/providers/src/chain";
+describe("NU7 branch pinning (no assumed mainnet value)", () => {
+  it("mainnet has no default; testnet does; malformed pin rejected", () => {
+    expect(NU7_HEIGHT.mainnet).toBe(3_543_405);
+    expect(expectedNu7Branch("mainnet", {})).toBeNull();
+    expect(expectedNu7Branch("mainnet", { ZCASH_NU7_BRANCH_ID: "0xAABBCCDD" })).toBe("aabbccdd");
+    expect(expectedNu7Branch("testnet", {})).toBe("77190ad9");
+    expect(() => expectedNu7Branch("mainnet", { ZCASH_NU7_BRANCH_ID: "zz" })).toThrow(/8 hex/);
+  });
+});
