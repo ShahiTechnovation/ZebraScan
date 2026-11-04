@@ -17,7 +17,7 @@
  * checkout, UPI, USDC and txid). `--auto-authorize` is the calling application's explicit authorization.
  */
 import { createHash } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { buildContext, emitResource, loadConfig } from "@zeb/core";
 import { createTinyFishPort } from "@zeb/providers";
 import { buildP2PLolSellGoal, checkP2PLolResult, P2PLOL_RESULT_SCHEMA, P2PLOL_START_URL, type P2PLolResult } from "../packages/providers/src/p2plol";
@@ -136,6 +136,24 @@ async function preview(id: string) {
 async function execute(id: string, confirm: string | "auto") {
   const t = await loadTerms(id);
   if (confirm !== "auto" && confirm !== t.code) throw new Error("confirm code does not match these exact terms (checkout, UPI, USDC, txid); run --preview again");
+  // Daily cap across ALL payouts (public site: any visitor can trigger one). Counts every lock written
+  // today (attempted orders count, whatever their outcome). Default 1.15 USDC/day, hard max 1.2.
+  const dailyCap = BigInt(process.env.PILOT_DAILY_MAX_USDC_MICROS ?? "1150000");
+  if (dailyCap <= 0n || dailyCap > HARD_MAX) throw new Error(`PILOT_DAILY_MAX_USDC_MICROS must be in (0, ${HARD_MAX}]`);
+  const today = new Date().toISOString().slice(0, 10);
+  let spentToday = 0n;
+  for (const f of readdirSync("var/settlements")) {
+    if (!f.endsWith(".lock")) continue;
+    try {
+      const l = JSON.parse(readFileSync(`var/settlements/${f}`, "utf8")) as { at?: string; usdc?: string };
+      if (l.at?.startsWith(today) && l.usdc) spentToday += BigInt(Math.round(Number(l.usdc) * 1_000_000));
+    } catch {
+      spentToday += HARD_MAX; // unreadable lock: assume the worst
+    }
+  }
+  if (spentToday + t.usdcMicros > dailyCap) {
+    throw new Error(`daily payout cap reached: ${usdcDecimal(spentToday)} USDC already attempted today + ${t.usdc} > ${usdcDecimal(dailyCap)} USDC`);
+  }
   // Exactly-once: create the lock BEFORE the run; never deleted automatically.
   let fd: number;
   try {

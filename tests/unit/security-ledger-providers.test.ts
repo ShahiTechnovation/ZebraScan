@@ -89,6 +89,9 @@ describe("redaction", () => {
     expect(out).not.toContain("aaaaaaaa");
     expect(out).not.toContain('"x"');
   });
+  it("removes one-character-name VPAs the UPI parsers accept (x@ybl)", () => {
+    expect(JSON.stringify(redact({ msg: "send INR 10 to x@ybl now" }))).not.toContain("x@ybl");
+  });
 });
 
 describe("rbac", () => {

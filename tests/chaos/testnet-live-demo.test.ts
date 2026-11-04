@@ -19,6 +19,7 @@ import {
   checkoutPublic,
   claim,
   createPayoutCommand,
+  emitResource,
   enqueueJob,
   evaluateExecution,
   health,
@@ -452,6 +453,47 @@ describe("TESTNET_LIVE_PAYOUT_DEMO on: strict rail end to end", () => {
     await runTestnet(testnetCtx(h!, CAPS_WITHOUT_FLAG), deps);
     expect(port.calls.execute).toBe(0);
     expect((await stateOf(cmd.id)).held).toBe(true);
+  });
+
+  it("a checkout already touched by scripts/settle-p2plol.ts (same flag, separate SELL path) is never paid again by the worker rail", async () => {
+    const { port, deps } = await setup({ preflight: preflightOk, execute: (g) => sellOk(g) });
+    const ctx = testnetCtx(h!, GATE_ON);
+    const i = await testnetCheckout(h!, "script.paid@okaxis", "5000");
+    await ingestScannerEvent(ctx, confirmed(i));
+    await runTestnet(ctx, deps);
+    const cmd = await cmdOf(i.id);
+    expect((await stateOf(cmd.id)).state).toBe("OPERATOR_APPROVAL_REQUIRED");
+    // what settle-p2plol.ts emits right before its own Place Order run
+    await emitResource(h!.db, "testnet", `checkout:${i.id}`, "payout.live_demo.authorized", { label: "INR payout authorized" });
+    await approvePayout(ctx, cmd.id, OPERATOR, cmd.command_hash);
+    await runTestnet(ctx, deps);
+    expect(port.calls.execute).toBe(0);
+    const s = await stateOf(cmd.id);
+    expect(s.held).toBe(true);
+    expect(s.state_reason).toMatch(/settle-p2plol/);
+  });
+
+  it("a payout left in OUTCOME_UNKNOWN_REVIEW keeps the P2P.lol account lease: a new checkout's payout waits and never executes", async () => {
+    const stopped = (): Step => ({ result: { ...sellOk("").result!, action: "stopped", submitted: false, place_order_clicks: "0", provider_order_id: "", blocking_issue: "expected INR payout below the minimum" } });
+    const { port, deps } = await setup({ preflight: preflightOk, execute: stopped });
+    const ctx = testnetCtx(h!, GATE_ON);
+    const a = await testnetCheckout(h!, "first.stuck@okaxis", "5000");
+    await ingestScannerEvent(ctx, confirmed(a));
+    await runTestnet(ctx, deps);
+    const ca = await cmdOf(a.id);
+    await approvePayout(ctx, ca.id, OPERATOR, ca.command_hash);
+    await runTestnet(ctx, deps);
+    expect((await stateOf(ca.id)).state).toBe("OUTCOME_UNKNOWN_REVIEW");
+    await expect(markVerifiedNotSubmitted(ctx, ca.id, "apr_fixture")).rejects.toThrow(); // no in-app release outside DEMO
+    const b = await testnetCheckout(h!, "second.waits@okaxis", "5000");
+    await ingestScannerEvent(ctx, confirmed(b));
+    await runTestnet(ctx, deps);
+    const cb = await cmdOf(b.id);
+    await approvePayout(ctx, cb.id, OPERATOR, cb.command_hash);
+    await runTestnet(ctx, deps);
+    expect((await stateOf(cb.id)).state).toBe("QUEUED");
+    expect(port.calls.execute).toBe(1);
+    expect((await h!.db.query(`SELECT payout_id FROM p2p_account_leases WHERE environment='testnet'`)).rows[0].payout_id).toBe(ca.id);
   });
 
   it("operator CLI functions: full terms, wrong hash refused, rail required, never races the worker, one execute", async () => {

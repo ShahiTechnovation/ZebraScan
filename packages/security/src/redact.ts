@@ -6,7 +6,8 @@
 const SENSITIVE_KEYS = /(password|secret|token|cookie|authorization|private|seed|mnemonic|viewing|ufvk|uivk|spend|vpa|upi|payee|memo|address|email|phone|kek|dek|relay)/i;
 
 const PATTERNS: Array<[RegExp, string]> = [
-  [/\b[a-zA-Z0-9][a-zA-Z0-9._-]{1,63}@[a-zA-Z][a-zA-Z0-9.-]{1,48}\b/g, "[vpa-or-email]"],
+  // Same shape as the VPA validators in packages/domain/src/upi.ts and apps/web/src/lib/upi.ts (1-char names allowed).
+  [/\b[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}@[a-zA-Z][a-zA-Z0-9.-]{1,48}\b/g, "[vpa-or-email]"],
   [/\b(u|utest|uregtest|zs|ztestsapling|uview|uivk|zxview)1[02-9ac-hj-np-z]{20,}\b/g, "[zcash-redacted]"],
   [/\bt[123m][1-9A-HJ-NP-Za-km-z]{33}\b/g, "[t-addr]"],
   [/\b0x[0-9a-fA-F]{64}\b/g, "[hex32]"],

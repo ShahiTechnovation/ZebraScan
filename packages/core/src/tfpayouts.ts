@@ -581,6 +581,9 @@ async function executionBlockers(t: Tx, ctx: CoreContext, deps: TfDeps, c: Payou
   if (ctx.env !== "demo") {
     if (demoLive) {
       if (c.flow !== "SCAN_PAY") reasons.push("testnet live demo pays Scan & Pay only");
+      // scripts/settle-p2plol.ts is a separate app.p2p.lol SELL path for the same checkouts, armed by the same flag
+      // but outside payout_commands (no hash-bound approval, lease or daily cap). Never pay one checkout through both.
+      if (c.source_intent_id && (await maybeOne(t, `SELECT 1 FROM resource_events WHERE environment=$1 AND resource=$2 AND starts_with(event_type, 'payout.live_demo.') LIMIT 1`, [ctx.env, `checkout:${c.source_intent_id}`]))) reasons.push("checkout already handled by the separate scripts/settle-p2plol.ts settlement; refusing a second payout");
     } else {
       // A browser balance is not authenticated spendable reserves. No production
       // capacity authority is provisioned yet, regardless of configured credentials.
