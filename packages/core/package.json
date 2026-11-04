@@ -1,0 +1,18 @@
+{
+  "name": "@zeb/core",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": { ".": "./src/index.ts", "./*": "./src/*.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json", "lint": "tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters", "build": "tsc -p tsconfig.json" },
+  "dependencies": {
+    "@zeb/domain": "workspace:*",
+    "@zeb/db": "workspace:*",
+    "@zeb/ledger": "workspace:*",
+    "@zeb/providers": "workspace:*",
+    "@zeb/security": "workspace:*",
+    "viem": "2.47.6"
+  }
+}

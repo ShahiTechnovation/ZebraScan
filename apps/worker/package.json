@@ -1,0 +1,29 @@
+{
+  "name": "@zeb/worker",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters"
+  },
+  "dependencies": {
+    "@zeb/core": "workspace:*",
+    "@zeb/providers": "workspace:*",
+    "viem": "2.47.6",
+    "pg": "^8.16.0",
+    "@node-rs/argon2": "^2.0.2",
+    "@p2pdotme/sdk": "1.3.10",
+    "neverthrow": "8.2.0",
+    "undici": "^7.16.0",
+    "nodemailer": "^7.0.10",
+    "zod": "4.3.6",
+    "@tiny-fish/sdk": "0.11.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0"
+  }
+}

@@ -1,0 +1,38 @@
+# Zeb Scan Zcash gateway — watch-only receiving service.
+# STATUS: source only. NOT COMPILED on the build host (no Rust toolchain); see README.md.
+# Versions pinned to the librustzcash release train published 2026-10-21 (verified on crates.io,
+# docs/evidence/external-verification-2026-11-04.json). Re-verify Ironwood (NU6.3) and NU7
+# support in these exact versions before any testnet run.
+[package]
+name = "zeb-zcash-gateway"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+publish = false
+
+[dependencies]
+zcash_client_backend = { version = "=0.25.0", features = ["lightwalletd-tonic", "orchard", "transparent-inputs", "sync"] }
+zcash_client_sqlite = { version = "=0.23.0", features = ["orchard", "transparent-inputs"] }
+zcash_keys = { version = "=0.17.0", features = ["orchard", "transparent-inputs"] }
+zcash_address = "=0.14.0"
+zcash_protocol = "=0.11.0"
+zip321 = "=0.10.0"
+zip32 = "=0.3.0"
+
+axum = "0.8"
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+rustls = "0.23"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "sync", "time"] }
+tonic = "0.13"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+sha2 = "0.10"
+hex = "0.4"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

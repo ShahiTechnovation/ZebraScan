@@ -1,0 +1,48 @@
+{
+  "name": "zeb-scan-monorepo",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Zeb Scan — Pay in ZEC. They get INR. Monorepo: web, api, worker, zcash gateway, shared packages.",
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "typecheck": "pnpm -r --workspace-concurrency=1 run typecheck && tsc -p tsconfig.json",
+    "lint": "pnpm -r run lint",
+    "build": "pnpm -r run build",
+    "test": "vitest run --config vitest.unit.config.ts && pnpm --filter @zeb/web test",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "pnpm --filter @zeb/web test:e2e",
+    "db:migrate": "tsx packages/db/src/cli.ts migrate",
+    "db:status": "tsx packages/db/src/cli.ts status",
+    "seed:test": "tsx scripts/seed-test.ts",
+    "verify:prod-config": "tsx scripts/verify-prod-config.ts",
+    "verify:external": "tsx scripts/verify-external.ts",
+    "reconcile": "tsx scripts/reconcile.ts",
+    "openapi": "tsx scripts/generate-openapi.ts",
+    "test:e2e:connected": "tsx scripts/e2e-connected.ts",
+    "ops:p2p-preflight": "tsx scripts/ops-p2p-preflight.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8",
+    "@zeb/core": "workspace:*",
+    "@zeb/db": "workspace:*",
+    "@zeb/domain": "workspace:*",
+    "@zeb/ledger": "workspace:*",
+    "@zeb/security": "workspace:*",
+    "@zeb/providers": "workspace:*",
+    "@zeb/contracts": "workspace:*",
+    "@zeb/api": "workspace:*",
+    "fastify": "^5.6.1",
+    "viem": "2.47.6",
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.8.0",
+    "@noir-wallet/sdk": "0.1.9"
+  }
+}

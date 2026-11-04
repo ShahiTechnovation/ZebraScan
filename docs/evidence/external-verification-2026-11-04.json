@@ -1,0 +1,242 @@
+{
+  "generatedAt": "2026-11-04T13:22:18.492Z",
+  "checks": [
+    {
+      "dependency": "ZEC/USD — CoinGecko simple price",
+      "status": "verified",
+      "evidence": {
+        "rate": "1286.1955105007146",
+        "observedAt": "2026-11-04T13:21:34.000Z"
+      },
+      "source": "https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies=usd&include_last_updated_at=true",
+      "checkedAt": "2026-11-04T13:22:08.133Z"
+    },
+    {
+      "dependency": "ZEC/USD — Kraken ticker (pair resolved via AssetPairs)",
+      "status": "verified",
+      "evidence": {
+        "mid": "1283.895",
+        "bid": "1283.47000",
+        "ask": "1284.32000",
+        "raw": {
+          "pair": "XZECZUSD",
+          "a": [
+            "1284.32000",
+            "1",
+            "1.000"
+          ],
+          "b": [
+            "1283.47000",
+            "1",
+            "1.000"
+          ],
+          "c": [
+            "1283.12000",
+            "0.10706018"
+          ]
+        }
+      },
+      "source": "https://api.kraken.com/0/public/AssetPairs?pair=ZECUSD",
+      "checkedAt": "2026-11-04T13:22:08.592Z"
+    },
+    {
+      "dependency": "ZEC/USD — oracle policy (2 sources, 150 bps max deviation, 120 s max age)",
+      "status": "verified",
+      "evidence": {
+        "median": "1283.77",
+        "sources": [
+          [
+            "coingecko",
+            "1286.1955105007146"
+          ],
+          [
+            "kraken",
+            "1283.77"
+          ]
+        ],
+        "failures": []
+      },
+      "source": "packages/providers/src/prices.ts",
+      "checkedAt": "2026-11-04T13:22:08.800Z"
+    },
+    {
+      "dependency": "Base mainnet RPC + Circle native USDC",
+      "status": "verified",
+      "evidence": {
+        "chainId": 8453,
+        "usdc": {
+          "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "hasCode": true,
+          "codeHash": "0xa6705a10bb756b5dea144591118be77d7af0c3eee3bf2dfe2583dcb0364fefab",
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "usdbcForContrast": {
+          "address": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA",
+          "hasCode": true,
+          "codeHash": "0x8cd2f08c7ee9e6ab6e0180e8d6cb0613bbd54d2c4ae2ecdcaddfcdd9a226215b",
+          "symbol": "USDbC",
+          "decimals": 6
+        },
+        "block": "53504591"
+      },
+      "source": "https://developers.circle.com/stablecoins/usdc-contract-addresses",
+      "checkedAt": "2026-11-04T13:22:10.813Z"
+    },
+    {
+      "dependency": "Base Sepolia RPC + Circle USDC (testnet)",
+      "status": "verified",
+      "evidence": {
+        "chainId": 84532,
+        "usdc": {
+          "address": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "hasCode": true,
+          "codeHash": "0xedc5281a85c0efecd49999a1ef668390c59b88702f2d4a07029d7f5d63059d6c",
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "block": "54383317"
+      },
+      "source": "https://developers.circle.com/stablecoins/usdc-contract-addresses",
+      "checkedAt": "2026-11-04T13:22:12.156Z"
+    },
+    {
+      "dependency": "@p2pdotme/sdk pinned version",
+      "status": "verified",
+      "evidence": {
+        "installed": "1.3.10",
+        "latestOnNpm": "1.3.10",
+        "deps": {
+          "@fingerprintjs/fingerprintjs": "5.1.0",
+          "@seontechnologies/seon-javascript-sdk": "6.10.2",
+          "neverthrow": "8.2.0",
+          "viem": "2.47.6",
+          "zod": "4.3.6"
+        }
+      },
+      "source": "https://www.npmjs.com/package/@p2pdotme/sdk",
+      "checkedAt": "2026-11-04T13:22:13.709Z"
+    },
+    {
+      "dependency": "P2P.me Diamond / subgraph / integrator permission",
+      "status": "blocked",
+      "evidence": {
+        "reason": "No provider-verified Diamond address, subgraph URL, ABI/code hash, integrator whitelist or liquidity-circle access has been supplied. The official examples intentionally use 0x000… placeholders. P2P execution stays gated closed.",
+        "diamondConfigured": false
+      },
+      "source": "https://github.com/p2pdotme/p2pdotme-sdk (example uses zero-address placeholders)",
+      "checkedAt": "2026-11-04T13:22:13.709Z"
+    },
+    {
+      "dependency": "librustzcash crates (Zcash gateway pins)",
+      "status": "verified",
+      "evidence": {
+        "zcash_client_backend": {
+          "max_stable_version": "0.25.0",
+          "updated_at": "2026-10-21T20:27:15.014519Z"
+        },
+        "zcash_client_sqlite": {
+          "max_stable_version": "0.23.0",
+          "updated_at": "2026-10-21T20:27:21.378141Z"
+        },
+        "zcash_keys": {
+          "max_stable_version": "0.17.0",
+          "updated_at": "2026-10-21T20:27:04.164184Z"
+        },
+        "zcash_address": {
+          "max_stable_version": "0.14.0",
+          "updated_at": "2026-10-21T20:27:00.739638Z"
+        },
+        "zip321": {
+          "max_stable_version": "0.10.0",
+          "updated_at": "2026-10-21T20:27:06.242398Z"
+        },
+        "zcash_protocol": {
+          "max_stable_version": "0.11.0",
+          "updated_at": "2026-10-21T20:26:57.950537Z"
+        }
+      },
+      "source": "https://crates.io",
+      "checkedAt": "2026-11-04T13:22:18.357Z"
+    },
+    {
+      "dependency": "Zebra / Zaino releases",
+      "status": "verified",
+      "evidence": {
+        "zebra": [
+          "v7.0.0",
+          "2026-10-22T02:08:39Z"
+        ],
+        "zaino": [
+          "0.10.1",
+          "2026-09-29T15:34:31Z"
+        ]
+      },
+      "source": "https://github.com/ZcashFoundation/zebra/releases, https://github.com/zingolabs/zaino/releases",
+      "checkedAt": "2026-11-04T13:22:18.491Z"
+    },
+    {
+      "dependency": "Zcash gateway (compiled + Ironwood scanning proven on testnet)",
+      "status": "blocked",
+      "evidence": {
+        "reason": "No Rust toolchain on the build host; gateway not compiled or run. No testnet node/indexer endpoint or wallet birthday supplied. Invoice creation stays closed in testnet/mainnet."
+      },
+      "source": "services/zcash-gateway",
+      "checkedAt": "2026-11-04T13:22:18.491Z"
+    },
+    {
+      "dependency": "Legal / regulatory approval (RBI PA, PPI, FIU-IND VDA, FEMA)",
+      "status": "blocked",
+      "evidence": {
+        "reason": "Requires qualified counsel. LEGAL_APPROVAL_REF unset → mainnet-enabled gate closed."
+      },
+      "source": "operator",
+      "checkedAt": "2026-11-04T13:22:18.491Z"
+    },
+    {
+      "dependency": "Merchant KYB provider",
+      "status": "blocked",
+      "evidence": {
+        "reason": "No provider selected; manual review queue implemented. Mandatory fields to be decided by counsel."
+      },
+      "source": "operator",
+      "checkedAt": "2026-11-04T13:22:18.491Z"
+    },
+    {
+      "dependency": "Email delivery (SMTP)",
+      "status": "blocked",
+      "evidence": {
+        "reason": "No SMTP credentials supplied; dev-file provider used for demo/testnet only."
+      },
+      "source": "operator",
+      "checkedAt": "2026-11-04T13:22:18.491Z"
+    },
+    {
+      "dependency": "Secret manager / KMS",
+      "status": "blocked",
+      "evidence": {
+        "reason": "Only LocalKeyProvider implemented (demo/testnet). Cloud KMS adapter required for mainnet."
+      },
+      "source": "operator",
+      "checkedAt": "2026-11-04T13:22:18.491Z"
+    },
+    {
+      "dependency": "Funded Base treasury signer",
+      "status": "blocked",
+      "evidence": {
+        "reason": "No signer, funding or remote signing service supplied."
+      },
+      "source": "operator",
+      "checkedAt": "2026-11-04T13:22:18.491Z"
+    },
+    {
+      "dependency": "ZEC→USDC rebalance venue",
+      "status": "blocked",
+      "evidence": {
+        "reason": "No approved venue; rebalancing is manual/out of scope until one is approved."
+      },
+      "source": "operator",
+      "checkedAt": "2026-11-04T13:22:18.491Z"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+permissions: { contents: read }
+concurrency: { group: "ci-${{ github.ref }}", cancel-in-progress: true }
+
+jobs:
+  node:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: ci, POSTGRES_DB: zebscan_test }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://postgres:ci@localhost:5432/zebscan_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm test:integration
+      - run: pnpm build
+      - name: OpenAPI is committed and current
+        run: pnpm openapi && git diff --exit-code docs/api/openapi.json
+      - name: Dependency audit (fail on high/critical)
+        run: pnpm audit --prod --audit-level high
+      - name: Demo-mode browser E2E
+        run: pnpm exec playwright install --with-deps chromium && pnpm --filter @zeb/web exec playwright test --project desktop
+        env: { E2E_CHANNEL: chromium }
+
+  connected-e2e:
+    runs-on: ubuntu-24.04
+    needs: node
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: ci, POSTGRES_DB: zebscan_e2e_test }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 20
+    env:
+      E2E_DATABASE_URL: postgres://postgres:ci@localhost:5432/zebscan_e2e_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chrome
+      - run: pnpm test:e2e:connected
+
+  gateway:
+    runs-on: ubuntu-24.04
+    # The Zcash gateway has never been compiled; this job is expected to need fixes on first run.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - run: cargo build --manifest-path services/zcash-gateway/Cargo.toml

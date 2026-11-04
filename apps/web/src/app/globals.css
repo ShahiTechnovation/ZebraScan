@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Zeb Scan design tokens.
+ * .theme-light — public mineral surfaces (marketing, public checkout, receipts)
+ * .theme-dark  — merchant console carbon surfaces
+ */
+:root,
+.theme-light {
+  /* Payment-first light palette (delta spec §9.1). All text pairs meet WCAG AA on --background. */
+  --background: 250 250 248; /* #FAFAF8 warm white */
+  --surface-1: 255 255 255; /* #FFFFFF */
+  --surface-2: 244 245 244;
+  --surface-3: 233 235 235;
+  --surface-hover: 241 242 241;
+  --surface-nav: 255 255 255;
+  --foreground: 22 25 28; /* #16191C */
+  --foreground-secondary: 104 112 120; /* #687078 */
+  --foreground-muted: 104 112 120;
+  --border: 229 231 232; /* #E5E7E8 */
+  --border-strong: 206 210 212;
+  --accent: 20 109 86; /* #146D56 emerald (text) */
+  --success: 20 109 86;
+  --progress: 37 99 160;
+  --warning: 154 96 9;
+  --danger: 185 50 50;
+  color-scheme: light;
+}
+
+/* Optional dark surfaces (used only for small banners). */
+.theme-dark {
+  --background: 16 19 22; /* #101316 */
+  --surface-1: 27 31 35; /* #1B1F23 */
+  --surface-2: 33 38 43;
+  --surface-3: 41 47 53;
+  --surface-hover: 38 44 50;
+  --surface-nav: 22 25 28;
+  --foreground: 240 241 239;
+  --foreground-secondary: 160 168 175;
+  --foreground-muted: 142 150 158;
+  --border: 45 51 57;
+  --border-strong: 62 70 77;
+  --accent: 72 199 155; /* emerald on dark */
+  --success: 72 199 155;
+  --progress: 110 170 230;
+  --warning: 240 170 60;
+  --danger: 239 107 107;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid #146D56;
+  outline-offset: 2px;
+}
+.theme-dark :focus-visible { outline-color: #48C79B; }
+
+::selection { background: rgb(32 163 122 / 0.25); }
+
+.num { font-variant-numeric: tabular-nums; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--border-strong) / 0.7); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@layer components {
+  .panel { @apply rounded-panel border border-border bg-surface-1; }
+  .panel-inset { @apply rounded-panel border border-border bg-surface-2; }
+  .eyebrow { @apply font-mono text-micro font-medium uppercase tracking-[0.08em] text-foreground-secondary; }
+  .input {
+    @apply h-11 w-full rounded-input border border-border bg-surface-2 px-3 text-[14px] text-foreground
+      placeholder:text-foreground-muted transition-colors duration-150
+      hover:border-border-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/40
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .input[aria-invalid="true"] { @apply border-danger focus:border-danger focus:ring-danger/30; }
+  .select {
+    @apply input cursor-pointer appearance-none bg-no-repeat pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2391A0A5' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.75rem center;
+  }
+  .link { @apply text-accent underline-offset-2 hover:underline; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  body { background: #fff !important; color: #111719 !important; }
+  .no-print { display: none !important; }
+  .print-area { border: none !important; box-shadow: none !important; }
+  .theme-dark, .theme-light { --background: 255 255 255; --surface-1: 255 255 255; --surface-2: 248 248 246; --foreground: 17 23 25; --foreground-secondary: 70 78 82; --foreground-muted: 90 98 102; --border: 210 212 208; --accent: 118 87 28; }
+}
