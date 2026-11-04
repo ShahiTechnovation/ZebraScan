@@ -35,11 +35,18 @@ export function CheckPaymentButton({ checkout: c }: { checkout: CheckoutIntent }
     setMsg(null);
     try {
       if (!connected) {
-        setMsg(
-          isDemo
-            ? `Demo build: not connected to the live Zcash watcher, so it can't see real payments. Current demo status: ${c.depositStatus}. The real check runs in the connected testnet app.`
-            : "Not connected to the Zeb Scan service right now. Status still updates automatically once it reconnects.",
-        );
+        if (!isDemo) {
+          setMsg("Not connected to the Zeb Scan service right now. Status still updates automatically once it reconnects.");
+          return;
+        }
+        // Public demo: real check against the operator's watch-only MAINNET wallet, matched by this checkout's memo.
+        const r = await fetch(`/api/mainnet-check?memo=${encodeURIComponent(`ZEB ${c.id}`)}&zat=${encodeURIComponent(c.quote.zecZat)}`, { cache: "no-store" });
+        const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; zecReceived?: boolean; zecConfirmed?: boolean; underpaid?: boolean; confirmations?: number; receivedZatoshis?: string; txid?: string };
+        if (!r.ok || !j.ok) setMsg(`Couldn't reach the mainnet wallet watcher (${j.error ?? `HTTP ${r.status}`}). Try again in a few seconds.`);
+        else if (!j.zecReceived) setMsg("No ZEC with this checkout's memo has reached the wallet yet. Shielded sends take about a minute to appear; include the memo.");
+        else if (j.underpaid) setMsg(`ZEC received (${Number(j.receivedZatoshis) / 1e8} ZEC) but less than the amount due. Tx ${j.txid?.slice(0, 12)}…`);
+        else if (j.zecConfirmed) setMsg(`ZEC received and confirmed on Zcash mainnet (${j.confirmations} confirmation${j.confirmations === 1 ? "" : "s"}). Tx ${j.txid?.slice(0, 12)}…`);
+        else setMsg(`ZEC detected in the mempool — waiting for the first block (about 75 s). Tx ${j.txid?.slice(0, 12)}…`);
         return;
       }
       const token = checkoutTokens.get(c.id);

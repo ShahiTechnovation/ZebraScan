@@ -202,8 +202,14 @@ export function CheckoutPanel({
                 <Wallet aria-hidden className="h-4 w-4" /> How to pay
               </p>
               <ol className="mt-1.5 list-decimal space-y-0.5 pl-5">
-                <li>Click <strong>Pay with Noir Wallet</strong> to review the exact transfer.</li>
-                <li>Or scan the QR with a compatible shielded wallet.</li>
+                {demoReal ? (
+                  <li>Scan the QR with a shielded Zcash <strong>mainnet</strong> wallet (it fills in the exact amount and memo).</li>
+                ) : (
+                  <>
+                    <li>Click <strong>Pay with Noir Wallet</strong> to review the exact transfer.</li>
+                    <li>Or scan the QR with a compatible shielded wallet.</li>
+                  </>
+                )}
                 <li>Verify exact amount and memo. Keep this page open until confirmed.</li>
               </ol>
             </div>
