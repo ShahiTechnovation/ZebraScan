@@ -13,5 +13,5 @@ const env = {
 };
 const run = (cmd: string, extra: Record<string, string> = {}) => execSync(cmd, { stdio: "inherit", env: { ...env, ...extra } });
 run("pnpm exec tsx scripts/e2e-connected-prepare.ts");
-run("pnpm --filter @zeb/web build", { NEXT_DIST_DIR: ".next-connected", NEXT_PUBLIC_ZEB_MODE: "connected", NEXT_PUBLIC_API_BASE_URL: "http://localhost:4100" });
+run("pnpm --filter @zeb/web build", { NEXT_DIST_DIR: ".next-connected", NEXT_PUBLIC_ZEB_MODE: "connected", NEXT_PUBLIC_ISOLATED_TEST_API: "true", NEXT_PUBLIC_API_BASE_URL: "http://localhost:4200" });
 run("pnpm --filter @zeb/web exec playwright test -c playwright.connected.config.ts");

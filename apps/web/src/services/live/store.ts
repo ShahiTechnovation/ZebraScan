@@ -55,6 +55,7 @@ class LiveStore {
   getServerSnapshot = (): DemoState | null => null;
 
   private emit() {
+    this.state = { ...this.state };
     for (const l of this.listeners) l();
   }
   private set(fn: (s: DemoState) => DemoState) {
@@ -79,7 +80,18 @@ class LiveStore {
     }
     this.ready = true;
     this.emit();
-    this.pollTimer = window.setInterval(() => void this.refreshMerchantData().catch(() => undefined), 30_000);
+    this.pollTimer = window.setInterval(() => void this.reconnect(), 30_000);
+    window.addEventListener("online", () => void this.reconnect());
+  }
+
+  private async reconnect() {
+    try {
+      if (this.error || !this.config) { this.config = await api.call("getPublicConfig");
+      if (this.config.environment === "demo" && process.env.NEXT_PUBLIC_ISOLATED_TEST_API !== "true") throw new Error("Payments temporarily unavailable: a test fixture API cannot serve this build"); await this.refreshSession(); }
+      else await this.refreshMerchantData();
+      this.error = null;
+    } catch { this.error = "Payments temporarily unavailable"; }
+    this.emit();
   }
 
   async refreshSession() {
@@ -118,7 +130,7 @@ class LiveStore {
       if (t) window.clearTimeout(t);
       t = window.setTimeout(() => void this.refreshMerchantData().catch(() => undefined), 400);
     };
-    for (const type of ["checkout.created", "checkout.updated", "credit.locked", "credit.available", "withdrawal.updated"]) es.addEventListener(type, kick);
+    for (const type of ["checkout.created", "checkout.updated", "credit.locked", "credit.available", "payment.testnet_received", "withdrawal.updated"]) es.addEventListener(type, kick);
     this.merchantStream = es;
   }
 

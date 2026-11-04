@@ -68,5 +68,6 @@ export async function raiseException(
     `INSERT INTO exceptions(id, environment, kind, severity, intent_id, withdrawal_id, order_id, deposit_id, details) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
     [id, env, e.kind, e.severity, e.intentId ?? null, e.withdrawalId ?? null, e.orderId ?? null, e.depositId ?? null, JSON.stringify(redact(e.details ?? {}))],
   );
+  await outbox(q, env, "exception", id, `alert.${e.severity}.${e.kind}`, {});
   return id;
 }

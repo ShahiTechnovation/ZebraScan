@@ -1,7 +1,7 @@
 import type { UiOperationMode } from "@/types/domain";
 
 export function getOperationMode(): UiOperationMode {
-  return "connected";
+  return process.env.NEXT_PUBLIC_ZEB_MODE === "demo" || !process.env.NEXT_PUBLIC_ZEB_MODE ? "demo" : "connected";
 }
 
 export const COPY = {
@@ -11,7 +11,7 @@ export const COPY = {
     "Scan a supported UPI QR or collect ZEC through your own checkout. Zeb Scan connects Zcash payments to local settlement experiences.",
   privacyHelper:
     "Shielded ZEC protects on-chain payment details. Fiat payout providers may still see banking information.",
-  simulation: "Zcash testnet only. No INR payout.",
+  simulation: "Demo only. These are simulated transactions, not real payments or bank transfers.",
   notConnected: "Payments temporarily unavailable. Your checkout reference is preserved.",
   illustrative: "Timestamped reference rate",
   balanceDescriptor: "Testnet payment records",

@@ -11,17 +11,17 @@
     "lint": "tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters"
   },
   "dependencies": {
-    "@zeb/core": "workspace:*",
-    "@zeb/providers": "workspace:*",
-    "viem": "2.47.6",
-    "pg": "^8.16.0",
     "@node-rs/argon2": "^2.0.2",
     "@p2pdotme/sdk": "1.3.10",
+    "@tiny-fish/sdk": "0.11.0",
+    "@zeb/core": "workspace:*",
+    "@zeb/providers": "workspace:*",
     "neverthrow": "8.2.0",
+    "nodemailer": "^10.0.6",
+    "pg": "^8.16.0",
     "undici": "^7.16.0",
-    "nodemailer": "^7.0.10",
-    "zod": "4.3.6",
-    "@tiny-fish/sdk": "0.11.0"
+    "viem": "2.47.6",
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "tsup": "^8.5.0"

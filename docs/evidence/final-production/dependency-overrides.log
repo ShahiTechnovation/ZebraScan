@@ -1,0 +1,12 @@
+Scope: all 11 workspace projects
+Progress: resolved 1, reused 0, downloaded 0, added 0
+apps/web                                 |  WARN  deprecated eslint@9.39.5
+Progress: resolved 47, reused 46, downloaded 1, added 0
+Progress: resolved 553, reused 432, downloaded 1, added 0
+Progress: resolved 596, reused 477, downloaded 1, added 0
+ WARN  1 deprecated subdependencies found: whatwg-encoding@3.1.1
+Packages: +9 -16
++++++++++----------------
+Progress: resolved 596, reused 477, downloaded 1, added 9, done
+
+Done in 4.1s using pnpm v10.27.0

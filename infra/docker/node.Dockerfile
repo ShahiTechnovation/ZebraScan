@@ -17,5 +17,6 @@ WORKDIR /srv
 RUN useradd --system --uid 10001 zeb
 COPY --from=build /out ./
 COPY --from=build /repo/packages/db/migrations ./migrations
+COPY --from=build /repo/packages/providers/proto ./packages/providers/proto
 USER 10001
 CMD ["node", "dist/main.js"]

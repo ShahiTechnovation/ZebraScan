@@ -1,0 +1,20 @@
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 18, reused 0, downloaded 0, added 0
+Progress: resolved 28, reused 0, downloaded 0, added 0
+apps/web                                 |  WARN  deprecated eslint@9.39.5
+Progress: resolved 37, reused 0, downloaded 0, added 0
+Progress: resolved 49, reused 0, downloaded 0, added 0
+Progress: resolved 218, reused 0, downloaded 0, added 0
+Progress: resolved 599, reused 0, downloaded 0, added 0
+Progress: resolved 615, reused 0, downloaded 0, added 0
+ WARN  1 deprecated subdependencies found: whatwg-encoding@3.1.1
+Progress: resolved 616, reused 0, downloaded 0, added 0, done
+.                                        |  +20 ++
+╭ Warning ─────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│   Ignored build scripts: protobufjs@7.6.6.                                   │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+│   to run scripts.                                                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Done in 9.4s using pnpm v10.27.0

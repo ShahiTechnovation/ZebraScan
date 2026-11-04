@@ -24,7 +24,7 @@ import { CheckoutStatus } from "./shared";
 
 export function TransactionDetail({ id }: { id: string }) {
   const router = useRouter();
-  const { state, merchant, isDemo } = useZeb();
+  const { state, merchant } = useZeb();
   if (!merchant) return null;
   const c = state.checkouts.find((x) => x.id === id && x.merchantId === merchant.id);
   if (!c) return <NotFoundPanel title="Transaction not found" body="No transaction with this id exists for the current shop." href="/app/transactions" cta="Back to transactions" />;

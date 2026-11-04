@@ -193,7 +193,7 @@ const envLines = [
   `ZKOOL_NETWORK=${network}`,
   `ZKOOL_ACCOUNT_ID=${watch.id}`,
   `ZKOOL_BIRTH_HEIGHT=${recv.birth}`,
-  `ZKOOL_JWT_PRIVATE_KEY_FILE=${SECRETS}/zkool-${network}-jwt.key`,
+  `ZKOOL_VIEWER_TOKEN_FILE=${SECRETS}/${network}-viewer.token`,
   `ZKOOL_ADDRESS_MODE=rotate`,
 ];
 writeFileSync(`${SECRETS}/${network}-worker.env`, envLines.join("\n") + "\n", { mode: 0o600 });

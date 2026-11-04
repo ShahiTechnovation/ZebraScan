@@ -8,7 +8,7 @@ import { useLiveResource, useNow, useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { formatInr, parseInrToMinor } from "@/lib/money";
 import { formatDate } from "@/lib/format";
-import { isQuoteExpired, validateInrAmount } from "@/lib/quote";
+import { isQuoteExpired, validateInrAmount } from "@/lib/payment-validation";
 import { linkStatus } from "@/services/model";
 import { COPY } from "@/config/mode";
 import type { PaymentPrivacy } from "@/types/domain";

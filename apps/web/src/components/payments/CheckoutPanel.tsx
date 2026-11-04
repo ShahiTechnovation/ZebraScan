@@ -6,8 +6,7 @@ import { useNow, useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { formatInr, formatZec } from "@/lib/money";
 import { formatDate } from "@/lib/format";
-import { isQuoteExpired } from "@/lib/quote";
-import { COPY } from "@/config/mode";
+import { isQuoteExpired } from "@/lib/payment-validation";
 import type { CheckoutIntent } from "@/types/domain";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Blocks";
@@ -86,7 +85,7 @@ export function CheckoutPanel({
             size={240}
           />
           <div className="mt-3 w-full text-center">
-            {awaiting ? <RateExpiry expiresAt={c.quote.expiresAt} now={now} /> : <span className="text-label text-foreground-secondary">{expired ? "This QR is no longer valid." : "Payment received — QR closed."}</span>}
+            {awaiting ? <RateExpiry expiresAt={c.quote.expiresAt} now={now} /> : <span className="text-label text-foreground-secondary">{expired ? "This QR is no longer valid." : c.depositStatus === "accepted" ? "ZEC received and verified." : "Payment is being checked. Do not send again."}</span>}
           </div>
         </div>
 
@@ -137,8 +136,8 @@ export function CheckoutPanel({
                 <Wallet aria-hidden className="h-4 w-4" /> How to pay
               </p>
               <ol className="mt-1.5 list-decimal space-y-0.5 pl-5">
-                <li>Click <strong>Pay with Noir Wallet</strong> for instant shielded send.</li>
-                <li>Or open any Zcash wallet (Zingo, Ywallet, Edge) and scan the QR.</li>
+                <li>Click <strong>Pay with Noir Wallet</strong> to review the exact shielded transfer.</li>
+                <li>Or scan the QR with a compatible Ironwood testnet wallet.</li>
                 <li>Verify exact amount and memo. Keep this page open until confirmed.</li>
               </ol>
             </div>
@@ -170,7 +169,7 @@ export function CheckoutPanel({
       )}
       {c.depositStatus === "refund_pending" && (
         <Callout tone="warning" title="Refund pending">
-          {c.exceptionReason ?? "A refund has been requested for this payment."} Refunds return ZEC to a payer-provided address.
+          {c.exceptionReason ?? "A refund has been requested for this payment."} No refund has been sent. A refund needs separate operator review and authorization.
         </Callout>
       )}
       {c.depositStatus === "refunded" && <Callout tone="info" title="Refunded">This payment was refunded. No credit was issued.</Callout>}

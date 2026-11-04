@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { HelpCircle } from "lucide-react";
 import { useZeb } from "@/providers/ZebProvider";
 import { modeLabel } from "@/services/model";
-import { COPY } from "@/config/mode";
 import { Container } from "@/components/layout/Container";
 import { PageSkeleton } from "@/components/ui/Blocks";
 import { ButtonLink } from "@/components/ui/Button";
@@ -17,7 +16,7 @@ import { useLiveResource } from "@/providers/ZebProvider";
 
 export function HostedCheckout({ id }: { id: string }) {
   const router = useRouter();
-  const { ready, state, isDemo } = useZeb();
+  const { ready, state } = useZeb();
   const res = useLiveResource("checkout", id);
   if (!ready || res.loading) return <Container className="py-10"><PageSkeleton /></Container>;
   const c = state.checkouts.find((x) => x.id === id);

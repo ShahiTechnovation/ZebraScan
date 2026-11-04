@@ -1,0 +1,226 @@
+{
+  "at": "2026-11-04T17:06:14.757Z",
+  "sha": "b1f194364b672943ee87534603d5c519f4922661",
+  "receipt": [
+    {
+      "id": "pi_kddd0fe7xccewd6x2csrhykxdr",
+      "status": "chain_reorg_review",
+      "payout_status": "manual_review",
+      "received_zatoshis": "836471",
+      "receipt_id": "rcp_z0rfgrmjdm9esyy8959kxmvb6w",
+      "receipt_count": 1,
+      "observation_count": 1
+    }
+  ],
+  "outputs": [
+    {
+      "network": "testnet",
+      "pool": "ironwood",
+      "txid": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7",
+      "value_zatoshis": "836471",
+      "block_height": null,
+      "confirmations": 0,
+      "canonical": false,
+      "accepted": true
+    }
+  ],
+  "receiptDigest": "d023b2aa5e342d34d77a66e1a59bc42b7cba96ba11f1e8bd06370b6e95c93ea9",
+  "journals": [
+    {
+      "id": "jnl_7f4bqfpeyf1b8wgt8w4bszj5c8",
+      "event_id": "deposit_accepted:pi_kddd0fe7xccewd6x2csrhykxdr:inr",
+      "kind": "deposit_accepted",
+      "reversal_of": null,
+      "currency": "INR",
+      "debits": "100500",
+      "credits": "100500"
+    },
+    {
+      "id": "jnl_82jphj97qgn5r9tv64fmbg47mm",
+      "event_id": "deposit_accepted:pi_kddd0fe7xccewd6x2csrhykxdr:zec",
+      "kind": "deposit_accepted",
+      "reversal_of": null,
+      "currency": "ZEC",
+      "debits": "836471",
+      "credits": "836471"
+    },
+    {
+      "id": "testnet_reclass_jnl_7f4bqfpeyf1b8wgt8w4bszj5c8",
+      "event_id": "testnet_nonredeemable:jnl_7f4bqfpeyf1b8wgt8w4bszj5c8",
+      "kind": "testnet_reference_reclassification",
+      "reversal_of": "jnl_7f4bqfpeyf1b8wgt8w4bszj5c8",
+      "currency": "INR",
+      "debits": "100500",
+      "credits": "100500"
+    }
+  ],
+  "migrations": [
+    {
+      "name": "0001_core.sql"
+    },
+    {
+      "name": "0002_scanner_cursor.sql"
+    },
+    {
+      "name": "0003_memo_matching.sql"
+    },
+    {
+      "name": "0004_tinyfish_payouts_and_wallet_auth.sql"
+    },
+    {
+      "name": "0005_wallet_only_users.sql"
+    },
+    {
+      "name": "0006_custody_safety.sql"
+    },
+    {
+      "name": "0007_payout_evidence.sql"
+    }
+  ],
+  "gates": [],
+  "walletState": [
+    {
+      "network": "testnet",
+      "status": "synced",
+      "tip_height": "4582726",
+      "tip_hash": "000006d334df4f0c07fd4ed28b66b04ee6c31c36f6f9bae252bcd7d470da784c",
+      "scanned_height": "4582726",
+      "consensus_branch": "77190ad9",
+      "tip_observed_at": "2026-11-04T17:05:16.000Z",
+      "updated_at": "2026-11-04T17:06:04.346Z"
+    }
+  ],
+  "provider": [],
+  "payoutCommands": [],
+  "chain": {
+    "network": "testnet",
+    "tip": 4582726,
+    "scanned": 4582726,
+    "hash": "000006d334df4f0c07fd4ed28b66b04ee6c31c36f6f9bae252bcd7d470da784c",
+    "time": "2026-11-04T17:05:16.000Z",
+    "branch": "77190ad9",
+    "state": "synced",
+    "nu7": true
+  },
+  "testnetApi": {
+    "url": "http://localhost:4000/api/v1/public/config",
+    "status": 200,
+    "config": {
+      "environment": "testnet",
+      "label": "TEST",
+      "apiVersion": "v1",
+      "minClientVersion": "0.2.0",
+      "zcashNetwork": "testnet",
+      "privacyModes": [
+        "shielded",
+        "transparent"
+      ],
+      "products": {
+        "scanPay": true,
+        "terminal": true,
+        "counterQr": true,
+        "paymentLinks": true,
+        "withdrawals": false
+      },
+      "limits": {
+        "minInrPaise": "100",
+        "maxInrPaise": "200000"
+      },
+      "quoteLifetimeSeconds": 600,
+      "requiredConfirmations": 1,
+      "fees": {
+        "platformFeeBps": 50,
+        "withdrawalFeeBps": 75
+      },
+      "disclaimers": [
+        "HACKATHON_TESTNET: real shielded TAZ (worthless test coins). No INR is ever paid out and balances are not redeemable.",
+        "Zeb Scan is custodial: ZEC you send is received by Zeb Scan's wallet.",
+        "Shielded ZEC protects on-chain payment details. The INR payout provider and banks still see banking information.",
+        "INR is delivered off-chain by independent P2P liquidity providers. Timing is not guaranteed.",
+        "Merchant balances are INR-denominated platform credits, not money in a bank account.",
+        "Rates shown are reference prices, not a promise of execution."
+      ],
+      "auth": {
+        "emailPassword": true,
+        "emailOtp": true,
+        "passkey": false,
+        "noirWallet": true,
+        "google": false,
+        "emailDelivery": true
+      },
+      "wallet": {
+        "noirNetwork": "zcash-testnet",
+        "payWithNoir": true
+      },
+      "payoutRail": "P2P_TINYFISH_WEB",
+      "modeName": "HACKATHON_TESTNET",
+      "capabilities": {
+        "realChainAddresses": true,
+        "creditsRedeemable": false,
+        "canSubmitTransactions": false
+      }
+    }
+  },
+  "mainnetApi": {
+    "url": "http://localhost:4100/api/v1/public/config",
+    "status": 200,
+    "config": {
+      "environment": "mainnet-readonly",
+      "label": null,
+      "apiVersion": "v1",
+      "minClientVersion": "0.2.0",
+      "zcashNetwork": "mainnet",
+      "privacyModes": [
+        "shielded",
+        "transparent"
+      ],
+      "products": {
+        "scanPay": false,
+        "terminal": false,
+        "counterQr": false,
+        "paymentLinks": false,
+        "withdrawals": false
+      },
+      "limits": {
+        "minInrPaise": "100",
+        "maxInrPaise": "200000"
+      },
+      "quoteLifetimeSeconds": 600,
+      "requiredConfirmations": 10,
+      "fees": {
+        "platformFeeBps": 50,
+        "withdrawalFeeBps": 75
+      },
+      "disclaimers": [
+        "Zeb Scan is custodial: ZEC you send is received by Zeb Scan's wallet.",
+        "Shielded ZEC protects on-chain payment details. The INR payout provider and banks still see banking information.",
+        "INR is delivered off-chain by independent P2P liquidity providers. Timing is not guaranteed.",
+        "Merchant balances are INR-denominated platform credits, not money in a bank account.",
+        "Rates shown are reference prices, not a promise of execution."
+      ],
+      "auth": {
+        "emailPassword": true,
+        "emailOtp": true,
+        "passkey": false,
+        "noirWallet": true,
+        "google": false,
+        "emailDelivery": false
+      },
+      "wallet": {
+        "noirNetwork": "zcash-mainnet",
+        "payWithNoir": true
+      },
+      "payoutRail": "P2P_TINYFISH_WEB",
+      "modeName": "MAINNET_READONLY",
+      "capabilities": {
+        "realChainAddresses": true,
+        "creditsRedeemable": false,
+        "canSubmitTransactions": false
+      }
+    }
+  },
+  "web": {
+    "url": "https://zebrascan.vercel.app",
+    "status": 200
+  }
+}

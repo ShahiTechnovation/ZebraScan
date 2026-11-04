@@ -6,7 +6,6 @@ import { useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { formatInr, formatUsdc } from "@/lib/money";
 import { formatDateTime } from "@/lib/format";
-import { COPY } from "@/config/mode";
 import { MerchantPageHeader } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { Callout, DataList } from "@/components/ui/Blocks";
@@ -27,7 +26,6 @@ export function WithdrawalDetail({ id }: { id: string }) {
   if (!w) return <NotFoundPanel title="Withdrawal not found" body="No withdrawal with this id exists for the current shop." href="/app/withdrawals" cta="Back to withdrawals" />;
   const order = state.orders.find((o) => o.id === w.p2pOrderId);
   const m = services?.merchant;
-  const active = ["requested", "matching", "accepted", "escrowed", "processing"].includes(w.status);
 
   return (
     <>

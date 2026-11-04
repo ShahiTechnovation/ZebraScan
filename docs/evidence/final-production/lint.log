@@ -1,0 +1,45 @@
+
+> zeb-scan-monorepo@0.2.0 lint P:\Zebra Scan\zeb-scan
+> pnpm -r run lint
+
+Scope: 10 of 11 workspace projects
+packages/domain lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/contracts lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/domain lint: Done
+packages/contracts lint: Done
+packages/providers lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+apps/web lint$ eslint src tests --max-warnings=0
+packages/db lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/security lint$ tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters
+packages/db lint: Done
+packages/security lint: Done
+apps/web lint: P:\Zebra Scan\zeb-scan\apps\web\src\components\merchant\Balance.tsx
+apps/web lint:   5:10  error  'useZeb' is defined but never used  @typescript-eslint/no-unused-vars
+apps/web lint: P:\Zebra Scan\zeb-scan\apps\web\src\components\merchant\Overview.tsx
+apps/web lint:   19:18  error  'isDemo' is assigned a value but never used  @typescript-eslint/no-unused-vars
+apps/web lint: P:\Zebra Scan\zeb-scan\apps\web\src\components\merchant\Settings.tsx
+apps/web lint:    3:17  error  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+apps/web lint:   10:10  error  'useToast' is defined but never used   @typescript-eslint/no-unused-vars
+apps/web lint: P:\Zebra Scan\zeb-scan\apps\web\src\components\merchant\TransactionDetail.tsx
+apps/web lint:   27:28  error  'isDemo' is assigned a value but never used  @typescript-eslint/no-unused-vars
+apps/web lint: P:\Zebra Scan\zeb-scan\apps\web\src\components\merchant\WithdrawalDetail.tsx
+apps/web lint:    9:10  error  'COPY' is defined but never used             @typescript-eslint/no-unused-vars
+apps/web lint:   30:9   error  'active' is assigned a value but never used  @typescript-eslint/no-unused-vars
+apps/web lint: P:\Zebra Scan\zeb-scan\apps\web\src\components\payments\CheckoutPanel.tsx
+apps/web lint:   10:10  error  'COPY' is defined but never used  @typescript-eslint/no-unused-vars
+apps/web lint: P:\Zebra Scan\zeb-scan\apps\web\src\components\screens\HostedCheckout.tsx
+apps/web lint:    9:10  error  'COPY' is defined but never used             @typescript-eslint/no-unused-vars
+apps/web lint:   20:25  error  'isDemo' is assigned a value but never used  @typescript-eslint/no-unused-vars
+apps/web lint: P:\Zebra Scan\zeb-scan\apps\web\src\components\screens\Onboarding.tsx
+apps/web lint:   5:71   error  'KeyRound' is defined but never used  @typescript-eslint/no-unused-vars
+apps/web lint:   5:102  error  'Sparkles' is defined but never used  @typescript-eslint/no-unused-vars
+apps/web lint: P:\Zebra Scan\zeb-scan\apps\web\src\components\screens\ScanStatus.tsx
+apps/web lint:   21:25  error  'services' is assigned a value but never used  @typescript-eslint/no-unused-vars
+apps/web lint:   22:11  error  'run' is assigned a value but never used       @typescript-eslint/no-unused-vars
+apps/web lint:   22:16  error  'busy' is assigned a value but never used      @typescript-eslint/no-unused-vars
+apps/web lint: ✖ 15 problems (15 errors, 0 warnings)
+apps/web lint: Failed
+P:\Zebra Scan\zeb-scan\apps\web:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @zeb/web@0.1.0 lint: `eslint src tests --max-warnings=0`
+Exit status 1
+ ELIFECYCLE  Command failed with exit code 1.

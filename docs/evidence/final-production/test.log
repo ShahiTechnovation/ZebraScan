@@ -1,0 +1,36 @@
+
+> zeb-scan-monorepo@0.2.0 test P:\Zebra Scan\zeb-scan
+> vitest run --config vitest.unit.config.ts && pnpm --filter @zeb/web test
+
+
+ RUN  v3.2.7 P:/Zebra Scan/zeb-scan
+
+ ✓ tests/unit/domain.test.ts (21 tests) 27ms
+ ✓ tests/unit/zkool-tinyfish.test.ts (14 tests) 47ms
+ ✓ tests/unit/security-ledger-providers.test.ts (12 tests) 327ms
+   ✓ passwords > hashes with argon2id and enforces policy  307ms
+ ✓ tests/contracts/contracts.test.ts (6 tests) 57ms
+
+ Test Files  4 passed (4)
+      Tests  53 passed (53)
+   Start at  22:34:05
+   Duration  4.79s (transform 1.38s, setup 0ms, collect 11.40s, tests 458ms, environment 1ms, prepare 1.18s)
+
+
+> @zeb/web@0.1.0 test P:\Zebra Scan\zeb-scan\apps\web
+> vitest run
+
+
+ RUN  v3.2.7 P:/Zebra Scan/zeb-scan/apps/web
+
+ ✓ tests/unit/money-quote-upi.test.ts (21 tests) 12ms
+ ✓ tests/unit/engine.test.ts (15 tests) 64ms
+ ✓ tests/unit/connected-mode.test.tsx (7 tests) 1499ms
+   ✓ connected mode without live adapters (acceptance 10) > registry returns no services — never falls back to demo  337ms
+   ✓ connected mode without live adapters (acceptance 10) > Scan & Pay shows not-connected state, no demo sample, no simulation  889ms
+
+ Test Files  3 passed (3)
+      Tests  43 passed (43)
+   Start at  22:34:12
+   Duration  6.43s (transform 934ms, setup 0ms, collect 1.56s, tests 1.58s, environment 6.25s, prepare 3.45s)
+

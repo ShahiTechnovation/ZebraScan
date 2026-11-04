@@ -28,6 +28,16 @@ function fakeZkool(handlers: Record<string, unknown>, calls: string[] = []) {
 }
 
 describe("zkool_graphql watcher (schema from pinned zkool2 6.36.0 source, fake server)", () => {
+  it("rejects issuer keys and admin, write, other-account, expired or long-lived viewer tokens", async () => {
+    const {privateKey}=generateKeyPairSync("ec",{namedCurve:"P-256"});
+    expect(()=>new ZkoolWatcher({url:"https://wallet.example/graphql",network:"testnet",accountId:7,jwtPrivateKeyPem:privateKey.export({type:"pkcs8",format:"pem"}).toString()})).toThrow(/issuer/);
+    for (const claims of [{sub:0,write:false},{sub:7,write:true},{sub:8,write:false},{sub:7,write:false,ttlSeconds:-1},{sub:7,write:false,ttlSeconds:7200}]) {
+      let called=false;
+      const watcher=new ZkoolWatcher({url:"https://wallet.example/graphql",network:"testnet",accountId:7,jwt:signZkoolJwt(privateKey,claims),fetchImpl:(async()=>{called=true;return new Response("{}");}) as typeof fetch});
+      await expect(watcher.gql("{ currentHeight }")).rejects.toThrow(/Viewer credential/);
+      expect(called).toBe(false);
+    }
+  });
   it("refuses a spend-capable account; accepts No Signing Key (watch-only) or Unauthorized (read-only token)", async () => {
     const watchOnly = new ZkoolWatcher({ url: "http://127.0.0.1:8000/graphql", accountId: 1, network: "testnet", fetchImpl: fakeZkool({ pay: { errors: [{ message: "No Signing Key" }] } }) });
     await expect(watchOnly.assertWatchOnly()).resolves.toBe("no_signing_key");

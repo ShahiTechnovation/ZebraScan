@@ -225,9 +225,30 @@ export async function acceptDeposit(t: Tx, ctx: CoreContext, intent: IntentRow, 
   });
   if (excess > 0n) await recordRefundLiability(t, ctx, intent.id, "overpaid_excess", excess);
 
+    // Link usage: exhausted-before-acceptance routes to refund review and issues NO credit.
+    if (intent.link_id) {
+      const link = await one<{ use_limit: number | null; reusable: boolean; successful_uses: number }>(t, `SELECT use_limit, reusable, successful_uses FROM payment_links WHERE id=$1 FOR UPDATE`, [intent.link_id]);
+      const limit = link.reusable ? link.use_limit : 1;
+      if (limit !== null && link.successful_uses >= limit) {
+        await postJournal(t, ctx.env, {
+          eventId: `refund_due:${intent.id}:link_exhausted`,
+          kind: "refund_liability",
+          memo: `Link exhausted before acceptance (${intent.id})`,
+          lines: [
+            { account: "zec_inventory_clearing", debit: due },
+            { account: "customer_refunds_due", credit: due },
+          ],
+        });
+        await transitionIntent(t, ctx, cur, "refund_queued", { label: "Refund queued", detail: "This payment link reached its use limit before your payment confirmed. Your ZEC is held for refund review; no refund has been sent.", set: { exception_reason: "link_exhausted" } });
+        await treasury.setState(t, ctx.env, intent.id, "released");
+        await raiseException(t, ctx.env, { kind: "link_exhausted_refund", severity: "warning", intentId: intent.id });
+        return;
+      }
+      await t.query(`UPDATE payment_links SET successful_uses = successful_uses + 1, updated_at=now() WHERE id=$1`, [intent.link_id]);
+    }
+
   if (ctx.env === "testnet") {
     // TAZ proves receiving only; INR is display/reference metadata, never an asset or entitlement.
-    if (intent.link_id) await t.query(`UPDATE payment_links SET successful_uses=successful_uses+1, updated_at=now() WHERE id=$1`, [intent.link_id]);
     await emitResource(t, ctx.env, `checkout:${intent.id}`, "payout.disabled", { label: "ZEC confirmed on testnet", detail: "Nonredeemable test receipt. INR payouts and withdrawals are disabled on testnet." });
     if (intent.merchant_id) await emitResource(t, ctx.env, `merchant:${intent.merchant_id}`, "payment.testnet_received", { intentId: intent.id });
     await issuePaymentReceipt(t, ctx, intent.id);
@@ -267,27 +288,6 @@ export async function acceptDeposit(t: Tx, ctx: CoreContext, intent: IntentRow, 
       await enqueueJob(t, ctx.env, "payout.advance", `scan_pay:${intent.id}`, { kind: "scan_pay", id: intent.id });
     }
   } else {
-    // Link usage: exhausted-before-acceptance routes to refund review and issues NO credit.
-    if (intent.link_id) {
-      const link = await one<{ use_limit: number | null; reusable: boolean; successful_uses: number }>(t, `SELECT use_limit, reusable, successful_uses FROM payment_links WHERE id=$1 FOR UPDATE`, [intent.link_id]);
-      const limit = link.reusable ? link.use_limit : 1;
-      if (limit !== null && link.successful_uses >= limit) {
-        await postJournal(t, ctx.env, {
-          eventId: `refund_due:${intent.id}:link_exhausted`,
-          kind: "refund_liability",
-          memo: `Link exhausted before acceptance (${intent.id})`,
-          lines: [
-            { account: "zec_inventory_clearing", debit: due },
-            { account: "customer_refunds_due", credit: due },
-          ],
-        });
-        await transitionIntent(t, ctx, cur, "refund_queued", { label: "Refund queued", detail: "This payment link reached its use limit before your payment confirmed. Your ZEC will be refunded after review.", set: { exception_reason: "link_exhausted" } });
-        await treasury.setState(t, ctx.env, intent.id, "released");
-        await raiseException(t, ctx.env, { kind: "link_exhausted_refund", severity: "warning", intentId: intent.id });
-        return;
-      }
-      await t.query(`UPDATE payment_links SET successful_uses = successful_uses + 1, updated_at=now() WHERE id=$1`, [intent.link_id]);
-    }
     const creditId = newId("credit");
     const unlocksAt = new Date(now.getTime() + ctx.cfg.policy.creditCooldownSec * 1000);
     const backing = usesTreasury(ctx)
@@ -327,7 +327,7 @@ async function handleReorg(t: Tx, ctx: CoreContext, intent: IntentRow, depositId
   if (wasAccepted || intent.status === "deposit_accepted") {
     // Post-finality reorg: freeze everything downstream; never delete history.
     if (intent.status === "deposit_accepted") await transitionIntent(t, ctx, intent, "chain_reorg_review", { label: "Under review", detail: "An accepted deposit was affected by a chain reorganisation.", set: { exception_reason: "reorg_after_acceptance" } });
-    await t.query(`UPDATE merchant_credits SET status='frozen', updated_at=now(), version=version+1 WHERE intent_id=$1 AND status IN ('credit_prepared','credit_locked','credit_available')`, [intent.id]);
+    await t.query(`UPDATE merchant_credits SET frozen_from_status=status, status='frozen', updated_at=now(), version=version+1 WHERE intent_id=$1 AND status IN ('credit_prepared','credit_locked','credit_available','withdrawal_reserved')`, [intent.id]);
     const committed = !["not_started", "payout_queued"].includes(intent.payout_status);
     if (intent.mode === "scan_pay" && !committed) await t.query(`UPDATE payment_intents SET payout_status='manual_review' WHERE id=$1`, [intent.id]);
     await raiseException(t, ctx.env, { kind: "reorg_after_acceptance", severity: "urgent", intentId: intent.id, details: { depositId, payoutCommitted: committed } });

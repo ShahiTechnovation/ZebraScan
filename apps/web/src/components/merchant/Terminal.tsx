@@ -8,7 +8,7 @@ import { useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { useMerchantData } from "@/lib/selectors";
 import { formatInr, parseInrToMinor } from "@/lib/money";
-import { validateInrAmount } from "@/lib/quote";
+import { validateInrAmount } from "@/lib/payment-validation";
 import { formatDateTime } from "@/lib/format";
 import type { PaymentPrivacy } from "@/types/domain";
 import { MerchantPageHeader } from "@/components/layout/AppShell";
@@ -100,7 +100,7 @@ export function Terminal() {
               <MetaBadge meta={DEPOSIT_META[active.depositStatus]} />
               <p className="text-foreground-secondary">
                 {active.depositStatus === "accepted"
-                  ? "Verified. The INR credit is locked during cooldown — it is not yet in your bank account."
+                  ? "ZEC verified. On testnet this is a nonredeemable reference receipt; no INR credit or bank transfer is created."
                   : active.depositStatus === "expired"
                     ? "The quote expired without a payment. Refresh to create a new checkout. Any late ZEC is held for recovery."
                     : "The customer's payment shows up here once the wallet scanner sees it. Don't hand over goods until it says “ZEC payment verified”."}

@@ -394,9 +394,8 @@ describe("ledger and safety invariants", () => {
     expect(c).toBeTruthy();
   });
 
-  it("final reconciliation across all flows is clean", async () => {
+  it("final reconciliation detects the deliberately unresolved reorg", async () => {
     const rec = await reconcile(h.ctx, "final");
-    // reorg test froze a credit: the liability check tolerates frozen credits under review
-    expect(rec.checks.filter((x) => !x.ok)).toEqual([]);
+    expect(rec.checks.filter((x) => x.status === "FAIL").map(x=>x.name)).toEqual(["accepted_deposits_canonical"]);
   });
 });

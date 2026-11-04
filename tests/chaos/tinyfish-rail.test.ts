@@ -3,7 +3,8 @@
  * core only accepts in DEMO) drives the REAL payout state machine, leases, ledger and DB.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { approvePayout, markVerifiedNotSubmitted, reconcile, requestReconcile, type TfDeps } from "@zeb/core";
+import { createHash } from "node:crypto";
+import { approvePayout, enqueueJob, markVerifiedNotSubmitted, reconcile, requestReconcile, type TfDeps } from "@zeb/core";
 import { validateP2PWebConfig, type TfQueueParams, type TfRun, type TinyFishPort } from "@zeb/providers";
 import { Client, key, makeHarness, type Harness } from "../integration/harness";
 
@@ -70,9 +71,17 @@ async function paidScanPay(hh: Harness, vpa = "fault.test@okaxis", inr = "15000"
 }
 const state = async (hh: Harness, id: string) => (await hh.db.query(`SELECT state, state_reason FROM payout_commands WHERE id=$1`, [id])).rows[0] as { state: string; state_reason: string | null };
 
+// Independent evidence fixture, inserted only into the isolated _test database.
+// Scripted browser runs cannot create this record.
+async function reviewedEvidence(id: string, vpa: string, outcome: "delivered" | "cancelled_no_debit") {
+  await h!.db.query(`INSERT INTO payout_settlement_evidence(payout_id,command_hash,provider_order_id,account_fingerprint,recipient_hash,inr_paise,actual_usdc_micros,outcome,debit_reference,bank_reference,evidence_digest,reviewed_by,second_reviewer,verified_at)
+    SELECT id,command_hash,'P2P-77',account_fingerprint,$2,requested_inr_paise,$3,$4,'isolated-debit-fixture','isolated-bank-fixture',$5,'fixture-reviewer-one','fixture-reviewer-two',now() FROM payout_commands WHERE id=$1`, [id,createHash("sha256").update(vpa).digest("hex"),outcome==="delivered"?"1500000":"0",outcome,"a".repeat(64)]);
+  await h!.db.query(`UPDATE payout_attempts SET updated_at=now()-interval '2 minutes' WHERE payout_id=$1 AND kind='reconcile'`,[id]);
+}
+
 describe("TinyFish payout rail", () => {
   it("happy path: preflight → operator approval → order observed → separate reconciliation → RECONCILED", async () => {
-    const { port } = await setup({ preflight: preflightOk, execute: (g) => executeOk(g), reconcile: () => reconcileStatus("COMPLETED") });
+    const { port, deps } = await setup({ preflight: preflightOk, execute: (g) => executeOk(g), reconcile: () => reconcileStatus("COMPLETED") });
     const { payoutId, hash, intentId, c, token } = await paidScanPay(h!);
     // payer consent snapshot exists and is immutable
     const auth = await h!.db.query(`SELECT terms FROM payout_authorizations WHERE intent_id=$1`, [intentId]);
@@ -88,8 +97,14 @@ describe("TinyFish payout rail", () => {
     await h!.runJobs(3);
     // TinyFish COMPLETED on the execute run is NOT success: only the order was observed.
     const mid = await state(h!, payoutId);
-    expect(["ORDER_SUBMISSION_OBSERVED", "PROVIDER_COMPLETED_VERIFIED", "RECONCILED"]).toContain(mid.state);
+    expect(["ORDER_SUBMISSION_OBSERVED", "FIAT_TRANSFER_REPORTED"]).toContain(mid.state);
     await h!.runJobs(20);
+    expect((await state(h!, payoutId)).state).toBe("FIAT_TRANSFER_REPORTED");
+    expect((await h!.db.query(`SELECT 1 FROM ledger_journals WHERE event_id=$1`,[`tf_settle:${payoutId}`])).rowCount).toBe(0);
+    await reviewedEvidence(payoutId,"fault.test@okaxis","delivered");
+    await requestReconcile(h!.ctx,deps,payoutId,"fixture-reviewer");
+    await requestReconcile(h!.ctx,deps,payoutId,"fixture-reviewer");
+    await h!.runJobs(5);
     expect((await state(h!, payoutId)).state).toBe("RECONCILED");
     expect(port.calls.execute).toBe(1);
     expect(port.calls.reconcile).toBeGreaterThanOrEqual(1);
@@ -181,7 +196,7 @@ describe("TinyFish payout rail", () => {
   });
 
   it("merchant withdrawal via SELL: provider cancels → credits restored exactly once", async () => {
-    await setup({ preflight: preflightOk, execute: (g) => executeOk(g), reconcile: () => reconcileStatus("CANCELLED", "cancel.shop@okicici", "397.00") });
+    const {deps}=await setup({ preflight: preflightOk, execute: (g) => executeOk(g), reconcile: () => reconcileStatus("CANCELLED", "cancel.shop@okicici", "397.00") });
     const m = new Client(h!.app);
     await m.req("POST", "/api/v1/auth/register", { body: { email: "rail-shop@example.test", password: "correct horse battery staple" } });
     await m.req("POST", "/api/v1/merchants", { body: { displayName: "Rail Shop", handle: "rail-shop", category: "food" }, key: key() });
@@ -197,11 +212,31 @@ describe("TinyFish payout rail", () => {
     await h!.runJobs();
     await approvePayout(h!.ctx, cmd.id, "usr_operator_aaaaaaaaaaaaaaaaaaaa", cmd.command_hash);
     await h!.runJobs(20);
+    expect((await state(h!, cmd.id)).state).toBe("OUTCOME_UNKNOWN_REVIEW");
+    expect((await h!.db.query(`SELECT 1 FROM ledger_journals WHERE event_id=$1`,[`withdrawal_restore:${w.json.id}`])).rowCount).toBe(0);
+    await reviewedEvidence(cmd.id,"cancel.shop@okicici","cancelled_no_debit");
+    await requestReconcile(h!.ctx,deps,cmd.id,"fixture-reviewer");
+    await requestReconcile(h!.ctx,deps,cmd.id,"fixture-reviewer");
+    await enqueueJob(h!.db,h!.ctx.env,"tfpayout.advance",cmd.id,{id:cmd.id});
+    await h!.runJobs(5);
     expect((await state(h!, cmd.id)).state).toBe("PAYOUT_FAILED_RECOVERY");
     const bal = await m.req("GET", "/api/v1/balance");
     expect(bal.json.availableInrPaise).toBe("40000");
     expect(bal.json.reservedInrPaise).toBe("0");
     const restores = await h!.db.query(`SELECT count(*)::int AS n FROM ledger_journals WHERE event_id=$1`, [`withdrawal_restore:${w.json.id}`]);
     expect(restores.rows[0].n).toBe(1);
+  });
+
+  it.each(["pause","expired","reorg"])("%s after queueing prevents any execution call", async (condition) => {
+    const {port}=await setup({preflight:preflightOk,execute:g=>executeOk(g)});
+    const a=await paidScanPay(h!); await h!.runJobs();
+    await approvePayout(h!.ctx,a.payoutId,"usr_operator_aaaaaaaaaaaaaaaaaaaa",a.hash);
+    await h!.runJobs(1); // approved -> queued, no external action
+    if(condition==="pause") await h!.db.query(`INSERT INTO feature_gates(environment,feature,enabled,reason,updated_by) VALUES('demo','all',false,'regression','fixture')`);
+    if(condition==="expired") await h!.db.query(`UPDATE payout_commands SET approval_expires_at=now()-interval '1 second' WHERE id=$1`,[a.payoutId]);
+    if(condition==="reorg") await h!.db.query(`UPDATE deposit_observations SET canonical=false WHERE intent_id=$1`,[a.intentId]);
+    await h!.runJobs(3);
+    expect(port.calls.execute).toBe(0);
+    expect((await h!.db.query(`SELECT held FROM payout_commands WHERE id=$1`,[a.payoutId])).rows[0].held).toBe(true);
   });
 });

@@ -7,7 +7,6 @@ import { useNow, useZeb } from "@/providers/ZebProvider";
 import { useMerchantData, checkoutTitle } from "@/lib/selectors";
 import { formatInr } from "@/lib/money";
 import { formatDate, formatRelativeDays } from "@/lib/format";
-import { demoConfig } from "@/config/demo";
 import { MerchantPageHeader } from "@/components/layout/AppShell";
 import { ButtonLink } from "@/components/ui/Button";
 import { Callout, EmptyState, MetricStrip } from "@/components/ui/Blocks";
@@ -36,8 +35,8 @@ export function Settlements() {
           </ButtonLink>
         }
       />
-      <Callout tone="info" icon={CalendarClock} className="mb-6" title={`Settlement Policy: ${demoConfig.cooldownDays}-day cooldown`}>
-        Each verified payment creates an INR credit that unlocks {demoConfig.cooldownDays} days after verification. Once unlocked, credits are available for withdrawal to your bank account via UPI.
+      <Callout tone="info" icon={CalendarClock} className="mb-6" title="Settlement availability">
+        Testnet payments create reference receipts only. No INR credits or withdrawals are available. Any future live credit must show its server-approved lock period and verified backing.
       </Callout>
       <MetricStrip
         items={[

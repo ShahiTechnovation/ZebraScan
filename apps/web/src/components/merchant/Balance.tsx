@@ -2,11 +2,9 @@
 
 import React, { useMemo, useState } from "react";
 import { ArrowDownToLine, Hourglass, Landmark, Lock, LockOpen, ScrollText } from "lucide-react";
-import { useZeb } from "@/providers/ZebProvider";
 import { useMerchantData } from "@/lib/selectors";
-import { formatInr, formatUsdc, inrToUsdcMicro } from "@/lib/money";
+import { formatInr } from "@/lib/money";
 import { formatDateTime } from "@/lib/format";
-import { demoConfig } from "@/config/demo";
 import { COPY } from "@/config/mode";
 import { MerchantPageHeader } from "@/components/layout/AppShell";
 import { ButtonLink } from "@/components/ui/Button";
@@ -22,7 +20,6 @@ export function Balance() {
   const [f, setF] = useState<F>("all");
   const rows = useMemo(() => ledger.filter((l) => f === "all" || l.direction === f), [ledger, f]);
   if (!merchant) return null;
-  const backing = inrToUsdcMicro(balance.liability, demoConfig.quote.inrPerUsdcMinor);
 
   return (
     <>
@@ -36,7 +33,7 @@ export function Balance() {
         }
       />
       <Callout tone="info" icon={Landmark} className="mb-6" title="Merchant Platform Balance">
-        These amounts are INR-denominated credits recorded for verified ZEC payments. Withdrawals are processed directly to your registered UPI destination.
+        Testnet payments are reference receipts only. They create no redeemable INR balance, and withdrawals remain disabled.
       </Callout>
       <MetricStrip
         items={[
@@ -98,7 +95,7 @@ export function Balance() {
                 items={[
                   { label: "Outstanding liability", value: formatInr(balance.liability), hint: "Pending + locked + available + reserved" },
                   { label: "Already withdrawn", value: formatInr(balance.withdrawn) },
-                  { label: "USDC equivalent reserved", value: `${formatUsdc(backing)} USDC`, hint: "Treasury reservation backed by USDC on Base" },
+                  { label: "USDC equivalent reserved", value: `${"Unverified"} USDC`, hint: "Treasury reservation backed by USDC on Base" },
                 ]}
               />
               <p className="mt-3 text-micro leading-relaxed text-foreground-muted">

@@ -1,0 +1,27 @@
+{
+  "at": "2026-11-04T17:10:26.426Z",
+  "tip": 4582736,
+  "scanned": 4582736,
+  "knownAddressCount": 1,
+  "totalEvents": 1,
+  "saved": [
+    {
+      "output_ref": "5c1f713d64e74a06352db9d75a1a5d988eeb8121c250bd010614e6c918dcd8f7:p3:d1:836471:0",
+      "block_height": null,
+      "canonical": false,
+      "scan_version": "zkool_graphql",
+      "updated_at": "2026-11-04T16:56:48.100Z",
+      "reorged_at": "2026-11-04T16:56:48.100Z"
+    }
+  ],
+  "matching": [],
+  "audit": [
+    {
+      "action": "intent.create",
+      "details": {
+        "mode": "scan_pay"
+      },
+      "created_at": "2026-11-04T15:59:40.006Z"
+    }
+  ]
+}

@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useZeb } from "@/providers/ZebProvider";
-import { demoConfig } from "@/config/demo";
 import { MerchantPageHeader } from "@/components/layout/AppShell";
 import { ButtonLink } from "@/components/ui/Button";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/Panel";
@@ -21,7 +20,7 @@ const TROUBLE = [
   },
   {
     q: "The quote expired",
-    a: `Quotes last ${demoConfig.quote.lifetimeMs / 1000} seconds. Use “Refresh quote” — it creates a new checkout with a new quote and a new unique address. Never send ZEC to an expired checkout.`,
+    a: `Quotes last until the server expiry shown on the checkout. Use “Refresh quote” — it creates a new checkout with a new quote and a new unique address. Never send ZEC to an expired checkout.`,
   },
   {
     q: "The amount received doesn't match",
@@ -29,7 +28,7 @@ const TROUBLE = [
   },
   {
     q: "Why can't I withdraw my balance yet?",
-    a: `New credits are locked during the settlement cooldown (${demoConfig.cooldownDays} days). Check the unlock dates on the Settlements page. Only one withdrawal can be in progress at a time.`,
+    a: `New credits are locked during the settlement cooldown shown by the server. Check the unlock dates on the Settlements page. Only one withdrawal can be in progress at a time.`,
   },
   {
     q: "A withdrawal failed or is disputed",

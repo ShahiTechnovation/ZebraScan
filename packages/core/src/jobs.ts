@@ -8,7 +8,8 @@ import { DomainError, randomToken } from "@zeb/domain";
 import type { CoreContext } from "./context";
 import { unlockCredit } from "./credits";
 import { ingestScannerEvent } from "./deposits";
-import { enqueueJob } from "./events";
+import { enqueueJob, raiseException } from "./events";
+import { deliverOutbox } from "./alerts";
 import type { P2PExecutor } from "./executor";
 import { lockIntent, transitionIntent } from "./intents";
 import { advancePayout } from "./payouts";
@@ -68,8 +69,7 @@ export function buildHandlers(exec: P2PExecutor | null, tf: TfDeps = { port: nul
       return { rerunInMs: 10_000 };
     },
     "outbox.dispatch": async (ctx) => {
-      // No external subscribers are configured; mark as dispatched so the table stays bounded.
-      await ctx.db.query(`UPDATE outbox_events SET dispatched_at=now() WHERE environment=$1 AND dispatched_at IS NULL AND id IN (SELECT id FROM outbox_events WHERE environment=$1 AND dispatched_at IS NULL ORDER BY id LIMIT 500)`, [ctx.env]);
+      await deliverOutbox(ctx);
       return { rerunInMs: 5_000 };
     },
   };
@@ -92,11 +92,18 @@ export async function expireIntents(ctx: CoreContext): Promise<number> {
       await treasury.setState(t, ctx.env, id, "released");
     });
   }
-  return due.length;
+  const stalled = await many<{id:string}>(ctx.db, `SELECT id FROM payment_intents WHERE environment=$1 AND status IN ('deposit_seen','confirming') AND finality_deadline<$2 LIMIT 200`,[ctx.env,ctx.now()]);
+  for (const {id} of stalled) await tx(ctx.db,async(t)=>{
+    const i=await lockIntent(t,ctx,id);
+    if (!["deposit_seen","confirming"].includes(i.status)) return;
+    await transitionIntent(t,ctx,i,"manual_review",{label:"Confirmation window ended",detail:"Payment remains watched. Any canonical funds require custody/refund review.",set:{exception_reason:"finality_window_expired"}});
+    await raiseException(t,ctx.env,{kind:"finality_window_expired",severity:"warning",intentId:id});
+  });
+  return due.length+stalled.length;
 }
 
-let zkoolWatchOnlyProven = false;
-let zkoolSchemaChecked = false;
+const zkoolWatchOnlyProven = new WeakSet<object>();
+const zkoolSchemaChecked = new WeakSet<object>();
 
 /**
  * zkool_graphql watch-only watcher (HACKATHON_TESTNET receiving; MAINNET_READONLY monitoring).
@@ -108,22 +115,22 @@ export async function pollZkool(ctx: CoreContext): Promise<{ events: number; reo
   const z = ctx.zkool!;
   const net = z.network;
   try {
-    if (!zkoolSchemaChecked) {
+    if (!zkoolSchemaChecked.has(z)) {
       await z.assertSchema(); // introspection: refuse to run against an incompatible zkool build
-      zkoolSchemaChecked = true;
+      zkoolSchemaChecked.add(z);
     }
-    if (!zkoolWatchOnlyProven) {
+    if (!zkoolWatchOnlyProven.has(z)) {
       await z.assertWatchOnly(); // refuse to operate a spend-capable account/token
-      zkoolWatchOnlyProven = true;
+      zkoolWatchOnlyProven.add(z);
     }
     const st = await z.status();
     await ctx.db.query(
-      `INSERT INTO scanner_state(environment, network, tip_height, scanned_height, tip_observed_at, consensus_branch, ironwood_supported, status, gateway_version, nu7_active, last_error, updated_at)
-       VALUES ($1,$2,$3,$4,now(),$5,$6,$7,$8,$9,NULL,now())
-       ON CONFLICT (environment, network) DO UPDATE SET tip_height=EXCLUDED.tip_height, scanned_height=EXCLUDED.scanned_height, tip_observed_at=now(),
+      `INSERT INTO scanner_state(environment, network, tip_height, scanned_height, tip_observed_at, consensus_branch, ironwood_supported, status, gateway_version, nu7_active, tip_hash, last_error, updated_at)
+       VALUES ($1,$2,$3,$4,$10,$5,$6,$7,$8,$9,$11,NULL,now())
+       ON CONFLICT (environment, network) DO UPDATE SET tip_height=EXCLUDED.tip_height, tip_hash=EXCLUDED.tip_hash, scanned_height=EXCLUDED.scanned_height, tip_observed_at=EXCLUDED.tip_observed_at,
          consensus_branch=EXCLUDED.consensus_branch, ironwood_supported=EXCLUDED.ironwood_supported, status=EXCLUDED.status, gateway_version=EXCLUDED.gateway_version,
          nu7_active=EXCLUDED.nu7_active, last_error=NULL, updated_at=now()`,
-      [ctx.env, net, st.tipHeight, st.scannedHeight, st.consensusBranchId, st.ironwoodSupported, st.state, st.version, st.nu7Active],
+      [ctx.env, net, st.tipHeight, st.scannedHeight, st.consensusBranchId, st.ironwoodSupported, st.state, st.version, st.nu7Active, st.tipTime, st.tipHash],
     );
     // Do not attribute while the wallet is still catching up from its birth height (WATCHER_CATCHING_UP).
     if (st.state !== "synced") return { events: 0, reorged: 0 };
@@ -141,8 +148,9 @@ export async function pollZkool(ctx: CoreContext): Promise<{ events: number; reo
     const known = await many<{ txid: string; output_ref: string; pool: string; value_zatoshis: string; address: string }>(
       ctx.db,
       `SELECT d.txid, d.output_ref, d.pool, d.value_zatoshis, coalesce(za.address,d.observed_address) AS address FROM deposit_observations d LEFT JOIN zcash_addresses za ON za.id=d.zcash_address_id
-        WHERE d.environment=$1 AND d.network=$2 AND d.mined AND d.canonical AND d.scan_version='zkool_graphql'`,
-      [ctx.env, net],
+        WHERE d.environment=$1 AND d.network=$2 AND d.mined AND d.canonical AND d.scan_version='zkool_graphql'
+          AND (za.wallet_id=$3 OR za.id IS NULL)`, // only notes of the wallet we are watching now: switching/re-importing a receiver is NOT a reorg
+      [ctx.env, net, `zkool:${net}:${z.accountId}`],
     );
     let reorged = 0;
     for (const k of known) {

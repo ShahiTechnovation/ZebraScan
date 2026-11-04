@@ -1,0 +1,114 @@
+
+> zeb-scan-monorepo@0.2.0 test:e2e:connected P:\Zebra Scan\zeb-scan
+> tsx scripts/e2e-connected.ts
+
+migrations: [
+  '0001_core.sql',
+  '0002_scanner_cursor.sql',
+  '0003_memo_matching.sql',
+  '0004_tinyfish_payouts_and_wallet_auth.sql',
+  '0005_wallet_only_users.sql',
+  '0006_custody_safety.sql',
+  '0007_payout_evidence.sql',
+  '0008_frozen_credit_origin.sql',
+  '0009_outbox_delivery.sql'
+]
+e2e database reset: zebscan_e2e_test
+
+> @zeb/web@0.1.0 build P:\Zebra Scan\zeb-scan\apps\web
+> next build
+
+   ▲ Next.js 15.5.28
+
+   Creating an optimized production build ...
+getaddrinfo ENOTFOUND fonts.googleapis.com
+
+Retrying 1/3...
+getaddrinfo ENOTFOUND fonts.googleapis.com
+
+Retrying 1/3...
+ ✓ Compiled successfully in 49s
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/30) ...
+   Generating static pages (7/30) 
+   Generating static pages (14/30) 
+   Generating static pages (22/30) 
+ ✓ Generating static pages (30/30)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                      165 B         106 kB
+├ ○ /_not-found                            138 B         103 kB
+├ ○ /app                                  6.4 kB         169 kB
+├ ○ /app/balance                         5.32 kB         177 kB
+├ ○ /app/counter-qr                      4.56 kB         183 kB
+├ ○ /app/help                            2.99 kB         175 kB
+├ ○ /app/links                             181 B         177 kB
+├ ƒ /app/links/[id]                      6.31 kB         190 kB
+├ ○ /app/links/new                       6.28 kB         178 kB
+├ ○ /app/ops                             1.96 kB         112 kB
+├ ○ /app/receipts                          187 B         181 kB
+├ ƒ /app/receipts/[id]                     184 B         181 kB
+├ ○ /app/settings                        5.32 kB         177 kB
+├ ○ /app/settlements                     3.69 kB         176 kB
+├ ○ /app/terminal                         5.3 kB         194 kB
+├ ○ /app/transactions                    5.64 kB         178 kB
+├ ƒ /app/transactions/[id]               4.23 kB         193 kB
+├ ○ /app/withdrawals                      4.8 kB         177 kB
+├ ƒ /app/withdrawals/[id]                7.52 kB         180 kB
+├ ○ /app/withdrawals/new                   634 B         173 kB
+├ ○ /apple-icon                            138 B         103 kB
+├ ƒ /checkout/[id]                        5.4 kB         185 kB
+├ ○ /faq                                   168 B         106 kB
+├ ○ /how-it-works                          168 B         106 kB
+├ ○ /icon.svg                                0 B            0 B
+├ ○ /login                               3.75 kB         171 kB
+├ ƒ /m/[handle]                            145 B         177 kB
+├ ○ /onboarding                          7.28 kB         170 kB
+├ ○ /opengraph-image                       138 B         103 kB
+├ ƒ /pay/[slug]                            144 B         177 kB
+├ ○ /privacy                               133 B         118 kB
+├ ƒ /receipt/[id]                        2.53 kB         170 kB
+├ ○ /reset-password                      1.38 kB         164 kB
+├ ○ /scan                                1.17 kB         180 kB
+├ ƒ /scan/[id]                           2.56 kB         195 kB
+├ ○ /terms                                 133 B         118 kB
+└ ○ /verify-email                        1.38 kB         164 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/8268-fd198d49a392f099.js      46.3 kB
+  ├ chunks/b6657665-49fb9c609693be07.js  54.2 kB
+  └ other shared chunks (total)          2.06 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+[WebServer] (node:32416) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:24972) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:6156) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:6156) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+[WebServer] (node:32004) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:36776) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1680) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:7508) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:8620) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:23060) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [connected] › tests\e2e-connected\connected.spec.ts:26:5 › guest Scan & Pay tracks authoritative confirmations and receipt without simulator controls (28.5s)
+  ok 2 [connected] › tests\e2e-connected\connected.spec.ts:37:5 › merchant authentication, terminal and one-time payment link use server facts (13.9s)
+
+  2 passed (1.0m)

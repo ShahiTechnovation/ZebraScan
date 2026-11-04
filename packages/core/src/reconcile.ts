@@ -44,25 +44,27 @@ export async function reconcile(ctx: CoreContext, kind = "periodic"): Promise<Re
   if (cap.stale) add("allocations_within_inventory", false, `USDC inventory not freshly observed (active ${cap.activeMicros})`, true);
   else add("allocations_within_inventory", cap.activeMicros <= cap.inventoryMicros, `active ${cap.activeMicros} vs inventory ${cap.inventoryMicros}`);
 
-  // Merchant liability per status: ledger vs credits table.
-  const led = await many<{ code: string; bal: string }>(
-    ctx.db,
-    `SELECT a.code, sum(p.credit_minor) - sum(p.debit_minor) AS bal FROM ledger_postings p JOIN ledger_accounts a ON a.id=p.account_id
-      WHERE a.environment=$1 AND a.code IN ('merchant_credits_locked','merchant_credits_available','merchant_credits_withdrawal_reserved') GROUP BY a.code`,
-    [env],
-  );
-  const cr = await many<{ status: string; total: string }>(ctx.db, `SELECT status, sum(amount_inr_paise) AS total FROM merchant_credits WHERE environment=$1 GROUP BY status`, [env]);
-  const ledOf = (c: string) => BigInt(led.find((r) => r.code === c)?.bal ?? "0");
-  const crOf = (s: string) => BigInt(cr.find((r) => r.status === s)?.total ?? "0");
-  const frozen = crOf("frozen");
-  const lockedOk = ledOf("merchant_credits_locked") === crOf("credit_locked") + crOf("credit_prepared");
-  const availOk = ledOf("merchant_credits_available") === crOf("credit_available");
-  const resOk = ledOf("merchant_credits_withdrawal_reserved") === crOf("withdrawal_reserved");
-  add(
-    "merchant_liability_matches_credits",
-    lockedOk && availOk && resOk,
-    `locked ${ledOf("merchant_credits_locked")}/${crOf("credit_locked")}, available ${ledOf("merchant_credits_available")}/${crOf("credit_available")}, reserved ${ledOf("merchant_credits_withdrawal_reserved")}/${crOf("withdrawal_reserved")}${frozen > 0n ? `, frozen ${frozen} under review` : ""}`,
-  );
+  // Compare each merchant and bucket independently, retaining frozen credits in
+  // their pre-freeze bucket. Testnet historical credits have been compensated.
+  const liabilities = await many<{ merchant_id: string; code: string; actual: string; expected: string }>(ctx.db, `
+    WITH books AS (
+      SELECT a.merchant_id,a.code,sum(p.credit_minor)-sum(p.debit_minor) AS actual
+      FROM ledger_accounts a JOIN ledger_postings p ON p.account_id=a.id
+      WHERE a.environment=$1 AND a.code IN ('merchant_credits_locked','merchant_credits_available','merchant_credits_withdrawal_reserved')
+      GROUP BY a.merchant_id,a.code
+    ), credits AS (
+      SELECT merchant_id, CASE WHEN status='frozen' THEN frozen_from_status ELSE status END AS state, amount_inr_paise
+      FROM merchant_credits WHERE environment=$1 AND environment<>'testnet'
+    ), expected AS (
+      SELECT merchant_id, CASE WHEN state IN ('credit_locked','credit_prepared') THEN 'merchant_credits_locked'
+        WHEN state='credit_available' THEN 'merchant_credits_available' ELSE 'merchant_credits_withdrawal_reserved' END AS code,
+        sum(amount_inr_paise) AS expected FROM credits WHERE state IN ('credit_locked','credit_prepared','credit_available','withdrawal_reserved')
+        GROUP BY merchant_id,code
+    ) SELECT coalesce(b.merchant_id,e.merchant_id) AS merchant_id,coalesce(b.code,e.code) AS code,
+      coalesce(actual,0) AS actual,coalesce(expected,0) AS expected
+      FROM books b FULL JOIN expected e ON e.merchant_id=b.merchant_id AND e.code=b.code`, [env]);
+  const mismatch = liabilities.filter(r=>BigInt(r.actual)!==BigInt(r.expected));
+  add("merchant_liability_matches_credits", mismatch.length===0, `${mismatch.length} merchant liability buckets differ from credits (frozen origin retained)`);
 
   // Every accepted merchant intent has exactly one original credit (or a refund route).
   const orphan = await one<{ n: string }>(

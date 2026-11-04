@@ -1,0 +1,25 @@
+
+> @zeb/web@0.1.0 test:e2e P:\Zebra Scan\zeb-scan\apps\web
+> playwright test
+
+[WebServer] (node:6252) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:28396) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 4 workers
+
+(node:26332) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:34648) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18900) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:27884) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 4 [desktop] › tests\e2e\connected-product.spec.ts:3:6 › public product fails closed without a configured API at 768px (4.6s)
+  ok 3 [desktop] › tests\e2e\connected-product.spec.ts:3:6 › public product fails closed without a configured API at 1440px (4.7s)
+  ok 1 [desktop] › tests\e2e\connected-product.spec.ts:3:6 › public product fails closed without a configured API at 360px (4.8s)
+  ok 2 [desktop] › tests\e2e\connected-product.spec.ts:14:5 › guest QR rejects arbitrary URLs and wallet absence is explicit (5.8s)
+
+  4 passed (12.9s)

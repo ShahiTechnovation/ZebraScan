@@ -7,7 +7,7 @@ import { useNow, useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { parseUpiPayload, validateVpa } from "@/lib/upi";
 import { formatInr, minorToInputString, parseInrToMinor } from "@/lib/money";
-import { validateInrAmount, isQuoteExpired } from "@/lib/quote";
+import { validateInrAmount, isQuoteExpired } from "@/lib/payment-validation";
 import { COPY } from "@/config/mode";
 import type { PaymentPrivacy, UpiRecipient } from "@/types/domain";
 import { Container } from "@/components/layout/Container";

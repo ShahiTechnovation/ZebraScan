@@ -4,7 +4,6 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { ReceiptText } from "lucide-react";
 import { useZeb } from "@/providers/ZebProvider";
-import { useAction } from "@/lib/useAction";
 import { formatInr } from "@/lib/money";
 import { Container } from "@/components/layout/Container";
 import { ButtonLink } from "@/components/ui/Button";
@@ -18,8 +17,7 @@ import { useLiveResource } from "@/providers/ZebProvider";
 
 export function ScanStatus({ id }: { id: string }) {
   const router = useRouter();
-  const { ready, state, services, isDemo, live } = useZeb();
-  const { run, busy } = useAction();
+  const { ready, state, isDemo, live } = useZeb();
   const res = useLiveResource("checkout", id);
 
   if (!ready || res.loading) return <Container className="py-10"><PageSkeleton /></Container>;

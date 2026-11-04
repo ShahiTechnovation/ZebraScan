@@ -20,10 +20,10 @@ describe("connected mode without live adapters (acceptance 10)", () => {
     expect(getServices()).toBeNull();
   });
 
-  it("demo mode returns demo services", async () => {
-    vi.stubEnv("NEXT_PUBLIC_ZEB_MODE", "demo");
+  it.each(["demo", "testnet", "connectd", ""])("invalid mode %s fails closed", async (mode) => {
+    vi.stubEnv("NEXT_PUBLIC_ZEB_MODE", mode);
     const { getServices } = await import("@/services/registry");
-    expect(getServices()?.kind).toBe("demo");
+    expect(getServices()).toBeNull();
   });
 
   it("Scan & Pay shows not-connected state, no demo sample, no simulation", async () => {
@@ -38,7 +38,7 @@ describe("connected mode without live adapters (acceptance 10)", () => {
         </ToastProvider>
       </ZebProvider>,
     );
-    expect(screen.getAllByText(/Live payments are not connected in this build/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Payments temporarily unavailable/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Simulate/)).toBeNull();
   });
 
@@ -58,6 +58,6 @@ describe("connected mode without live adapters (acceptance 10)", () => {
     );
     expect(screen.queryByText("secret console")).toBeNull();
     expect(screen.queryByRole("button", { name: "Explore demo merchant account" })).toBeNull();
-    expect(screen.getAllByText(/not connected/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Payments temporarily unavailable/i).length).toBeGreaterThan(0);
   });
 });

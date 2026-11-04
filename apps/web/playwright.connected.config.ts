@@ -8,7 +8,7 @@ import { randomBytes } from "node:crypto";
 import path from "node:path";
 
 const WEB = 3200;
-const API = 4100;
+const API = 4200;
 const root = path.resolve(__dirname, "../..");
 export const MAIL_DIR = path.join(root, "var", "e2e-mail");
 const db = process.env.E2E_DATABASE_URL ?? "";
@@ -51,8 +51,8 @@ export default defineConfig({
     {
       command: `pnpm exec tsx apps/worker/src/main.ts`,
       cwd: root,
-      env: { ...backendEnv, WORKER_HEALTH_PORT: "4101" },
-      url: "http://127.0.0.1:4101/",
+      env: { ...backendEnv, WORKER_HEALTH_PORT: "4201" },
+      url: "http://127.0.0.1:4201/",
       reuseExistingServer: false,
       timeout: 60_000,
     },

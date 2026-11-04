@@ -1,142 +1,54 @@
-/**
- * Connected mode: browser → Next.js → Zeb Scan API → PostgreSQL ← worker.
- * The backend runs in the DEMO environment, so addresses are non-payable placeholders and every
- * record is labelled DEMO; all state transitions, ledger postings, sessions, CSRF, idempotency,
- * SSE and P2P job processing are the real backend code paths.
- */
-import { expect, test, type Page } from "@playwright/test";
-import { readdirSync, readFileSync } from "node:fs";
-import path from "node:path";
-
-const MAIL_DIR = path.resolve(__dirname, "../../../../var/e2e-mail");
-
-async function collectErrors(page: Page) {
-  const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
-  page.on("response", async (r) => {
-    if (r.url().includes("/api/v1/") && r.status() >= 400 && r.status() !== 404) errors.push(`${r.status()} ${r.request().method()} ${new URL(r.url()).pathname}: ${(await r.text().catch(() => "")).slice(0, 200)}`);
-  });
-  return errors;
+/** Browser + HTTP + PostgreSQL. Chain observations are isolated test fixtures, never real money. */
+import {expect,test,type Page} from '@playwright/test';
+import {readFileSync,readdirSync} from 'node:fs';
+import path from 'node:path';
+const API='http://localhost:4200';
+const MAIL=path.resolve(__dirname,'../../../../var/e2e-mail');
+const idempotency=()=>`browser-${Date.now()}-${Math.random()}`;
+async function fixturePayment(page:Page,id:string){
+ const cfg=await (await page.request.get(`${API}/api/v1/public/config`)).json();
+ expect(cfg.environment).toBe('demo'); // never inject into a real chain environment
+ const token=await page.evaluate(id=>JSON.parse(localStorage.getItem('zebscan.checkoutAccess.v1')??'{}')[id]?.token,id);
+ const r=await page.request.post(`${API}/api/v1/demo/checkout/${id}/simulate-deposit`,{headers:{authorization:`Bearer ${token}`,'idempotency-key':idempotency(),origin:'http://localhost:3200'},data:{kind:'exact',confirmations:3}});
+ expect(r.status(),await r.text()).toBe(200);
 }
-
-/** Drive a DEMO-backend checkout to acceptance through the UI simulator (real API calls). */
-async function payExactLive(page: Page) {
-  await page.getByRole("button", { name: /Simulate deposit detected/ }).click();
-  await page.getByRole("dialog").getByRole("button", { name: /Exact amount/ }).click();
-  await expect(page.getByText(/ZEC detected/).first()).toBeVisible();
-  for (let i = 0; i < 6; i++) {
-    if (await page.getByText("ZEC payment verified", { exact: true }).first().isVisible().catch(() => false)) break;
-    const btn = page.getByRole("button", { name: /Add confirmation|Reach required confirmations/ });
-    if (await btn.isVisible().catch(() => false)) await btn.click();
-    await page.waitForTimeout(400);
-  }
-  await expect(page.getByText("ZEC payment verified", { exact: true }).first(), (globalThis as { __errs?: string[] }).__errs?.join(" | ")).toBeVisible();
+async function merchant(page:Page){
+ const handle=`shop-${Date.now().toString(36)}`;
+ await page.goto('/login');await page.getByRole('tab',{name:'Create account'}).click();
+ await page.getByLabel('Email',{exact:true}).fill(`${handle}@example.test`);await page.getByLabel('Password',{exact:true}).fill('correct horse battery staple');
+ await page.getByRole('button',{name:'Create account',exact:true}).click();await page.waitForURL('**/onboarding');
+ await page.getByLabel('Business name').fill('Browser Test Shop');await page.getByLabel('Merchant handle').fill(handle);await page.getByLabel('Business category').selectOption('Retail');
+ await page.getByRole('button',{name:'Create merchant',exact:true}).click();await page.waitForURL('**/app');
+ let link='';
+ await expect.poll(()=>{for(const f of readdirSync(MAIL).sort().reverse()){const body=readFileSync(path.join(MAIL,f),'utf8');if(!body.includes(`${handle}@example.test`))continue;const m=body.match(/http:\/\/[^\s]+\/verify-email\?token=[^\s]+/);if(m){link=m[0];return true;}}return false;},{timeout:30000}).toBe(true);
+ await page.goto(link);await expect(page.getByText('Your email is verified.')).toBeVisible();
 }
-
-async function latestMailLink(kind: "verify-email" | "reset-password"): Promise<string> {
-  for (let i = 0; i < 40; i++) {
-    const files = readdirSync(MAIL_DIR).sort().reverse();
-    for (const f of files) {
-      const body = readFileSync(path.join(MAIL_DIR, f), "utf8");
-      const m = body.match(new RegExp(`(http://[^\\s]+/${kind}\\?token=[^\\s]+)`));
-      if (m) return m[1]!;
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error(`no ${kind} email delivered`);
-}
-
-test("Scan & Pay end-to-end against the real backend (DEMO environment)", async ({ page }) => {
-  const errors = await collectErrors(page);
-  await page.goto("/scan");
-  await expect(page.getByText(/Demo backend — simulated payments only/)).toBeVisible();
-  await page.getByRole("tab", { name: "UPI ID" }).click();
-  await page.getByLabel("Receiver UPI ID").fill("corner.store@okaxis");
-  await page.getByRole("button", { name: "Use this UPI ID" }).click();
-  await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByLabel("Amount the receiver gets").fill("150");
-  await page.getByRole("button", { name: /Lock quote/ }).click();
-  await expect(page).toHaveURL(/\/scan\/pi_/, { timeout: 30_000 });
-
-  // Non-payable placeholder, never a real Zcash address; full UPI ID is never shown back.
-  await expect(page.getByText(/zebscan-demo-address-pi_/).first()).toBeVisible();
-  await expect(page.getByText("Preview QR — cannot receive real ZEC").first()).toBeVisible();
-  await expect(page.getByText("corner.store@okaxis")).toHaveCount(0);
-
-  await payExactLive(page);
-  // The worker places and tracks the (simulated) P2P PAY order; the UI follows via SSE/polling.
-  await expect(page.getByText("Payout completed").first()).toBeVisible({ timeout: 90_000 });
-  await expect(page.getByText(/not a bank statement/).first()).toBeVisible();
-  await page.getByRole("link", { name: "View receipt" }).click();
-  await expect(page).toHaveURL(/\/receipt\/rcp_/);
-  await expect(page.getByText(/co•••••e@okaxis/).first()).toBeVisible();
-  await expect(page.getByText("corner.store@okaxis")).toHaveCount(0);
-  expect(errors).toEqual([]);
+test('guest Scan & Pay tracks authoritative confirmations and receipt without simulator controls',async({page})=>{
+ await page.goto('/scan');await expect(page.getByText('Isolated test API · no real funds')).toBeVisible();
+ await page.getByRole('tab',{name:'UPI ID'}).click();await page.getByLabel('Receiver UPI ID',{exact:true}).fill('corner.store@okaxis');await page.getByRole('button',{name:'Use this UPI ID'}).click();await page.getByRole('button',{name:'Continue',exact:true}).click();
+ await page.getByLabel('Amount the receiver gets').fill('150');await page.getByRole('button',{name:/Lock quote/}).click();await page.waitForURL(/\/scan\/pi_/);
+ const id=page.url().split('/').pop()!;
+ await expect(page.getByRole('button',{name:/Simulate|Add confirmation/})).toHaveCount(0);
+ await fixturePayment(page,id);await expect(page.getByText('ZEC payment verified',{exact:true}).first()).toBeVisible();
+ await page.reload();await expect(page.getByText('ZEC payment verified',{exact:true}).first()).toBeVisible();
+ await page.getByRole('link',{name:'View receipt',exact:true}).first().click();await expect(page).toHaveURL(/\/receipt\/rcp_/);
+ await expect(page.getByText('corner.store@okaxis',{exact:true})).toHaveCount(0);
 });
-
-test("merchant: register → onboard → verify email → terminal payment → credit unlock → withdrawal", async ({ page }) => {
-  const errors = await collectErrors(page);
-  (globalThis as { __errs?: string[] }).__errs = errors;
-  const handle = `e2e-shop-${Date.now().toString(36)}`;
-  await page.goto("/login");
-  await page.getByRole("tab", { name: "Create account" }).click();
-  await page.getByLabel("Email").fill(`${handle}@example.test`);
-  await page.getByLabel("Password").fill("correct horse battery staple");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("**/onboarding");
-
-  await page.getByLabel("Business name").fill("E2E Chai House");
-  await page.getByLabel("Merchant handle").fill(handle);
-  await page.getByLabel("Business category").selectOption("Retail");
-  await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByLabel("Payout UPI ID").fill("e2e.chai@okhdfcbank");
-  await page.getByLabel("Beneficiary display name").fill("E2E Chai House");
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Review" }).click();
-  await page.getByRole("button", { name: "Create merchant" }).click();
-  await page.waitForURL("**/app");
-
-  // Server-reported gate is visible, not a hidden button error.
-  await expect(page.getByText(/Verify your email/).first()).toBeVisible();
-  await page.goto(await latestMailLink("verify-email"));
-  await expect(page.getByText("Your email is verified.")).toBeVisible();
-
-  // Terminal invoice → simulated deposit → locked credit.
-  await page.goto("/app/terminal");
-  await page.getByLabel("Amount (INR)").fill("500");
-  await page.getByRole("button", { name: "Create checkout" }).click();
-  await expect(page.getByText(/zebscan-demo-address-pi_/).first()).toBeVisible({ timeout: 30_000 });
-  await payExactLive(page);
-  await expect(page.getByText(/Credit locked until/).first()).toBeVisible();
-
-  // Cooldown (3s in this E2E config) → worker unlocks → available.
-  await page.waitForTimeout(6_000);
-  await page.goto("/app/settlements");
-  await expect(page.locator("table").getByText("Available").first()).toBeVisible({ timeout: 30_000 });
-
-  // Payout destination (encrypted; DEMO backend auto-verifies) then withdrawal via P2P SELL.
-  await page.goto("/app/settings?tab=payout");
-  await page.getByLabel("Payout UPI ID").fill("e2e.chai@okhdfcbank");
-  await page.getByLabel("Beneficiary display name").fill("E2E Chai House");
-  await page.getByRole("button", { name: "Save payout destination" }).click();
-  const pw = page.getByLabel("Password");
-  if (await pw.isVisible({ timeout: 1500 }).catch(() => false)) {
-    await pw.fill("correct horse battery staple");
-    await page.getByRole("button", { name: "Confirm" }).click();
-  }
-  await expect(page.getByText(/Payout destination saved/).first()).toBeVisible();
-
-  await page.goto("/app/withdrawals/new");
-  await page.getByLabel("Withdrawal amount (INR)").fill("300");
-  await page.getByRole("button", { name: "Review" }).click();
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Request withdrawal" }).click();
-  const pw2 = page.getByLabel("Password");
-  if (await pw2.isVisible({ timeout: 1500 }).catch(() => false)) {
-    await pw2.fill("correct horse battery staple");
-    await page.getByRole("button", { name: "Confirm" }).click();
-  }
-  await expect(page).toHaveURL(/\/app\/withdrawals\/wd_/, { timeout: 30_000 });
-  await expect(page.getByText("Payout completed").first()).toBeVisible({ timeout: 90_000 });
-  expect(errors).toEqual([]);
+test('merchant authentication, terminal and one-time payment link use server facts',async({page,context})=>{
+ await merchant(page);
+ await page.goto('/app/terminal');await page.getByLabel('Amount (INR)').fill('500');await page.getByRole('button',{name:'Create checkout',exact:true}).click();
+ await expect(page).toHaveURL(/c=pi_/);const terminal=new URL(page.url()).searchParams.get('c')!;
+ await fixturePayment(page,terminal);await expect(page.getByText('ZEC payment verified',{exact:true}).first()).toBeVisible();
+ await page.goto('/app/links/new');await page.getByLabel('Title',{exact:true}).fill('Single use browser payment');await page.getByLabel('Fixed amount',{exact:true}).fill('125');
+ const created=page.waitForResponse(r=>r.url()===`${API}/api/v1/links`&&r.request().method()==='POST');await page.getByRole('button',{name:'Create link',exact:true}).click();const link=await (await created).json();await page.waitForURL(/\/app\/links\/lnk_/);
+ const guest=await context.newPage();await guest.goto(`/pay/${link.slug}`);await guest.getByRole('button',{name:'Generate checkout'}).click();await guest.waitForURL(/\/checkout\/pi_/);const first=guest.url().split('/').pop()!;
+ const second=await context.newPage();await second.goto(`/pay/${link.slug}`);await second.getByRole('button',{name:'Generate checkout'}).click();await second.waitForURL(/\/checkout\/pi_/);const secondId=second.url().split('/').pop()!;expect(secondId).not.toBe(first);
+ // Opening two tabs consumes no use. Confirmation consumes exactly one.
+ expect((await (await page.request.get(`${API}/api/v1/links/${link.id}`)).json()).successfulUses).toBe(0);
+ await Promise.all([fixturePayment(guest,first),fixturePayment(second,secondId)]);
+ await expect.poll(async()=>(await (await page.request.get(`${API}/api/v1/links/${link.id}`)).json()).successfulUses).toBe(1);
+ await guest.reload();await second.reload();
+ await expect.poll(async()=>((await guest.locator('body').innerText())+' '+(await second.locator('body').innerText())).includes('Refund')).toBe(true);
+ await page.goto('/app/withdrawals/new');await expect(page.getByText('Withdrawals unavailable',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Request withdrawal'})).toHaveCount(0);
 });

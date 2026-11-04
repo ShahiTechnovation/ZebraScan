@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Upload } from "lucide-react";
 import { useZeb } from "@/providers/ZebProvider";
 import { useAction } from "@/lib/useAction";
 import { validateVpa } from "@/lib/upi";
-import { useToast } from "@/providers/ToastProvider";
 import { COPY } from "@/config/mode";
 import type { Merchant } from "@/types/domain";
 import { MerchantPageHeader } from "@/components/layout/AppShell";

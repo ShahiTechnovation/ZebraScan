@@ -38,7 +38,7 @@ export function ModeBanner() {
         Payments temporarily unavailable. Keep your checkout reference and try again.
       </div>
     );
-  return <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">Zcash testnet · TAZ only · INR payouts disabled</div>;
+  return <div role="status" className="border-b border-border px-4 py-2 text-center text-[13px]">{live?.config?.environment === "demo" ? "Isolated test API · no real funds" : live?.config?.environment === "testnet" ? "Zcash testnet · TAZ only · INR payouts disabled" : "Mainnet read-only · payments disabled"}</div>;
 }
 
 export function NotConnectedNotice({ className }: { className?: string }) {

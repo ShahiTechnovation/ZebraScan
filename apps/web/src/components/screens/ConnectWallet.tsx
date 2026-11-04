@@ -81,7 +81,7 @@ export function ConnectWalletModal({ open, onClose, next = "/app" }: { open: boo
               {noir === "checking"
                 ? "Detecting browser extension..."
                 : noir === "installed"
-                  ? "Extension detected. Connect to authenticate with your shielded Zcash address."
+                  ? "Extension detected. Sign a server challenge to authenticate. Hardware accounts may not support message signing."
                   : "Noir Wallet is the premier shielded Zcash browser extension. Install it to authenticate."}
             </p>
 
@@ -117,7 +117,7 @@ export function ConnectWalletModal({ open, onClose, next = "/app" }: { open: boo
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={() => setView("email")}>
+            <Button variant="secondary" disabled={!live?.config?.auth.emailDelivery} onClick={() => setView("email")}>
               <Mail aria-hidden className="h-4 w-4" /> Email code
             </Button>
             <Button variant="secondary" onClick={() => setView("other")}>
@@ -138,7 +138,7 @@ export function ConnectWalletModal({ open, onClose, next = "/app" }: { open: boo
             Any Zcash wallet that can send to a payment request can pay a Zeb Scan checkout: scan the QR, or copy the address, exact amount and memo. No account or
             connection is needed, and Zeb Scan never asks for your seed phrase or keys.
           </p>
-          <p>Merchants using other wallets can sign in with an email code; customers can still pay from any Zcash wallet.</p>
+          <p>Email code sign-in is available only when delivery is configured. Customers can pay without an account from a compatible testnet wallet.</p>
           <Button variant="secondary" onClick={() => setView("choose")}>
             Back
           </Button>

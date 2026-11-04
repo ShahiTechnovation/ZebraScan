@@ -16,7 +16,7 @@ import { CheckoutStatus } from "./shared";
  * No KPI wall, no charts, no fabricated activity.
  */
 export function Overview() {
-  const { state, isDemo, canTransact } = useZeb();
+  const { state, canTransact } = useZeb();
   const now = useNow(30_000);
   const { merchant, checkouts, credits, balance } = useMerchantData();
   if (!merchant) return null;

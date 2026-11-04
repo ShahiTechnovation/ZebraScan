@@ -24,6 +24,7 @@ import { sign as edSign, type KeyObject } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DomainError, INVOICE_MEMO_RE, addressMatchesNetwork, buildZip321, parseDecimalToMinor } from "@zeb/domain";
 import type { AddressAllocator, AllocatedAddress, DepositEvent, ScannerStatus } from "./zcash";
+import { readChainWitness, type ChainWitness } from "./chain";
 
 export type ZkoolNetwork = "testnet" | "mainnet";
 export type ZkoolAddressMode = "rotate" | "memo";
@@ -46,6 +47,8 @@ export interface ZkoolConfig {
   birthHeight?: number;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  chainReader?: (network: ZkoolNetwork) => Promise<ChainWitness>;
+  maxTipAgeSec?: number;
 }
 
 export interface ZkoolNote {
@@ -277,21 +280,24 @@ export class ZkoolWatcher implements AddressAllocator {
   }
 
   async status(): Promise<ScannerStatus> {
+    const chain = await (this.cfg.chainReader ?? readChainWitness)(this.network);
     const h = await this.gql<{ currentHeight: number }>(`{ currentHeight }`);
     const synced = await this.gql<{ synchronizeAccount: number }>(`mutation { synchronizeAccount(idAccount: ${this.cfg.accountId}, fast: false) }`);
     const tip = Number(h.currentHeight ?? 0);
     const scanned = Number(synced.synchronizeAccount ?? 0);
     if (!(tip > 0)) throw new DomainError("WALLET_WATCHER_ERROR", "zkool reported no chain tip");
+    if (chain.network !== this.network || Math.abs(chain.height-tip)>3) throw new DomainError("WALLET_CHAIN_INCONSISTENT", "Wallet tip disagrees with the independent chain witness");
+    const fresh = Date.now()-Date.parse(chain.time) <= (this.cfg.maxTipAgeSec ?? 600)*1000;
     return {
       network: this.network,
       tipHeight: tip,
-      tipHash: "",
-      tipTime: new Date().toISOString(),
+      tipHash: chain.hash,
+      tipTime: chain.time,
       scannedHeight: scanned,
-      consensusBranchId: "",
+      consensusBranchId: chain.branch,
       ironwoodSupported: true, // zkool2 6.36 scans Ironwood (pool 3); verified by schema + live notes
-      nu7Active: this.network === "testnet" ? true : tip >= MAINNET_NU7_HEIGHT,
-      state: scanned > 0 && tip - scanned <= 3 ? "synced" : "syncing",
+      nu7Active: tip >= (this.network === "testnet" ? 4_465_026 : MAINNET_NU7_HEIGHT) && chain.branch === "77190ad9",
+      state: fresh && scanned >= (this.cfg.birthHeight ?? 1) && Math.abs(tip - scanned) <= 3 ? "synced" : "syncing",
       walletBirthday: this.cfg.birthHeight ?? 0,
       version: "zkool_graphql",
     };

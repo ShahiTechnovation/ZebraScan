@@ -1,0 +1,4 @@
+
+> @zeb/web@0.1.0 lint P:\Zebra Scan\zeb-scan\apps\web
+> eslint src tests --max-warnings=0
+
